@@ -1,0 +1,176 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_ttf.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
+
+// ---------------------------------
+// 구조체 정의
+// ---------------------------------
+typedef struct {
+    float world_x;     // 맵에서의 X 좌표
+    float y_screen;    // 화면상의 Y 좌표
+    float vx;          // X 속도
+    float vy;          // Y 속도 (중력/점프)
+    bool on_ground;    // 땅에 닿아있는지
+} Tank;
+
+typedef struct {
+    float camera_x;
+    float camera_y;
+} Camera;
+
+// ---------------------------------
+// 전역 변수
+// ---------------------------------
+Tank tank;
+Camera camera;
+float gravity = 0.5f;
+float friction = 0.8f;
+
+// ---------------------------------
+// 함수 원형
+// ---------------------------------
+void must_init(bool test, const char* description);
+float ground_y_at(float x);
+void init_game();
+void update_physics(ALLEGRO_KEYBOARD_STATE* ks);
+void render();
+
+// ---------------------------------
+// 보조 함수
+// ---------------------------------
+void must_init(bool test, const char* description) {
+    if (test) return;
+    printf("couldn't initialize %s\n", description);
+    exit(1);
+}
+
+// 단순 지형 높이 함수
+float ground_y_at(float x) {
+    return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅
+}
+
+// ---------------------------------
+// 초기화
+// ---------------------------------
+void init_game() {
+    tank.world_x = 100;
+    tank.y_screen = ground_y_at(100) - 20; // 탱크 바닥 땅 위에
+    tank.vx = 0;
+    tank.vy = 0;
+    tank.on_ground = true;
+
+    camera.camera_x = 0;
+    camera.camera_y = 0;
+}
+
+// ---------------------------------
+// 물리 업데이트
+// ---------------------------------
+void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
+    static bool prev_space = false;
+
+    // 좌우 이동
+    if (al_key_down(ks, ALLEGRO_KEY_A)) {
+        tank.vx = -2;
+    } else if (al_key_down(ks, ALLEGRO_KEY_D)) {
+        tank.vx = 2;
+    } else {
+        tank.vx *= friction;
+    }
+
+    // 점프 (스페이스 키 눌렀을 때)
+    if (al_key_down(ks, ALLEGRO_KEY_SPACE) && !prev_space && tank.on_ground) {
+        tank.vy = -9.5f;
+        tank.on_ground = false;
+    }
+    prev_space = al_key_down(ks, ALLEGRO_KEY_SPACE);
+
+    // 중력 적용
+    tank.vy += gravity;
+    tank.world_x += tank.vx;
+    tank.y_screen += tank.vy;   // <- 여기 추가 (화면 좌표도 갱신)
+
+    // 땅 충돌 체크
+    float ground_y = ground_y_at(tank.world_x);
+    if (tank.y_screen >= ground_y - 20) {
+        tank.y_screen = ground_y - 20;
+        tank.vy = 0;
+        tank.on_ground = true;
+    }
+
+    // 카메라 탱크 따라가기
+    camera.camera_x = tank.world_x - 400; // 화면 중앙 기준
+    camera.camera_y = 0;
+}
+
+// ---------------------------------
+// 렌더링
+// ---------------------------------
+void render() {
+    al_clear_to_color(al_map_rgb(100, 149, 237));
+
+    // 땅 그리기
+    for (int x = -50; x < 850; x++) {
+        float world_x = x + camera.camera_x;
+        float ground_y = ground_y_at(world_x);
+        al_draw_filled_rectangle(x, ground_y, x + 1, 600, al_map_rgb(34, 139, 34));
+    }
+
+    // 탱크 (빨간색 사각형)
+    float draw_x = tank.world_x - camera.camera_x;
+    float draw_y = tank.y_screen;
+    al_draw_filled_rectangle(draw_x - 20, draw_y - 20, draw_x + 20, draw_y, al_map_rgb(200, 0, 0));
+}
+
+// ---------------------------------
+// 메인
+// ---------------------------------
+int main() {
+    must_init(al_init(), "allegro");
+    must_init(al_install_keyboard(), "keyboard");
+    must_init(al_init_primitives_addon(), "primitives");
+
+    ALLEGRO_DISPLAY* disp = al_create_display(800, 600);
+    must_init(disp, "display");
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    must_init(timer, "timer");
+
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    must_init(queue, "queue");
+
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+    al_register_event_source(queue, al_get_keyboard_event_source());
+
+    init_game();
+    al_start_timer(timer);
+
+    bool done = false;
+    ALLEGRO_KEYBOARD_STATE ks;
+
+    while (!done) {
+        ALLEGRO_EVENT event;
+        al_wait_for_event(queue, &event);
+
+        if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            done = true;
+        }
+        if (event.type == ALLEGRO_EVENT_TIMER) {
+            al_get_keyboard_state(&ks);
+            update_physics(&ks);
+            render();
+            al_flip_display();
+        }
+    }
+
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
+    return 0;
+}
