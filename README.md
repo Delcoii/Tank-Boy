@@ -7,7 +7,16 @@
 * 제거한 적의 난이도에 따른 점수가 측정되고, 많은 적을 죽이며 높은 난이도까지 올라갈수록 점수가 높아진다.
 
 
-### vscode 환경구성
+### 환경 구성
+```sh
+# 원하는 폴더에
+git clone https://github.com/Delcoii/Tank-Boy.git
+cd Tank-Boy
+```
+
+### VSCode 환경구성
+* Visual Studio (2022권장) 에서 최초 한 번 빌드 및 실행 필요
+
 ```sh
 winget install Microsoft.VisualStudio.2022.BuildTools
 
