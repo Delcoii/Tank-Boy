@@ -6,6 +6,8 @@
  * ./game
  */
 
+#if 0
+
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1019,3 +1021,894 @@ int main()
 
     return 0;
 }
+
+#endif
+
+
+
+#if 1
+/* game.c
+ *
+ * TankBoy - single-file Allegro5 game prototype
+ * Implements: tank centered, moving background (parallax), tank movement & jump (parabola),
+ * machinegun (straight) and cannon (parabolic projectile), 4 enemy types, stages, HUD,
+ * game over + name entry. All bitmaps are generated at runtime (no external assets).
+ *
+ * Build:
+ * gcc game.c -o game $(pkg-config allegro-5 allegro_font-5 allegro_primitives-5 --libs --cflags) -lm
+ * ./game
+ */
+
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_primitives.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+#include <string.h>
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+/* --- general --- */
+long frames;
+long score;
+
+void must_init(bool test, const char* description)
+{
+    if (test) return;
+    fprintf(stderr, "couldn't initialize %s\n", description);
+    exit(1);
+}
+
+int between(int lo, int hi) { return lo + (rand() % (hi - lo)); }
+float between_f(float lo, float hi) { return lo + ((float)rand() / (float)RAND_MAX) * (hi - lo); }
+
+bool collide(int ax1, int ay1, int ax2, int ay2, int bx1, int by1, int bx2, int by2)
+{
+    if (ax1 > bx2) return false;
+    if (ax2 < bx1) return false;
+    if (ay1 > by2) return false;
+    if (ay2 < by1) return false;
+    return true;
+}
+
+/* --- display --- */
+#define BUFFER_W 640
+#define BUFFER_H 360
+
+#define DISP_SCALE 1
+#define DISP_W (BUFFER_W * DISP_SCALE)
+#define DISP_H (BUFFER_H * DISP_SCALE)
+
+ALLEGRO_DISPLAY* disp;
+ALLEGRO_BITMAP* buffer;
+
+void disp_init()
+{
+    disp = al_create_display(DISP_W, DISP_H);
+    must_init(disp, "display");
+    buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    must_init(buffer, "bitmap buffer");
+}
+
+void disp_deinit()
+{
+    if (buffer) al_destroy_bitmap(buffer);
+    if (disp) al_destroy_display(disp);
+}
+
+void disp_pre_draw() { al_set_target_bitmap(buffer); }
+void disp_post_draw()
+{
+    al_set_target_backbuffer(disp);
+    al_draw_scaled_bitmap(buffer, 0, 0, BUFFER_W, BUFFER_H, 0, 0, DISP_W, DISP_H, 0);
+    al_flip_display();
+}
+
+/* --- keyboard --- */
+#define KEY_SEEN 1
+#define KEY_DOWN 2
+unsigned char key[ALLEGRO_KEY_MAX];
+
+void keyboard_init() { memset(key, 0, sizeof(key)); }
+void keyboard_update(ALLEGRO_EVENT* event)
+{
+    switch (event->type)
+    {
+    case ALLEGRO_EVENT_TIMER:
+        for (int i = 0; i < ALLEGRO_KEY_MAX; i++) key[i] &= ~KEY_SEEN;
+        break;
+    case ALLEGRO_EVENT_KEY_DOWN:
+        key[event->keyboard.keycode] = KEY_SEEN | KEY_DOWN;
+        break;
+    case ALLEGRO_EVENT_KEY_UP:
+        key[event->keyboard.keycode] &= ~KEY_DOWN;
+        break;
+    }
+}
+
+/* --- simple runtime-drawn spritesheet --- */
+typedef struct SPRITES {
+    ALLEGRO_BITMAP* tank;
+    ALLEGRO_BITMAP* bullet_mg;
+    ALLEGRO_BITMAP* bullet_cn;
+    ALLEGRO_BITMAP* enemy_small;
+    ALLEGRO_BITMAP* enemy_cannon;
+    ALLEGRO_BITMAP* enemy_air;
+    ALLEGRO_BITMAP* enemy_mover;
+    ALLEGRO_BITMAP* life;
+    ALLEGRO_BITMAP* portal;
+} SPRITES;
+SPRITES sprites;
+
+void make_sprite_bitmaps()
+{
+    // tank (simple rectangle + turret)
+    sprites.tank = al_create_bitmap(32, 20);
+    al_set_target_bitmap(sprites.tank);
+    al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rounded_rectangle(2, 8, 30, 18, 3, 3, al_map_rgb(60, 120, 180));
+    al_draw_filled_rectangle(12, 2, 20, 10, al_map_rgb(30, 80, 150));
+    // mg bullet
+    sprites.bullet_mg = al_create_bitmap(4, 4);
+    al_set_target_bitmap(sprites.bullet_mg); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rectangle(0, 0, 4, 4, al_map_rgb(255, 220, 0));
+    // cannon projectile
+    sprites.bullet_cn = al_create_bitmap(6, 6);
+    al_set_target_bitmap(sprites.bullet_cn); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_circle(3, 3, 3, al_map_rgb(255, 140, 0));
+    // enemy small (machinegun)
+    sprites.enemy_small = al_create_bitmap(20, 12);
+    al_set_target_bitmap(sprites.enemy_small); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rectangle(2, 4, 18, 10, al_map_rgb(200, 60, 60));
+    // enemy cannon
+    sprites.enemy_cannon = al_create_bitmap(24, 14);
+    al_set_target_bitmap(sprites.enemy_cannon); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rectangle(2, 4, 22, 12, al_map_rgb(180, 80, 40));
+    // enemy air
+    sprites.enemy_air = al_create_bitmap(18, 10);
+    al_set_target_bitmap(sprites.enemy_air); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_triangle(9, 0, 2, 10, 16, 10, al_map_rgb(120, 200, 120));
+    // enemy mover
+    sprites.enemy_mover = al_create_bitmap(22, 16);
+    al_set_target_bitmap(sprites.enemy_mover); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rectangle(2, 2, 20, 14, al_map_rgb(140, 60, 180));
+    // life icon
+    sprites.life = al_create_bitmap(10, 8);
+    al_set_target_bitmap(sprites.life); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rectangle(1, 1, 9, 7, al_map_rgb(255, 0, 0));
+    // portal
+    sprites.portal = al_create_bitmap(24, 40);
+    al_set_target_bitmap(sprites.portal); al_clear_to_color(al_map_rgb(0, 0, 0));
+    al_draw_filled_rounded_rectangle(2, 2, 22, 38, 6, 6, al_map_rgb(80, 200, 255));
+    // reset back buffer target will be set by disp_pre_draw when drawing
+}
+
+/* --- fx (simple explosions as circles) --- */
+typedef struct FX { int x, y, frame; bool used; } FX;
+#define FX_N 32
+FX fx[FX_N];
+void fx_init() { for (int i = 0; i < FX_N; i++) fx[i].used = false; }
+void fx_add(int x, int y) { for (int i = 0; i < FX_N; i++) { if (!fx[i].used) { fx[i].used = true; fx[i].x = x; fx[i].y = y; fx[i].frame = 0; return; } } }
+void fx_update() { for (int i = 0; i < FX_N; i++) if (fx[i].used) { fx[i].frame++; if (fx[i].frame > 18) fx[i].used = false; } }
+void fx_draw() {
+    for (int i = 0; i < FX_N; i++) if (fx[i].used) {
+        float r = fx[i].frame * 1.4f;
+        float a = (1.0f - fx[i].frame / 18.0f);
+        al_draw_filled_circle(fx[i].x, fx[i].y, r, al_map_rgba_f(1.0, 0.6, 0.0, a));
+    }
+}
+
+/* --- shots --- */
+typedef struct SHOT {
+    float x, y;
+    float vx, vy;
+    bool from_player;
+    bool used;
+    int life; // frames
+    bool is_cannon;
+} SHOT;
+#define SHOTS_N 128
+SHOT shots[SHOTS_N];
+
+void shots_init() { for (int i = 0; i < SHOTS_N; i++) shots[i].used = false; }
+void shots_add_player_mg(float x, float y) {
+    for (int i = 0; i < SHOTS_N; i++) if (!shots[i].used) {
+        shots[i].used = true; shots[i].from_player = true;
+        shots[i].is_cannon = false;
+        shots[i].x = x; shots[i].y = y; shots[i].vx = 0; shots[i].vy = -8; shots[i].life = 60; return;
+    }
+}
+void shots_add_player_cannon(float x, float y, float angle, float power) {
+    for (int i = 0; i < SHOTS_N; i++) if (!shots[i].used) {
+        shots[i].used = true; shots[i].from_player = true;
+        shots[i].is_cannon = true;
+        shots[i].x = x; shots[i].y = y;
+        shots[i].vx = cosf(angle) * power;
+        shots[i].vy = -sinf(angle) * power;
+        shots[i].life = 300;
+        return;
+    }
+}
+void shots_add_enemy(float x, float y, float vx, float vy) {
+    for (int i = 0; i < SHOTS_N; i++) if (!shots[i].used) {
+        shots[i].used = true; shots[i].from_player = false;
+        shots[i].is_cannon = false;
+        shots[i].x = x; shots[i].y = y; shots[i].vx = vx; shots[i].vy = vy; shots[i].life = 200; return;
+    }
+}
+
+void shots_update()
+{
+    const float gravity = 0.25f;
+    for (int i = 0; i < SHOTS_N; i++) {
+        if (!shots[i].used) continue;
+        if (shots[i].is_cannon) shots[i].vy += gravity;
+        shots[i].x += shots[i].vx;
+        shots[i].y += shots[i].vy;
+        shots[i].life--;
+        if (shots[i].life <= 0 || shots[i].x < -20 || shots[i].x > BUFFER_W + 20 || shots[i].y < -40 || shots[i].y > BUFFER_H + 40)
+            shots[i].used = false;
+    }
+}
+
+void shots_draw()
+{
+    for (int i = 0; i < SHOTS_N; i++) {
+        if (!shots[i].used) continue;
+        if (shots[i].from_player) {
+            if (shots[i].is_cannon)
+                al_draw_bitmap(sprites.bullet_cn, (int)shots[i].x - 3, (int)shots[i].y - 3, 0);
+            else
+                al_draw_bitmap(sprites.bullet_mg, (int)shots[i].x - 2, (int)shots[i].y - 2, 0);
+        }
+        else {
+            al_draw_filled_circle(shots[i].x, shots[i].y, 3, al_map_rgb_f(1, 0.4, 0.4));
+        }
+    }
+}
+
+/* --- player (tank) --- */
+typedef struct TANK {
+    int x_screen, y_screen; // fixed screen pos (center-ish)
+    float world_x; // background/world offset (camera)
+    float vx, vy;
+    bool on_ground;
+    int hp;
+    int shot_timer_mg;
+    int shot_timer_cn;
+    float cannon_angle; // radians
+    int lives;
+    int respawn_timer;
+    int invincible;
+} TANK;
+TANK tank;
+
+#define TANK_START_LIVES 3
+
+void tank_init()
+{
+    tank.x_screen = BUFFER_W / 3; // tank is fixed on left-middle of screen
+    tank.y_screen = BUFFER_H - 60;
+    tank.world_x = 0;
+    tank.vx = 0; tank.vy = 0;
+    tank.on_ground = true;
+    tank.hp = 100;
+    tank.shot_timer_mg = 0;
+    tank.shot_timer_cn = 0;
+    tank.cannon_angle = M_PI / 4.0f; // 45deg
+    tank.lives = TANK_START_LIVES;
+    tank.respawn_timer = 0;
+    tank.invincible = 0;
+}
+
+/* simple ground and hills: generate height by tiles, also used for collision */
+#define MAP_W_TILES 300
+float map_height[MAP_W_TILES]; // absolute y (top) of ground for each x tile
+void map_init()
+{
+    // base ground line near BUFFER_H - 40, with some hills
+    float base = BUFFER_H - 40;
+    float x = 0;
+    for (int i = 0; i < MAP_W_TILES; i++) {
+        float hill = 0;
+        if ((i / 20) % 3 == 1) hill = -30; // small hill
+        if ((i / 50) % 5 == 2) hill = -60; // bigger hill
+        map_height[i] = base + hill + between(-6, 6);
+    }
+}
+
+/* world -> screen conversion */
+float world_to_screen_x(float world_x, float camera_world_x) {
+    return (world_x - camera_world_x) + tank.x_screen;
+}
+
+/* get ground y at world_x (approx by tile index) */
+float ground_y_at(float world_x)
+{
+    int idx = (int)(world_x / 8.0f);
+    if (idx < 0) idx = 0;
+    if (idx >= MAP_W_TILES) idx = MAP_W_TILES - 1;
+    return map_height[idx];
+}
+
+/* update tank physics (move & jump & firing) */
+void tank_update()
+{
+    if (tank.lives < 0) return;
+    if (tank.respawn_timer) { tank.respawn_timer--; return; }
+
+    const float accel = 0.5f;
+    const float maxspeed = 3.5f;
+    const float friction = 0.85f;
+    const float gravity = 0.6f;
+
+    // left/right: a/d or arrows
+    if (key[ALLEGRO_KEY_A] || key[ALLEGRO_KEY_LEFT]) tank.vx -= accel;
+    if (key[ALLEGRO_KEY_D] || key[ALLEGRO_KEY_RIGHT]) tank.vx += accel;
+    tank.vx *= friction;
+    if (tank.vx > maxspeed) tank.vx = maxspeed;
+    if (tank.vx < -maxspeed) tank.vx = -maxspeed;
+
+    // jump: space
+    if ((key[ALLEGRO_KEY_SPACE]) && tank.on_ground) {
+        tank.vy = -9.5f;
+        tank.on_ground = false;
+    }
+
+    // cannon angle adjust: W/S or mouse would be nicer; use W/S
+    if (key[ALLEGRO_KEY_W]) { tank.cannon_angle += 0.03f; if (tank.cannon_angle > M_PI * 0.9f) tank.cannon_angle = M_PI * 0.9f; }
+    if (key[ALLEGRO_KEY_S]) { tank.cannon_angle -= 0.03f; if (tank.cannon_angle < 0.1f) tank.cannon_angle = 0.1f; }
+
+    // update position in world coordinates (tank.world_x increases when moving right)
+    tank.world_x += tank.vx;
+
+    // keep world_x within map
+    if (tank.world_x < 0) tank.world_x = 0;
+    if (tank.world_x > (MAP_W_TILES * 8 - 1)) tank.world_x = MAP_W_TILES * 8 - 1;
+
+    // vertical physics
+    tank.vy += gravity;
+    float new_world_y = ground_y_at(tank.world_x); // ground level at current x
+    float tank_world_y = new_world_y - 14; // tank base sits above ground
+    // naive vertical: we model tank's vertical offset relative to ground (for jump)
+    static float vertical_offset = 0.0f; // positive = above ground
+    vertical_offset += tank.vy;
+    if (vertical_offset > 0) {
+        // when below ground (landing)
+        if (vertical_offset > 1000) vertical_offset = 0;
+    }
+    // if below 0 (i.e., we've gone under ground), clamp
+    float ground_screen_y = tank.y_screen + (ground_y_at(tank.world_x) - (BUFFER_H - 40));
+    // Simplify: detect landing if a downward motion hits y = 0 offset
+    if (tank.vy > 0) {
+        // estimate absolute screen y of tank bottom and ground
+        float tank_bottom_screen_y = tank.y_screen + vertical_offset + 12;
+        float ground_line_screen_y = ground_screen_y + 40; // base shift
+        // simpler approach: if we're below a small threshold, set on ground
+    }
+
+    // simpler (and robust) approach: keep tank on a vertical offset variable
+    static float jump_offset = 0.0f;
+    static float jump_v = 0.0f;
+    if (!tank.on_ground) {
+        jump_v += gravity;
+        jump_offset += jump_v;
+        if (jump_offset > 0) { // hitting ground
+            jump_offset = 0;
+            jump_v = 0;
+            tank.on_ground = true;
+            tank.vy = 0;
+        }
+    }
+    else {
+        // if just jumped we set jump_v
+        if ((key[ALLEGRO_KEY_SPACE]) && tank.on_ground) {
+            tank.on_ground = false;
+            jump_v = -9.5f;
+            jump_offset += jump_v;
+        }
+    }
+    // store these back (approx): we'll render tank at y_screen + jump_offset
+    (void)jump_offset;
+
+    // firing
+    if (tank.shot_timer_mg) tank.shot_timer_mg--;
+    if (tank.shot_timer_cn) tank.shot_timer_cn--;
+
+    // Machinegun: X key
+    if ((key[ALLEGRO_KEY_X]) && tank.shot_timer_mg == 0) {
+        // fire a few bullets slightly spread
+        float sx = world_to_screen_x(tank.world_x, tank.world_x);
+        float sy = tank.y_screen + -10;
+        shots_add_player_mg(sx + 16, sy);
+        tank.shot_timer_mg = 6; // rate of fire
+    }
+
+    // Cannon: C key (stronger, parabolic)
+    if ((key[ALLEGRO_KEY_C]) && tank.shot_timer_cn == 0) {
+        float sx = world_to_screen_x(tank.world_x, tank.world_x);
+        float sy = tank.y_screen - 6;
+        float angle = tank.cannon_angle; // radians
+        float power = 7.2f;
+        // convert to world coords: fire from tank.world_x + offset
+        float fx_world_x = tank.world_x + 16;
+        // spawn projectile in screen coords but with world-relative velocities
+        shots_add_player_cannon(sx + 16, sy, angle, power);
+        tank.shot_timer_cn = 30;
+    }
+
+    // simple invincibility tick
+    if (tank.invincible) tank.invincible--;
+
+    // camera following: here we set camera = tank.world_x - tank.x_screen so background moves
+    // already handled later when drawing.
+}
+
+/* --- enemies --- */
+typedef enum ENEMY_TYPE { E_SMALL = 0, E_CANNON, E_AIR, E_MOVER, E_N } ENEMY_TYPE;
+typedef struct ENEMY {
+    float world_x, y; // world_x is horizontal position in world coords
+    ENEMY_TYPE type;
+    int life;
+    bool used;
+    int dir; // for movers
+    int shoot_cooldown;
+    int spawn_stage;
+} ENEMY;
+#define ENEMIES_N 48
+ENEMY enemies[ENEMIES_N];
+
+void enemies_init() { for (int i = 0; i < ENEMIES_N; i++) enemies[i].used = false; }
+
+void spawn_enemy(float world_x, ENEMY_TYPE type, int stage)
+{
+    for (int i = 0; i < ENEMIES_N; i++) {
+        if (enemies[i].used) continue;
+        enemies[i].used = true;
+        enemies[i].world_x = world_x;
+        enemies[i].type = type;
+        enemies[i].spawn_stage = stage;
+        enemies[i].y = ground_y_at(world_x) - 12;
+        enemies[i].dir = (rand() % 2) ? 1 : -1;
+        enemies[i].shoot_cooldown = between(30, 150);
+        switch (type) {
+        case E_SMALL: enemies[i].life = 4; break;
+        case E_CANNON: enemies[i].life = 6; break;
+        case E_AIR: enemies[i].life = 3; enemies[i].y = between(40, 120); break;
+        case E_MOVER: enemies[i].life = 8; break;
+        default: enemies[i].life = 5; break;
+        }
+        return;
+    }
+}
+
+/* simple spawn logic depending on frames and stage */
+int current_stage = 1;
+void enemies_update()
+{
+    // spawn based on frames and stage
+    if ((frames % (120 - current_stage * 8)) == 0) {
+        float spawn_x = tank.world_x + BUFFER_W + between(40, 120);
+        // pick types depending on stage
+        if (current_stage == 1) spawn_enemy(spawn_x, E_SMALL, current_stage);
+        else if (current_stage == 2) spawn_enemy(spawn_x, (rand() % 2) ? E_SMALL : E_CANNON, current_stage);
+        else if (current_stage == 3) {
+            spawn_enemy(spawn_x, (rand() % 3 == 0) ? E_AIR : ((rand() % 2) ? E_SMALL : E_CANNON), current_stage);
+        }
+        else {
+            int r = rand() % 4;
+            if (r == 0) spawn_enemy(spawn_x, E_MOVER, current_stage);
+            else if (r == 1) spawn_enemy(spawn_x, E_AIR, current_stage);
+            else spawn_enemy(spawn_x, (rand() % 2) ? E_SMALL : E_CANNON, current_stage);
+        }
+    }
+
+    // update existing enemies
+    for (int i = 0; i < ENEMIES_N; i++) {
+        if (!enemies[i].used) continue;
+        // behaviour by type
+        switch (enemies[i].type) {
+        case E_SMALL:
+            enemies[i].y += (frames % 2) ? 0.5f : 0.0f;
+            break;
+        case E_CANNON:
+            // stays, occasionally shoots
+            enemies[i].shoot_cooldown--;
+            if (enemies[i].shoot_cooldown <= 0) {
+                // fire bullet towards player
+                float sx = world_to_screen_x(enemies[i].world_x, tank.world_x);
+                float sy = enemies[i].y - 6;
+                // bullet velocity roughly towards player
+                float dirx = (tank.x_screen - (sx)) > 0 ? 1 : -1;
+                shots_add_enemy(sx, sy, dirx * -2.0f, 2.5f);
+                enemies[i].shoot_cooldown = between(80, 160);
+            }
+            break;
+        case E_AIR:
+            enemies[i].world_x -= 1.2f;
+            break;
+        case E_MOVER:
+            enemies[i].y += enemies[i].dir * 0.9f;
+            if (enemies[i].y < 60) enemies[i].dir = 1;
+            if (enemies[i].y > BUFFER_H - 80) enemies[i].dir = -1;
+            break;
+        default: break;
+        }
+
+        // move slowly left relative to world (so they come toward player)
+        enemies[i].world_x -= 0.6f + current_stage * 0.1f;
+
+        // if off-screen left, free
+        if (enemies[i].world_x < tank.world_x - 200) { enemies[i].used = false; continue; }
+
+        // collision with player shots
+        int ew = 20, eh = 14;
+        float ex_screen = world_to_screen_x(enemies[i].world_x, tank.world_x);
+        float ey_screen = enemies[i].y;
+        // check shots
+        for (int s = 0; s < SHOTS_N; s++) {
+            if (!shots[s].used) continue;
+            if (!shots[s].from_player) continue;
+            int sw = shots[s].is_cannon ? 6 : 4;
+            if (collide((int)ex_screen, (int)ey_screen, (int)ex_screen + ew, (int)ey_screen + eh, (int)shots[s].x, (int)shots[s].y, (int)shots[s].x + sw, (int)shots[s].y + sw)) {
+                enemies[i].life -= (shots[s].is_cannon ? 5 : 3); // cannon bigger damage
+                shots[s].used = false;
+                fx_add((int)ex_screen + ew / 2, (int)ey_screen + eh / 2);
+                if (enemies[i].life <= 0) {
+                    // scoring by type
+                    switch (enemies[i].type) {
+                    case E_SMALL: score += 1; break;
+                    case E_CANNON: score += 2; break;
+                    case E_AIR: score += 3; break;
+                    case E_MOVER: score += 4; break;
+                    default: score += 1; break;
+                    }
+                    enemies[i].used = false;
+                }
+                break;
+            }
+        }
+
+        // collision with enemy touching the player's hull (damage to tank)
+        float tank_screen_x = tank.x_screen, tank_screen_y = tank.y_screen;
+        if (!tank.invincible && enemies[i].used) {
+            if (collide((int)ex_screen, (int)ey_screen, (int)ex_screen + ew, (int)ey_screen + eh,
+                (int)tank_screen_x, (int)tank_screen_y, (int)tank_screen_x + 32, (int)tank_screen_y + 20)) {
+                tank.hp -= 10;
+                tank.invincible = 90;
+                fx_add((int)tank_screen_x + 16, (int)tank_screen_y + 8);
+                enemies[i].used = false;
+                if (tank.hp <= 0) {
+                    tank.lives--;
+                    if (tank.lives >= 0) {
+                        tank.hp = 100;
+                        tank.respawn_timer = 120;
+                        tank.invincible = 180;
+                    }
+                    else {
+                        // game over handled higher level
+                    }
+                }
+            }
+        }
+    }
+}
+
+void enemies_draw()
+{
+    for (int i = 0; i < ENEMIES_N; i++) {
+        if (!enemies[i].used) continue;
+        float sx = world_to_screen_x(enemies[i].world_x, tank.world_x);
+        float sy = enemies[i].y;
+        switch (enemies[i].type) {
+        case E_SMALL:
+            al_draw_bitmap(sprites.enemy_small, (int)sx, (int)sy, 0); break;
+        case E_CANNON:
+            al_draw_bitmap(sprites.enemy_cannon, (int)sx, (int)sy, 0); break;
+        case E_AIR:
+            al_draw_bitmap(sprites.enemy_air, (int)sx, (int)sy, 0); break;
+        case E_MOVER:
+            al_draw_bitmap(sprites.enemy_mover, (int)sx, (int)sy, 0); break;
+        default:
+            al_draw_filled_rectangle((int)sx, (int)sy, (int)sx + 18, (int)sy + 12, al_map_rgb(200, 100, 100));
+        }
+    }
+}
+
+/* --- stars / parallax background --- */
+typedef struct PARAX {
+    float x, y;
+    float speed;
+    float layer; // 0..1
+} PARAX;
+#define PARAX_N 80
+PARAX parallax[PARAX_N];
+void parallax_init() {
+    for (int i = 0; i < PARAX_N; i++) {
+        parallax[i].x = rand() % (BUFFER_W * 3);
+        parallax[i].y = rand() % BUFFER_H;
+        parallax[i].speed = between_f(0.1f, 1.2f);
+        parallax[i].layer = between_f(0.05f, 0.9f);
+    }
+}
+void parallax_update() {
+    for (int i = 0; i < PARAX_N; i++) {
+        parallax[i].x -= parallax[i].speed;
+        if (parallax[i].x < -BUFFER_W) parallax[i].x = BUFFER_W + (rand() % 200);
+    }
+}
+void parallax_draw() {
+    for (int i = 0; i < PARAX_N; i++) {
+        float l = 0.1f + parallax[i].layer * 0.9f;
+        al_draw_filled_circle(parallax[i].x, parallax[i].y, 1.0 + parallax[i].layer * 2.0, al_map_rgb_f(l, l, l));
+    }
+}
+
+/* --- HUD / font --- */
+ALLEGRO_FONT* font_builtin;
+void hud_init() { font_builtin = al_create_builtin_font(); must_init(font_builtin, "font"); }
+void hud_deinit() { if (font_builtin) al_destroy_font(font_builtin); }
+
+void hud_draw()
+{
+    al_draw_textf(font_builtin, al_map_rgb_f(1, 1, 1), 8, 8, 0, "SCORE: %06ld", score);
+    al_draw_textf(font_builtin, al_map_rgb_f(1, 1, 1), 8, 24, 0, "STAGE: %d", current_stage);
+    al_draw_textf(font_builtin, al_map_rgb_f(1, 1, 1), 8, 40, 0, "HP: %d", tank.hp);
+    // lives as small icons
+    for (int i = 0; i < (tank.lives > 0 ? tank.lives : 0); i++) {
+        al_draw_bitmap(sprites.life, BUFFER_W - 12 - i * 12, 8, 0);
+    }
+    // instruction
+    al_draw_text(font_builtin, al_map_rgb_f(1, 1, 1), BUFFER_W / 2, 8, ALLEGRO_ALIGN_CENTER, "A/D Move  SPACE Jump  X MG  C Cannon  W/S Aim  ENTER Name(after game)");
+}
+
+/* --- portal / stage progression --- */
+float portal_world_x = 2000; // example portal position per stage
+void portal_init_for_stage(int stage) {
+    // set portal further for higher stage
+    portal_world_x = stage * 1200 + between(400, 800);
+}
+void portal_draw() {
+    float sx = world_to_screen_x(portal_world_x, tank.world_x);
+    if (sx > -40 && sx < BUFFER_W + 40)
+        al_draw_bitmap(sprites.portal, (int)sx - 12, BUFFER_H - 40 - 20, 0);
+}
+void portal_update() {
+    float sx = world_to_screen_x(portal_world_x, tank.world_x);
+    if (sx > tank.x_screen - 20 && sx < tank.x_screen + 40 && tank.lives >= 0) {
+        // simple portal trigger when near portal
+        current_stage++;
+        score += 500 * current_stage;
+        // reset stage: move portal further and maybe reset enemies
+        for (int i = 0; i < ENEMIES_N; i++) enemies[i].used = false;
+        portal_init_for_stage(current_stage);
+    }
+}
+
+/* --- name input & ranking (simple) --- */
+char player_name[32] = "";
+bool entering_name = false;
+void start_name_entry() { entering_name = true; player_name[0] = 0; }
+void draw_name_entry() {
+    al_draw_filled_rounded_rectangle(BUFFER_W / 2 - 160, BUFFER_H / 2 - 36, BUFFER_W / 2 + 160, BUFFER_H / 2 + 36, 6, 6, al_map_rgba_f(0, 0, 0, 0.8));
+    al_draw_text(font_builtin, al_map_rgb_f(1, 1, 1), BUFFER_W / 2, BUFFER_H / 2 - 16, ALLEGRO_ALIGN_CENTER, "GAME OVER! Enter name:");
+    al_draw_text(font_builtin, al_map_rgb_f(1, 1, 0), BUFFER_W / 2, BUFFER_H / 2 + 6, ALLEGRO_ALIGN_CENTER, player_name);
+}
+
+/* --- initialization & main --- */
+int main(int argc, char** argv)
+{
+    srand((unsigned int)time(NULL));
+    must_init(al_init(), "allegro");
+    must_init(al_install_keyboard(), "keyboard");
+    must_init(al_init_primitives_addon(), "primitives");
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    must_init(timer, "timer");
+
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    must_init(queue, "queue");
+
+    disp_init();
+    make_sprite_bitmaps();
+
+    hud_init();
+    parallax_init();
+    fx_init();
+    shots_init();
+    tank_init();
+    map_init();
+    enemies_init();
+    portal_init_for_stage(1);
+
+    al_register_event_source(queue, al_get_keyboard_event_source());
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+
+    keyboard_init();
+
+    frames = 0;
+    score = 0;
+
+    bool done = false;
+    bool redraw = true;
+    ALLEGRO_EVENT event;
+
+    al_start_timer(timer);
+
+    while (1)
+    {
+        al_wait_for_event(queue, &event);
+
+        switch (event.type)
+        {
+        case ALLEGRO_EVENT_TIMER:
+            if (!entering_name) {
+                frames++;
+                fx_update();
+                shots_update();
+                parallax_update();
+                tank_update();
+                enemies_update();
+                portal_update();
+                // check collision of enemy shots with tank
+                for (int s = 0; s < SHOTS_N; s++) {
+                    if (!shots[s].used) continue;
+                    if (shots[s].from_player) continue;
+                    // enemy bullet collision
+                    if (!tank.invincible && collide((int)tank.x_screen, (int)tank.y_screen, (int)tank.x_screen + 32, (int)tank.y_screen + 20,
+                        (int)shots[s].x, (int)shots[s].y, (int)shots[s].x + 4, (int)shots[s].y + 4)) {
+                        shots[s].used = false;
+                        tank.hp -= 8;
+                        tank.invincible = 90;
+                        fx_add((int)tank.x_screen + 16, (int)tank.y_screen + 8);
+                        if (tank.hp <= 0) {
+                            tank.lives--;
+                            if (tank.lives >= 0) {
+                                tank.hp = 100;
+                                tank.respawn_timer = 120;
+                                tank.invincible = 180;
+                            }
+                            else {
+                                // game over: begin name entry
+                                entering_name = true;
+                            }
+                        }
+                    }
+                }
+            }
+            redraw = true;
+            break;
+
+        case ALLEGRO_EVENT_DISPLAY_CLOSE:
+            done = true;
+            break;
+        }
+
+        if (done) break;
+
+        keyboard_update(&event);
+
+        // keyboard input for name entry (when game over)
+        if (entering_name && event.type == ALLEGRO_EVENT_KEY_DOWN) {
+            int k = event.keyboard.keycode;
+            if (k == ALLEGRO_KEY_BACKSPACE) {
+                size_t len = strlen(player_name);
+                if (len > 0) player_name[len - 1] = 0;
+            }
+            else if (k == ALLEGRO_KEY_ENTER) {
+                // finalize name and display (here simply print to stdout)
+                printf("Player: %s  Score: %ld\n", player_name, score);
+                entering_name = false;
+                done = true; // close game after entry for demo
+            }
+            else {
+                // accept letters and digits
+                char ch = 0;
+                if (k >= ALLEGRO_KEY_A && k <= ALLEGRO_KEY_Z) {
+                    ch = 'a' + (k - ALLEGRO_KEY_A);
+                }
+                else if (k >= ALLEGRO_KEY_0 && k <= ALLEGRO_KEY_9) {
+                    ch = '0' + (k - ALLEGRO_KEY_0);
+                }
+                else if (k == ALLEGRO_KEY_SPACE) ch = ' ';
+                if (ch && strlen(player_name) < 20) {
+                    size_t len = strlen(player_name);
+                    player_name[len] = ch;
+                    player_name[len + 1] = 0;
+                }
+            }
+        }
+
+        if (redraw && al_is_event_queue_empty(queue))
+        {
+            disp_pre_draw();
+            al_clear_to_color(al_map_rgb(10, 10, 20));
+
+            // draw distant background
+            al_draw_filled_rectangle(0, BUFFER_H - 40, BUFFER_W, BUFFER_H, al_map_rgb(40, 30, 20));
+            // parallax stars
+            parallax_draw();
+
+            // draw ground segments based on map around camera
+            int camera_world_x = (int)tank.world_x;
+            for (int tx = -40; tx < MAP_W_TILES * 8; tx += 8) {
+                float world_x = tx;
+                float sx = world_to_screen_x(world_x, tank.world_x);
+                if (sx < -40 || sx > BUFFER_W + 40) continue;
+                int idx = tx / 8;
+                if (idx < 0 || idx >= MAP_W_TILES) continue;
+                float gy = map_height[idx];
+                float ground_top_screen_y = BUFFER_H - (BUFFER_H - gy);
+                // draw a simple ground strip
+                al_draw_filled_rectangle(sx, gy, sx + 8, BUFFER_H, al_map_rgb(30, 120, 40));
+            }
+
+            // draw portal
+            portal_draw();
+
+            // draw enemies
+            enemies_draw();
+
+            // draw shots
+            shots_draw();
+
+            // draw fx
+            fx_draw();
+
+            // draw tank centered at tank.x_screen with slight bob from jumping
+            int draw_x = tank.x_screen;
+            int draw_y = tank.y_screen;
+            // invincible blinking
+            if (tank.invincible && ((tank.invincible / 6) % 2 == 0)) {
+                // skip drawing (blink)
+            }
+            else {
+                al_draw_bitmap(sprites.tank, draw_x, draw_y, 0);
+                // cannon barrel representation (rotate)
+                float cx = draw_x + 16;
+                float cy = draw_y + 6;
+                float angle = tank.cannon_angle;
+                float bx = cx + cosf(angle) * 18;
+                float by = cy - sinf(angle) * 18;
+                al_draw_line(cx, cy, bx, by, al_map_rgb_f(0.8, 0.8, 0.2), 4.0f);
+            }
+
+            // HUD
+            hud_draw();
+
+            // game over & name entry overlay
+            if (entering_name) draw_name_entry();
+
+            disp_post_draw();
+
+            redraw = false;
+        }
+    }
+
+    // Cleanup
+    al_destroy_bitmap(sprites.tank);
+    al_destroy_bitmap(sprites.bullet_mg);
+    al_destroy_bitmap(sprites.bullet_cn);
+    al_destroy_bitmap(sprites.enemy_small);
+    al_destroy_bitmap(sprites.enemy_cannon);
+    al_destroy_bitmap(sprites.enemy_air);
+    al_destroy_bitmap(sprites.enemy_mover);
+    al_destroy_bitmap(sprites.life);
+    al_destroy_bitmap(sprites.portal);
+
+    hud_deinit();
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
+    disp_deinit();
+
+    return 0;
+}
+ 
+
+#endif
