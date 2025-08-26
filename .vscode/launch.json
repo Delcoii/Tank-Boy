@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug x64",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/example_tutorial/game_tutorial/x64/Debug/game_tutorial.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/example_tutorial/game_tutorial",
+            "environment": [],
+            "console": "externalTerminal",
+            "preLaunchTask": "Build Debug x64"
+        },
+        {
+            "name": "Release x64",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/example_tutorial/game_tutorial/x64/Release/game_tutorial.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/example_tutorial/game_tutorial",
+            "environment": [],
+            "console": "externalTerminal",
+            "preLaunchTask": "Build Release x64"
+        }
+    ]
+}
