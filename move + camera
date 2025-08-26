@@ -1,185 +1,199 @@
-// fortress_min_fixed.c
-// Build: gcc fortress_min_fixed.c -o fortress_min_fixed $(pkg-config --cflags --libs allegro-5 allegro_primitives-5 allegro_font-5 allegro_ttf-5)
-
-#define _USE_MATH_DEFINES
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <math.h>
+#define _CRT_SECURE_NO_WARNINGS
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
 
-#define BUFFER_W 1024
-#define BUFFER_H 480
-#define VIEW_W 800
-#define VIEW_H 480
-#define WINDOW_W VIEW_W
-#define WINDOW_H (VIEW_H + 120)
-
-#define GRAVITY 420.0f
-#define WIND_MAX 220.0f
-#define WIND_TICK 3.0f
-#define PLAYER_SPEED 140.0f
-#define EXPLOSION_RADIUS 48.0f
-
-typedef enum { WPN_CANNON = 0, WPN_MISSILE = 1, WPN_GATLING = 2, WPN_COUNT } WeaponType;
-const char* weapon_name[WPN_COUNT] = { "CANNON", "MISSILE", "GATLING" };
-
-typedef enum { DIFF_EASY = 0, DIFF_MED, DIFF_HARD } Difficulty;
-
-ALLEGRO_DISPLAY* display = NULL;
-ALLEGRO_EVENT_QUEUE* queue = NULL;
-ALLEGRO_TIMER* timer = NULL;
-ALLEGRO_FONT* fontb = NULL;
-ALLEGRO_BITMAP* terrain = NULL;
-
-float cam_x = 0.0f;
-float wind_ax = 0.0f;
-float wind_timer = 0.0f;
-int stage = 1;
-int scorev = 0;
-
+// ---------------------------------
+// 탱크의 물리적 상태를 저장하는 구조체 정의
+// ---------------------------------
 typedef struct {
-    float x, y;
-    float angle;
-    float power;
-    int hp;
-    WeaponType wpn;
-    bool alive;
+    float world_x;     // 맵에서의 X 좌표(게임 맵 전체)
+    float y_screen;    // 화면상의 Y 좌표(화면 상에서만 그려질 Y축)
+    float vx;          // X 속도
+    float vy;          // Y 속도 (중력/점프)
+    bool on_ground;    // 땅에 닿아있는지 (점프 가능 여부 판단)
 } Tank;
 
 typedef struct {
-    bool used;
-    float x, y;
-    float vx, vy;
-    WeaponType type;
-    int owner_is_player;
-} Shot;
+    float camera_x; // 가로 스크롤 방식
+    float camera_y; // 세로는 화면 고정 방식
+} Camera;
 
-typedef struct {
-    bool used;
-    float x, y;
-    Difficulty diff;
-    int hp;
-    float shoot_cooldown;
-} Enemy;
+// ---------------------------------
+// 전역 변수
+// ---------------------------------
+Tank tank;
+Camera camera;
+float gravity = 0.5f; // 중력 가속도 설정
+float friction = 0.9f; // 표면 마찰 계수(원래는 한 0.8)
 
-#define MAX_SHOTS 128
-#define MAX_ENEMIES 8
-Shot shots[MAX_SHOTS];
-Enemy enemies[MAX_ENEMIES];
-Tank player;
+// ---------------------------------
+// 함수 원형
+// ---------------------------------
+void must_init(bool test, const char* description);
+float ground_y_at(float x); 
+void init_game();
+void update_physics(ALLEGRO_KEYBOARD_STATE* ks);
+void render();
 
-static void must_init_bool(bool ok, const char* desc) {
-    if (!ok) { fprintf(stderr, "couldn't initialize %s\n", desc); exit(1); }
+// ---------------------------------
+// 보조 함수
+// ---------------------------------
+void must_init(bool test, const char* description) {
+    if (test) return;
+    printf("couldn't initialize %s\n", description);
+    exit(1);
 }
-static void must_init_ptr(void* p, const char* desc) {
-    if (!p) { fprintf(stderr, "couldn't initialize %s\n", desc); exit(1); }
+
+// 단순 지형 높이 함수
+float ground_y_at(float x) { //특정 x좌표에서의 지형 높이 계산
+  //  return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅 -> 다양한 렌더링 추가 가능 (sin x 함수로 지형 표현
+  // )
+    if (x < 300) {
+        return 400; // 평지 구간
+    }
+    else if (x < 500) {
+        // 발판: 왼쪽 50픽셀은 낮고, 오른쪽 50픽셀은 높음
+        if (((int)x % 100) < 50)
+            return 350;
+        else
+            return 400;
+    }
+    else if (x < 700) {
+        // 계단식 지형: 100픽셀마다 20씩 상승
+        int step = ((int)x - 500) / 100;
+        return 400 - step * 20;
+    }
+    else {
+        // 언덕: 부드러운 사인 곡선
+        return 360 + 40 * sinf((x - 700) * 0.05f);
+    }
 }
-static float clampf(float v, float a, float b) { return v < a ? a : (v > b ? b : v); }
-int main(void) {
-    void terrain_init(int w, int h) {
-        if (terrain) al_destroy_bitmap(terrain);
-        terrain = al_create_bitmap(w, h);
-        must_init_ptr(terrain, "terrain bitmap");
-        ALLEGRO_BITMAP* prev = al_get_target_bitmap();
-        al_set_target_bitmap(terrain);
-        al_clear_to_color(al_map_rgba(0, 0, 0, 0));
-        ALLEGRO_COLOR ground = al_map_rgba(42, 120, 42, 255);
-        for (int x = 0; x < w; x += 4) {
-            float nx = (float)x / (float)w;
-            int base = (int)(h * 0.6f + 20.0f * sinf(nx * 6.0f) + 8.0f * cosf(nx * 17.0f));
-            al_draw_filled_rectangle(x, base, x + 4, h, ground);
+
+
+// ---------------------------------
+// 초기화
+// ---------------------------------
+void init_game() {
+    tank.world_x = 100;
+    tank.y_screen = ground_y_at(100) - 20; // 탱크 바닥 땅 위에
+    tank.vx = 0;
+    tank.vy = 0;
+    tank.on_ground = true;
+
+    camera.camera_x = 0;
+    camera.camera_y = 0;
+}
+
+// ---------------------------------
+// 물리 업데이트
+// ---------------------------------
+void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
+    static bool prev_space = false;
+
+    // 좌우 이동
+    if (al_key_down(ks, ALLEGRO_KEY_LEFT)) { // left 자리에 내가 원하는 기호 넣으면 그게 키가 됌
+        tank.vx = -2; // -2는 왼쪽으로 라는것을 의미 (숫자 크기 = 속도)
+    }
+    else if (al_key_down(ks, ALLEGRO_KEY_RIGHT)) {
+        tank.vx = 2; // +2는 오른쪽을 의미
+    }
+    else {
+        tank.vx *= friction; // 관성 마찰 작용 0.8로서 일반적 1*0.8해서 관성 작용
+    }
+
+    // 점프 (스페이스 키 눌렀을 때)
+    if (al_key_down(ks, ALLEGRO_KEY_SPACE) && !prev_space && tank.on_ground) {
+        tank.vy = -9.5f;
+        tank.on_ground = false;
+    }
+    prev_space = al_key_down(ks, ALLEGRO_KEY_SPACE);
+
+    // 중력 적용
+    tank.vy += gravity;
+    tank.world_x += tank.vx;
+    tank.y_screen += tank.vy;   // <- 여기 추가 (화면 좌표도 갱신)
+
+    // 땅 충돌 체크
+    float ground_y = ground_y_at(tank.world_x);
+    if (tank.y_screen >= ground_y - 20) {
+        tank.y_screen = ground_y - 20;
+        tank.vy = 0;
+        tank.on_ground = true;
+    }
+
+    // 카메라 탱크 따라가기
+    camera.camera_x = tank.world_x - 400; // 화면 중앙 기준
+    camera.camera_y = 0;
+}
+
+// ---------------------------------
+// 렌더링 (맵 생성 sin 파형으로)
+// ---------------------------------
+void render() {
+    al_clear_to_color(al_map_rgb(100, 149, 237)); // 배경색 파란색
+
+    // 땅 그리기
+    for (int x = -50; x < 850; x++) {
+        float world_x = x + camera.camera_x;
+        float ground_y = ground_y_at(world_x);
+        al_draw_filled_rectangle(x, ground_y, x + 1, 600, al_map_rgb(34, 139, 34));
+    } // 땅 색상을 풀 색으로 설정 (R,G,B 배열)
+
+    // 탱크 (빨간색 사각형)
+    float draw_x = tank.world_x - camera.camera_x;
+    float draw_y = tank.y_screen;
+    al_draw_filled_rectangle(draw_x - 20, draw_y - 20, draw_x + 20, draw_y, al_map_rgb(200, 0, 0));
+}
+
+// ---------------------------------
+// 메인
+// ---------------------------------
+int main() {
+    must_init(al_init(), "allegro");
+    must_init(al_install_keyboard(), "keyboard");
+    must_init(al_init_primitives_addon(), "primitives");
+
+    ALLEGRO_DISPLAY* disp = al_create_display(800, 600); //800-600 픽셀
+    must_init(disp, "display");
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    must_init(timer, "timer");
+
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    must_init(queue, "queue");
+
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+    al_register_event_source(queue, al_get_keyboard_event_source());
+
+    init_game();
+    al_start_timer(timer);
+
+    bool done = false;
+    ALLEGRO_KEYBOARD_STATE ks;
+
+    while (!done) {
+        ALLEGRO_EVENT event;
+        al_wait_for_event(queue, &event);
+
+        if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            done = true;
         }
-        al_set_target_bitmap(prev);
-    }
-
-    void terrain_blast(float cx, float cy, float r) {
-        if (!terrain) return;
-        ALLEGRO_BITMAP* prev = al_get_target_bitmap();
-        al_set_target_bitmap(terrain);
-        al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
-        al_draw_filled_circle(cx, cy, r, al_map_rgba(0, 0, 0, 0));
-        al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
-        al_set_target_bitmap(prev);
-    }
-
-    bool terrain_solid_at(int sx, int sy) {
-        if (!terrain || sx < 0 || sy < 0 || sx >= BUFFER_W || sy >= BUFFER_H) return false;
-        ALLEGRO_LOCKED_REGION* lr = al_lock_bitmap(terrain, ALLEGRO_PIXEL_FORMAT_ABGR_8888, ALLEGRO_LOCK_READONLY);
-        if (!lr) return false;
-        unsigned char* p = (unsigned char*)lr->data + sy * lr->pitch + sx * 4;
-        bool solid = p[3] > 8;
-        al_unlock_bitmap(terrain);
-        return solid;
-    }
-
-    int find_free_shot(void) {
-        for (int i = 0; i < MAX_SHOTS; i++) if (!shots[i].used) return i;
-        return -1;
-    }
-
-    void add_shot(float x, float y, float vx, float vy, WeaponType t, int owner) {
-        int i = find_free_shot();
-        if (i < 0) return;
-        shots[i] = (Shot){ true, x, y, vx, vy, t, owner };
-    }
-
-    void damage_from_explosion(float cx, float cy, float r) {
-        float dx = player.x - cx, dy = player.y - 8 - cy;
-        float d2 = dx * dx + dy * dy;
-        if (d2 <= r * r) {
-            int dmg = (int)(80 * (1.0f - sqrtf(d2) / r));
-            player.hp -= dmg;
-            if (player.hp <= 0) player.alive = false;
-        }
-        for (int i = 0; i < MAX_ENEMIES; i++) {
-            if (!enemies[i].used) continue;
-            dx = enemies[i].x - cx; dy = enemies[i].y - cy;
-            d2 = dx * dx + dy * dy;
-            if (d2 <= r * r) {
-                int dmg = (int)(100 * (1.0f - sqrtf(d2) / r));
-                enemies[i].hp -= dmg;
-                if (enemies[i].hp <= 0) {
-                    enemies[i].used = false;
-                    scorev += (enemies[i].diff == DIFF_EASY) ? 100 : (enemies[i].diff == DIFF_MED) ? 250 : 500;
-                }
-            }
+        if (event.type == ALLEGRO_EVENT_TIMER) {
+            al_get_keyboard_state(&ks);
+            update_physics(&ks);
+            render();
+            al_flip_display();
         }
     }
 
-    void update_shots(double dt) {
-        for (int i = 0; i < MAX_SHOTS; i++) {
-            if (!shots[i].used) continue;
-            shots[i].vx += wind_ax * dt * (shots[i].type == WPN_MISSILE ? 1.1f : 1.0f);
-            shots[i].vy += GRAVITY * dt;
-            float nx = shots[i].x + shots[i].vx * dt;
-            float ny = shots[i].y + shots[i].vy * dt;
-            bool hit = false;
-            for (int s = 1; s <= 6; s++) {
-                int sx = (int)(shots[i].x + (nx - shots[i].x) * s / 6.0f);
-                int sy = (int)(shots[i].y + (ny - shots[i].y) * s / 6.0f);
-                if (terrain_solid_at(sx, sy)) { hit = true; break; }
-            }
-            shots[i].x = nx; shots[i].y = ny;
-            if (hit) {
-                float r = (shots[i].type == WPN_GATLING) ? EXPLOSION_RADIUS * 0.45f :
-                    (shots[i].type == WPN_MISSILE) ? EXPLOSION_RADIUS * 0.9f : EXPLOSION_RADIUS;
-                terrain_blast(nx, ny, r);
-                damage_from_explosion(nx, ny, r);
-                shots[i].used = false;
-            }
-            else if (nx < -50 || nx > BUFFER_W + 50 || ny > BUFFER_H + 200) {
-                shots[i].used = false;
-            }
-        }
-    }
-
-    void update_enemies(double dt) {
-        for (int i = 0; i < MAX_ENEMIES; i++)if (!enemies[i].used);
-    }
-
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
     return 0;
 }
