@@ -1,1 +1,185 @@
+// fortress_min_fixed.c
+// Build: gcc fortress_min_fixed.c -o fortress_min_fixed $(pkg-config --cflags --libs allegro-5 allegro_primitives-5 allegro_font-5 allegro_ttf-5)
 
+#define _USE_MATH_DEFINES
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_ttf.h>
+
+#define BUFFER_W 1024
+#define BUFFER_H 480
+#define VIEW_W 800
+#define VIEW_H 480
+#define WINDOW_W VIEW_W
+#define WINDOW_H (VIEW_H + 120)
+
+#define GRAVITY 420.0f
+#define WIND_MAX 220.0f
+#define WIND_TICK 3.0f
+#define PLAYER_SPEED 140.0f
+#define EXPLOSION_RADIUS 48.0f
+
+typedef enum { WPN_CANNON = 0, WPN_MISSILE = 1, WPN_GATLING = 2, WPN_COUNT } WeaponType;
+const char* weapon_name[WPN_COUNT] = { "CANNON", "MISSILE", "GATLING" };
+
+typedef enum { DIFF_EASY = 0, DIFF_MED, DIFF_HARD } Difficulty;
+
+ALLEGRO_DISPLAY* display = NULL;
+ALLEGRO_EVENT_QUEUE* queue = NULL;
+ALLEGRO_TIMER* timer = NULL;
+ALLEGRO_FONT* fontb = NULL;
+ALLEGRO_BITMAP* terrain = NULL;
+
+float cam_x = 0.0f;
+float wind_ax = 0.0f;
+float wind_timer = 0.0f;
+int stage = 1;
+int scorev = 0;
+
+typedef struct {
+    float x, y;
+    float angle;
+    float power;
+    int hp;
+    WeaponType wpn;
+    bool alive;
+} Tank;
+
+typedef struct {
+    bool used;
+    float x, y;
+    float vx, vy;
+    WeaponType type;
+    int owner_is_player;
+} Shot;
+
+typedef struct {
+    bool used;
+    float x, y;
+    Difficulty diff;
+    int hp;
+    float shoot_cooldown;
+} Enemy;
+
+#define MAX_SHOTS 128
+#define MAX_ENEMIES 8
+Shot shots[MAX_SHOTS];
+Enemy enemies[MAX_ENEMIES];
+Tank player;
+
+static void must_init_bool(bool ok, const char* desc) {
+    if (!ok) { fprintf(stderr, "couldn't initialize %s\n", desc); exit(1); }
+}
+static void must_init_ptr(void* p, const char* desc) {
+    if (!p) { fprintf(stderr, "couldn't initialize %s\n", desc); exit(1); }
+}
+static float clampf(float v, float a, float b) { return v < a ? a : (v > b ? b : v); }
+int main(void) {
+    void terrain_init(int w, int h) {
+        if (terrain) al_destroy_bitmap(terrain);
+        terrain = al_create_bitmap(w, h);
+        must_init_ptr(terrain, "terrain bitmap");
+        ALLEGRO_BITMAP* prev = al_get_target_bitmap();
+        al_set_target_bitmap(terrain);
+        al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+        ALLEGRO_COLOR ground = al_map_rgba(42, 120, 42, 255);
+        for (int x = 0; x < w; x += 4) {
+            float nx = (float)x / (float)w;
+            int base = (int)(h * 0.6f + 20.0f * sinf(nx * 6.0f) + 8.0f * cosf(nx * 17.0f));
+            al_draw_filled_rectangle(x, base, x + 4, h, ground);
+        }
+        al_set_target_bitmap(prev);
+    }
+
+    void terrain_blast(float cx, float cy, float r) {
+        if (!terrain) return;
+        ALLEGRO_BITMAP* prev = al_get_target_bitmap();
+        al_set_target_bitmap(terrain);
+        al_set_blender(ALLEGRO_ADD, ALLEGRO_ZERO, ALLEGRO_INVERSE_ALPHA);
+        al_draw_filled_circle(cx, cy, r, al_map_rgba(0, 0, 0, 0));
+        al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+        al_set_target_bitmap(prev);
+    }
+
+    bool terrain_solid_at(int sx, int sy) {
+        if (!terrain || sx < 0 || sy < 0 || sx >= BUFFER_W || sy >= BUFFER_H) return false;
+        ALLEGRO_LOCKED_REGION* lr = al_lock_bitmap(terrain, ALLEGRO_PIXEL_FORMAT_ABGR_8888, ALLEGRO_LOCK_READONLY);
+        if (!lr) return false;
+        unsigned char* p = (unsigned char*)lr->data + sy * lr->pitch + sx * 4;
+        bool solid = p[3] > 8;
+        al_unlock_bitmap(terrain);
+        return solid;
+    }
+
+    int find_free_shot(void) {
+        for (int i = 0; i < MAX_SHOTS; i++) if (!shots[i].used) return i;
+        return -1;
+    }
+
+    void add_shot(float x, float y, float vx, float vy, WeaponType t, int owner) {
+        int i = find_free_shot();
+        if (i < 0) return;
+        shots[i] = (Shot){ true, x, y, vx, vy, t, owner };
+    }
+
+    void damage_from_explosion(float cx, float cy, float r) {
+        float dx = player.x - cx, dy = player.y - 8 - cy;
+        float d2 = dx * dx + dy * dy;
+        if (d2 <= r * r) {
+            int dmg = (int)(80 * (1.0f - sqrtf(d2) / r));
+            player.hp -= dmg;
+            if (player.hp <= 0) player.alive = false;
+        }
+        for (int i = 0; i < MAX_ENEMIES; i++) {
+            if (!enemies[i].used) continue;
+            dx = enemies[i].x - cx; dy = enemies[i].y - cy;
+            d2 = dx * dx + dy * dy;
+            if (d2 <= r * r) {
+                int dmg = (int)(100 * (1.0f - sqrtf(d2) / r));
+                enemies[i].hp -= dmg;
+                if (enemies[i].hp <= 0) {
+                    enemies[i].used = false;
+                    scorev += (enemies[i].diff == DIFF_EASY) ? 100 : (enemies[i].diff == DIFF_MED) ? 250 : 500;
+                }
+            }
+        }
+    }
+
+    void update_shots(double dt) {
+        for (int i = 0; i < MAX_SHOTS; i++) {
+            if (!shots[i].used) continue;
+            shots[i].vx += wind_ax * dt * (shots[i].type == WPN_MISSILE ? 1.1f : 1.0f);
+            shots[i].vy += GRAVITY * dt;
+            float nx = shots[i].x + shots[i].vx * dt;
+            float ny = shots[i].y + shots[i].vy * dt;
+            bool hit = false;
+            for (int s = 1; s <= 6; s++) {
+                int sx = (int)(shots[i].x + (nx - shots[i].x) * s / 6.0f);
+                int sy = (int)(shots[i].y + (ny - shots[i].y) * s / 6.0f);
+                if (terrain_solid_at(sx, sy)) { hit = true; break; }
+            }
+            shots[i].x = nx; shots[i].y = ny;
+            if (hit) {
+                float r = (shots[i].type == WPN_GATLING) ? EXPLOSION_RADIUS * 0.45f :
+                    (shots[i].type == WPN_MISSILE) ? EXPLOSION_RADIUS * 0.9f : EXPLOSION_RADIUS;
+                terrain_blast(nx, ny, r);
+                damage_from_explosion(nx, ny, r);
+                shots[i].used = false;
+            }
+            else if (nx < -50 || nx > BUFFER_W + 50 || ny > BUFFER_H + 200) {
+                shots[i].used = false;
+            }
+        }
+    }
+
+    void update_enemies(double dt) {
+        for (int i = 0; i < MAX_ENEMIES; i++)if (!enemies[i].used);
+    }
+
+    return 0;
+}
