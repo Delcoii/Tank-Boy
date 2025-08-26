@@ -1025,8 +1025,8 @@ int main()
 #endif
 
 
-
 #if 0
+
 /* game.c
  *
  * TankBoy - single-file Allegro5 game prototype
@@ -1910,8 +1910,12 @@ int main(int argc, char** argv)
     return 0;
 }
  
-
 #endif
+
+
+
+
+#if 0
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <allegro5/allegro.h>
@@ -1923,19 +1927,19 @@ int main(int argc, char** argv)
 #include <math.h>
 
 // ---------------------------------
-// 구조체 정의
+// 탱크의 물리적 상태를 저장하는 구조체 정의
 // ---------------------------------
 typedef struct {
-    float world_x;     // 맵에서의 X 좌표
-    float y_screen;    // 화면상의 Y 좌표
+    float world_x;     // 맵에서의 X 좌표(게임 맵 전체)
+    float y_screen;    // 화면상의 Y 좌표(화면 상에서만 그려질 Y축)
     float vx;          // X 속도
     float vy;          // Y 속도 (중력/점프)
-    bool on_ground;    // 땅에 닿아있는지
+    bool on_ground;    // 땅에 닿아있는지 (점프 가능 여부 판단)
 } Tank;
 
 typedef struct {
-    float camera_x;
-    float camera_y;
+    float camera_x; // 가로 스크롤 방식
+    float camera_y; // 세로는 화면 고정 방식
 } Camera;
 
 // ---------------------------------
@@ -1943,14 +1947,14 @@ typedef struct {
 // ---------------------------------
 Tank tank;
 Camera camera;
-float gravity = 0.5f;
-float friction = 0.8f;
+float gravity = 0.5f; // 중력 가속도 설정
+float friction = 0.9f; // 표면 마찰 계수(원래는 한 0.8)
 
 // ---------------------------------
 // 함수 원형
 // ---------------------------------
 void must_init(bool test, const char* description);
-float ground_y_at(float x);
+float ground_y_at(float x); 
 void init_game();
 void update_physics(ALLEGRO_KEYBOARD_STATE* ks);
 void render();
@@ -1965,9 +1969,30 @@ void must_init(bool test, const char* description) {
 }
 
 // 단순 지형 높이 함수
-float ground_y_at(float x) {
-    return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅
+float ground_y_at(float x) { //특정 x좌표에서의 지형 높이 계산
+  //  return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅 -> 다양한 렌더링 추가 가능 (sin x 함수로 지형 표현
+  // )
+    if (x < 300) {
+        return 400; // 평지 구간
+    }
+    else if (x < 500) {
+        // 발판: 왼쪽 50픽셀은 낮고, 오른쪽 50픽셀은 높음
+        if (((int)x % 100) < 50)
+            return 350;
+        else
+            return 400;
+    }
+    else if (x < 700) {
+        // 계단식 지형: 100픽셀마다 20씩 상승
+        int step = ((int)x - 500) / 100;
+        return 400 - step * 20;
+    }
+    else {
+        // 언덕: 부드러운 사인 곡선
+        return 360 + 40 * sinf((x - 700) * 0.05f);
+    }
 }
+
 
 // ---------------------------------
 // 초기화
@@ -1990,14 +2015,14 @@ void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
     static bool prev_space = false;
 
     // 좌우 이동
-    if (al_key_down(ks, ALLEGRO_KEY_A)) {
-        tank.vx = -2;
+    if (al_key_down(ks, ALLEGRO_KEY_LEFT)) { // left 자리에 내가 원하는 기호 넣으면 그게 키가 됌
+        tank.vx = -2; // -2는 왼쪽으로 라는것을 의미 (숫자 크기 = 속도)
     }
-    else if (al_key_down(ks, ALLEGRO_KEY_D)) {
-        tank.vx = 2;
+    else if (al_key_down(ks, ALLEGRO_KEY_RIGHT)) {
+        tank.vx = 2; // +2는 오른쪽을 의미
     }
     else {
-        tank.vx *= friction;
+        tank.vx *= friction; // 관성 마찰 작용 0.8로서 일반적 1*0.8해서 관성 작용
     }
 
     // 점프 (스페이스 키 눌렀을 때)
@@ -2026,17 +2051,17 @@ void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
 }
 
 // ---------------------------------
-// 렌더링
+// 렌더링 (맵 생성 sin 파형으로)
 // ---------------------------------
 void render() {
-    al_clear_to_color(al_map_rgb(100, 149, 237));
+    al_clear_to_color(al_map_rgb(100, 149, 237)); // 배경색 파란색
 
     // 땅 그리기
-    for (int x = -50; x < 850; x++) {
+    for (int x = -50; x < 1280; x++) {
         float world_x = x + camera.camera_x;
         float ground_y = ground_y_at(world_x);
         al_draw_filled_rectangle(x, ground_y, x + 1, 600, al_map_rgb(34, 139, 34));
-    }
+    } // 땅 색상을 풀 색으로 설정 (R,G,B 배열)
 
     // 탱크 (빨간색 사각형)
     float draw_x = tank.world_x - camera.camera_x;
@@ -2052,7 +2077,7 @@ int main() {
     must_init(al_install_keyboard(), "keyboard");
     must_init(al_init_primitives_addon(), "primitives");
 
-    ALLEGRO_DISPLAY* disp = al_create_display(800, 600);
+    ALLEGRO_DISPLAY* disp = al_create_display(1280, 720); //800-600 픽셀
     must_init(disp, "display");
 
     ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
@@ -2086,6 +2111,813 @@ int main() {
         }
     }
 
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
+    return 0;
+}
+#endif
+
+
+#if 0
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_primitives.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define BUFFER_W 1280
+#define BUFFER_H 720
+
+ALLEGRO_DISPLAY* disp;
+ALLEGRO_BITMAP* buffer;
+
+void disp_init() {
+    disp = al_create_display(BUFFER_W, BUFFER_H);
+    if (!disp) exit(1);
+    buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    if (!buffer) exit(1);
+}
+void disp_pre_draw() { al_set_target_bitmap(buffer); }
+void disp_post_draw() {
+    al_set_target_backbuffer(disp);
+    al_draw_bitmap(buffer, 0, 0, 0);
+    al_flip_display();
+}
+
+/* --- 키보드 입력 --- */
+typedef struct {
+    bool left, right, jump;
+    bool fire, change_weapon;
+    bool rotate_cw, rotate_ccw;
+    bool esc;
+} Input;
+Input input;
+
+void keyboard_update(ALLEGRO_EVENT* event) {
+    bool down = event->type == ALLEGRO_EVENT_KEY_DOWN;
+    switch (event->keyboard.keycode) {
+    case ALLEGRO_KEY_LEFT: input.left = down; break;
+    case ALLEGRO_KEY_RIGHT: input.right = down; break;
+    case ALLEGRO_KEY_SPACE: input.jump = down; break;
+    case ALLEGRO_KEY_X: input.fire = down; break;
+    case ALLEGRO_KEY_R: input.change_weapon = down; break;
+    case ALLEGRO_KEY_Z: input.rotate_cw = down; break;
+    case ALLEGRO_KEY_C: input.rotate_ccw = down; break;
+    case ALLEGRO_KEY_ESCAPE: input.esc = down; break;
+    }
+}
+
+/* --- 맵 / 지형 --- */
+#define MAP_W 200
+float map_height[MAP_W];
+
+void map_init() {
+    float base = BUFFER_H - 40;
+    for (int i = 0; i < MAP_W; i++)
+        map_height[i] = base + (rand() % 20 - 10); // 간단한 지형
+}
+
+float ground_y_at(int x_tile) {
+    if (x_tile < 0) x_tile = 0;
+    if (x_tile >= MAP_W) x_tile = MAP_W - 1;
+    return map_height[x_tile];
+}
+
+/* --- 카메라 --- */
+typedef struct {
+    float x, y;
+} Camera;
+Camera camera;
+
+/* --- 탱크 구조체 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    float cannon_angle; // 포신 각도
+    bool on_ground;
+    int weapon; // 0 = MG, 1 = Cannon
+} Tank;
+Tank tank;
+
+void tank_init() {
+    tank.x = 50;
+    tank.y = ground_y_at((int)tank.x) - 20;
+    tank.vx = tank.vy = 0;
+    tank.on_ground = true;
+    tank.cannon_angle = M_PI / 4;
+    tank.weapon = 0;
+}
+
+/* --- 탄환 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    bool alive;
+    int weapon;
+} Bullet;
+
+#define MAX_BULLETS 50
+Bullet bullets[MAX_BULLETS];
+
+void bullets_init() {
+    for (int i = 0; i < MAX_BULLETS; i++) bullets[i].alive = false;
+}
+
+void shoot_bullet() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) {
+            bullets[i].alive = true;
+            bullets[i].x = tank.x + 16;
+            bullets[i].y = tank.y + 10;
+            bullets[i].weapon = tank.weapon;
+            float speed = (tank.weapon == 0) ? 8.0f : 6.0f;
+            bullets[i].vx = cosf(tank.cannon_angle) * speed;
+            bullets[i].vy = -sinf(tank.cannon_angle) * speed;
+            break;
+        }
+    }
+}
+
+void bullets_update() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        if (bullets[i].weapon == 1) bullets[i].vy += 0.3f; // 대포는 중력 적용
+        bullets[i].x += bullets[i].vx;
+        bullets[i].y += bullets[i].vy;
+        // 화면 밖이나 지형 충돌 시 삭제
+        if (bullets[i].x < 0 || bullets[i].x >= MAP_W * 4 || bullets[i].y >= BUFFER_H) bullets[i].alive = false;
+    }
+}
+
+/* --- 탱크 업데이트 --- */
+void tank_update() {
+    const float accel = 0.4f;
+    const float maxspeed = 3.0f;
+    const float friction = 0.85f;
+    const float gravity = 0.5f;
+
+    if (input.left) tank.vx -= accel;
+    if (input.right) tank.vx += accel;
+    tank.vx *= friction;
+    if (tank.vx > maxspeed) tank.vx = maxspeed;
+    if (tank.vx < -maxspeed) tank.vx = -maxspeed;
+
+    tank.x += tank.vx;
+
+    if (input.jump && tank.on_ground) {
+        tank.vy = -8;
+        tank.on_ground = false;
+    }
+
+    if (input.rotate_cw) { tank.cannon_angle += 0.05f; if (tank.cannon_angle > M_PI * 0.9f) tank.cannon_angle = M_PI * 0.9f; }
+    if (input.rotate_ccw) { tank.cannon_angle -= 0.05f; if (tank.cannon_angle < 0.1f) tank.cannon_angle = 0.1f; }
+
+    tank.vy += gravity;
+    tank.y += tank.vy;
+
+    float ground = ground_y_at((int)tank.x);
+    if (tank.y > ground - 20) { tank.y = ground - 20; tank.vy = 0; tank.on_ground = true; }
+
+    if (input.change_weapon) { tank.weapon = 1 - tank.weapon; input.change_weapon = false; }
+
+    if (input.fire) { shoot_bullet(); input.fire = false; }
+
+    camera.x = tank.x - BUFFER_W / 3;
+    camera.y = tank.y - BUFFER_H / 2;
+
+    bullets_update();
+}
+
+/* --- 그리기 --- */
+void draw_tank() {
+    float screen_x = tank.x - camera.x;
+    float screen_y = tank.y - camera.y;
+
+    al_draw_filled_rectangle(screen_x, screen_y, screen_x + 32, screen_y + 20, al_map_rgb(60, 120, 180));
+
+    float cx = screen_x + 16;
+    float cy = screen_y + 10;
+    float bx = cx + cosf(tank.cannon_angle) * 18;
+    float by = cy - sinf(tank.cannon_angle) * 18;
+    al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
+}
+
+void draw_map() {
+    for (int i = 0; i < MAP_W; i++) {
+        float sx = i * 4 - camera.x;
+        float sy = map_height[i];
+        al_draw_filled_rectangle(sx, sy, sx + 4, BUFFER_H, al_map_rgb(30, 150, 40));
+    }
+}
+
+void draw_bullets() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        float sx = bullets[i].x - camera.x;
+        float sy = bullets[i].y - camera.y;
+        al_draw_filled_circle(sx, sy, 4, al_map_rgb(255, 50, 50));
+    }
+}
+
+int main() {
+    srand((unsigned int)time(NULL));
+    if (!al_init()) return 1;
+    al_install_keyboard();
+    al_init_primitives_addon();
+
+    disp_init();
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60);
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    al_register_event_source(queue, al_get_keyboard_event_source());
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+
+    map_init();
+    tank_init();
+    bullets_init();
+
+    al_start_timer(timer);
+    bool done = false;
+    ALLEGRO_EVENT event;
+
+    while (!done) {
+        al_wait_for_event(queue, &event);
+
+        switch (event.type) {
+        case ALLEGRO_EVENT_DISPLAY_CLOSE: done = true; break;
+        case ALLEGRO_EVENT_TIMER: tank_update(); break;
+        case ALLEGRO_EVENT_KEY_DOWN:
+        case ALLEGRO_EVENT_KEY_UP: keyboard_update(&event); break;
+        }
+
+        disp_pre_draw();
+        al_clear_to_color(al_map_rgb(20, 20, 30));
+        draw_map();
+        draw_tank();
+        draw_bullets();
+        disp_post_draw();
+    }
+
+    al_destroy_bitmap(buffer);
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
+    return 0;
+}
+
+#endif
+
+#if 0
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_primitives.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <time.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define BUFFER_W 1280
+#define BUFFER_H 720
+#define MAP_W 200
+#define MAX_BULLETS 50
+
+/* --- 디스플레이 / 버퍼 --- */
+ALLEGRO_DISPLAY* disp;
+ALLEGRO_BITMAP* buffer;
+
+void disp_init() {
+    disp = al_create_display(BUFFER_W, BUFFER_H);
+    if (!disp) exit(1);
+    buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    if (!buffer) exit(1);
+}
+void disp_pre_draw() { al_set_target_bitmap(buffer); }
+void disp_post_draw() {
+    al_set_target_backbuffer(disp);
+    al_draw_bitmap(buffer, 0, 0, 0);
+    al_flip_display();
+}
+
+/* --- 키보드 입력 --- */
+typedef struct {
+    bool left, right, jump;
+    bool fire, change_weapon;
+    bool rotate_cw, rotate_ccw;
+    bool esc;
+} Input;
+Input input;
+
+void keyboard_update(ALLEGRO_EVENT* event) {
+    bool down = event->type == ALLEGRO_EVENT_KEY_DOWN;
+    switch (event->keyboard.keycode) {
+    case ALLEGRO_KEY_LEFT: input.left = down; break;
+    case ALLEGRO_KEY_RIGHT: input.right = down; break;
+    case ALLEGRO_KEY_SPACE: input.jump = down; break;
+    case ALLEGRO_KEY_X: input.fire = down; break;
+    case ALLEGRO_KEY_R: input.change_weapon = down; break;
+    case ALLEGRO_KEY_Z: input.rotate_cw = down; break;
+    case ALLEGRO_KEY_C: input.rotate_ccw = down; break;
+    case ALLEGRO_KEY_ESCAPE: input.esc = down; break;
+    }
+}
+
+/* --- 맵 / 지형 --- */
+float map_height[MAP_W];
+
+void map_init() {
+    float base = BUFFER_H - 40;
+    for (int i = 0; i < MAP_W; i++)
+        map_height[i] = base + (rand() % 20 - 10);
+}
+
+float ground_y_at(int x_tile) {
+    if (x_tile < 0) x_tile = 0;
+    if (x_tile >= MAP_W) x_tile = MAP_W - 1;
+    return map_height[x_tile];
+}
+
+/* --- 카메라 --- */
+typedef struct {
+    float x, y;
+} Camera;
+Camera camera;
+
+/* --- 탱크 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    float cannon_angle;
+    bool on_ground;
+    int weapon; // 0 = MG, 1 = Cannon
+} Tank;
+Tank tank;
+
+void tank_init() {
+    tank.x = 50;
+    tank.y = ground_y_at((int)tank.x) - 20;
+    tank.vx = tank.vy = 0;
+    tank.on_ground = true;
+    tank.cannon_angle = M_PI / 4;
+    tank.weapon = 0;
+}
+
+/* --- 탄환 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    bool alive;
+    int weapon;
+} Bullet;
+Bullet bullets[MAX_BULLETS];
+
+void bullets_init() {
+    for (int i = 0; i < MAX_BULLETS; i++) bullets[i].alive = false;
+}
+
+void shoot_bullet() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) {
+            bullets[i].alive = true;
+            bullets[i].x = tank.x + 16;
+            bullets[i].y = tank.y + 10;
+            bullets[i].weapon = tank.weapon;
+            float speed = (tank.weapon == 0) ? 8.0f * 3 : 6.0f * 3; // 3배
+            bullets[i].vx = cosf(tank.cannon_angle) * speed;
+            bullets[i].vy = -sinf(tank.cannon_angle) * speed;
+            break;
+        }
+    }
+}
+
+void bullets_update() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        if (bullets[i].weapon == 1) bullets[i].vy += 0.3f;
+        bullets[i].x += bullets[i].vx;
+        bullets[i].y += bullets[i].vy;
+        if (bullets[i].x < 0 || bullets[i].x >= MAP_W * 4 || bullets[i].y >= BUFFER_H)
+            bullets[i].alive = false;
+    }
+}
+
+/* --- 탱크 업데이트 --- */
+void tank_update() {
+    const float accel = 0.4f;
+    const float maxspeed = 3.0f;
+    const float friction = 0.85f;
+    const float gravity = 0.5f;
+
+    if (input.left) tank.vx -= accel;
+    if (input.right) tank.vx += accel;
+    tank.vx *= friction;
+    if (tank.vx > maxspeed) tank.vx = maxspeed;
+    if (tank.vx < -maxspeed) tank.vx = -maxspeed;
+
+    tank.x += tank.vx;
+
+    if (input.jump && tank.on_ground) {
+        tank.vy = -8;
+        tank.on_ground = false;
+    }
+
+    if (input.rotate_cw) { tank.cannon_angle += 0.05f; if (tank.cannon_angle > M_PI * 0.9f) tank.cannon_angle = M_PI * 0.9f; }
+    if (input.rotate_ccw) { tank.cannon_angle -= 0.05f; if (tank.cannon_angle < 0.1f) tank.cannon_angle = 0.1f; }
+
+    tank.vy += gravity;
+    tank.y += tank.vy;
+
+    float ground = ground_y_at((int)tank.x);
+    if (tank.y > ground - 20) { tank.y = ground - 20; tank.vy = 0; tank.on_ground = true; }
+
+    if (input.change_weapon) { tank.weapon = 1 - tank.weapon; input.change_weapon = false; }
+    if (input.fire) { shoot_bullet(); input.fire = false; }
+
+    bullets_update();
+
+    // 카메라 X, Y 모두 탱크 중심 기준
+    camera.x = tank.x - BUFFER_W / 3;
+    camera.y = tank.y - BUFFER_H / 2;
+}
+
+/* --- 그리기 --- */
+void draw_tank() {
+    float screen_x = tank.x - camera.x;
+    float screen_y = tank.y - camera.y;
+
+    al_draw_filled_rectangle(screen_x, screen_y, screen_x + 32, screen_y + 20, al_map_rgb(60, 120, 180));
+
+    float cx = screen_x + 16;
+    float cy = screen_y + 10;
+    float bx = cx + cosf(tank.cannon_angle) * 18;
+    float by = cy - sinf(tank.cannon_angle) * 18;
+    al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
+}
+
+void draw_map() {
+    for (int i = 0; i < MAP_W; i++) {
+        float sx = i * 4 - camera.x;
+        float sy = map_height[i];
+        al_draw_filled_rectangle(sx, sy, sx + 4, BUFFER_H, al_map_rgb(30, 150, 40));
+    }
+}
+
+void draw_bullets() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        float sx = bullets[i].x - camera.x;
+        float sy = bullets[i].y - camera.y;
+        al_draw_filled_circle(sx, sy, 4, al_map_rgb(255, 50, 50));
+    }
+}
+
+/* --- 메인 --- */
+int main() {
+    srand((unsigned int)time(NULL));
+    if (!al_init()) return 1;
+    al_install_keyboard();
+    al_init_primitives_addon();
+
+    disp_init();
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60);
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    al_register_event_source(queue, al_get_keyboard_event_source());
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+
+    map_init();
+    tank_init();
+    bullets_init();
+
+    al_start_timer(timer);
+    bool done = false;
+    ALLEGRO_EVENT event;
+
+    while (!done) {
+        al_wait_for_event(queue, &event);
+
+        switch (event.type) {
+        case ALLEGRO_EVENT_DISPLAY_CLOSE: done = true; break;
+        case ALLEGRO_EVENT_TIMER: tank_update(); break;
+        case ALLEGRO_EVENT_KEY_DOWN:
+        case ALLEGRO_EVENT_KEY_UP: keyboard_update(&event); break;
+        }
+
+        disp_pre_draw();
+        al_clear_to_color(al_map_rgb(20, 20, 30));
+        draw_map();
+        draw_tank();
+        draw_bullets();
+        disp_post_draw();
+    }
+
+    al_destroy_bitmap(buffer);
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
+    return 0;
+}
+#endif
+
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_primitives.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <time.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define BUFFER_W 1280
+#define BUFFER_H 720
+#define MAP_W 200
+#define MAX_BULLETS 50
+
+/* --- 디스플레이 / 버퍼 --- */
+ALLEGRO_DISPLAY* disp;
+ALLEGRO_BITMAP* buffer;
+void disp_init() {
+    disp = al_create_display(BUFFER_W, BUFFER_H);
+    if (!disp) exit(1);
+    buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    if (!buffer) exit(1);
+}
+void disp_pre_draw() { al_set_target_bitmap(buffer); }
+void disp_post_draw() {
+    al_set_target_backbuffer(disp);
+    al_draw_bitmap(buffer, 0, 0, 0);
+    al_flip_display();
+}
+
+/* --- 키보드 입력 --- */
+typedef struct {
+    bool left, right, jump;
+    bool fire, change_weapon;
+    bool rotate_cw, rotate_ccw;
+    bool esc;
+} Input;
+Input input;
+
+void keyboard_update(ALLEGRO_EVENT* event) {
+    bool down = event->type == ALLEGRO_EVENT_KEY_DOWN;
+    switch (event->keyboard.keycode) {
+    case ALLEGRO_KEY_LEFT: input.left = down; break;
+    case ALLEGRO_KEY_RIGHT: input.right = down; break;
+    case ALLEGRO_KEY_SPACE: input.jump = down; break;
+    case ALLEGRO_KEY_X: input.fire = down; break;
+    case ALLEGRO_KEY_R: input.change_weapon = down; break;
+    case ALLEGRO_KEY_Z: input.rotate_cw = down; break;
+    case ALLEGRO_KEY_C: input.rotate_ccw = down; break;
+    case ALLEGRO_KEY_ESCAPE: input.esc = down; break;
+    }
+}
+
+/* --- 맵 / 지형 --- */
+float map_height[MAP_W];
+
+void map_init() {
+    float base = BUFFER_H - 40;
+    for (int i = 0; i < MAP_W; i++)
+        map_height[i] = base + (rand() % 20 - 10);
+}
+
+float ground_y_at(int x_tile) {
+    if (x_tile < 0) x_tile = 0;
+    if (x_tile >= MAP_W) x_tile = MAP_W - 1;
+    return map_height[x_tile];
+}
+
+/* --- 카메라 --- */
+typedef struct { float x, y; } Camera;
+Camera camera;
+
+/* --- 탱크 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    float cannon_angle;
+    bool on_ground;
+    int weapon; // 0 = MG, 1 = Cannon
+    bool charging; // 캐논 충전 상태
+    float cannon_power;
+} Tank;
+Tank tank;
+
+void tank_init() {
+    tank.x = 50;
+    tank.y = ground_y_at((int)tank.x) - 20;
+    tank.vx = tank.vy = 0;
+    tank.on_ground = true;
+    tank.cannon_angle = M_PI / 4;
+    tank.weapon = 0;
+    tank.charging = false;
+    tank.cannon_power = 0;
+}
+
+/* --- 탄환 --- */
+typedef struct {
+    float x, y;
+    float vx, vy;
+    bool alive;
+    int weapon;
+} Bullet;
+Bullet bullets[MAX_BULLETS];
+
+void bullets_init(){
+    for (int i = 0; i < MAX_BULLETS; i++) bullets[i].alive = false;
+}
+
+void shoot_bullet() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) {
+            bullets[i].alive = true;
+            bullets[i].x = tank.x + 16;
+            bullets[i].y = tank.y + 10;
+            bullets[i].weapon = tank.weapon;
+            float speed = (tank.weapon == 0) ? 8.0f * 0.7f : tank.cannon_power * 0.7f;
+            bullets[i].vx = cosf(tank.cannon_angle) * speed;
+            bullets[i].vy = -sinf(tank.cannon_angle) * speed;
+            break;
+        }
+    }
+}
+
+void bullets_update() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        if (bullets[i].weapon == 1) bullets[i].vy += 0.3f; // 캐논 중력
+        bullets[i].x += bullets[i].vx;
+        bullets[i].y += bullets[i].vy;
+        if (bullets[i].x < 0 || bullets[i].x >= MAP_W * 4 || bullets[i].y >= BUFFER_H)
+            bullets[i].alive = false;
+    }
+}
+
+/* --- 탱크 업데이트 --- */
+void tank_update() {
+    const float accel = 0.4f;
+    const float maxspeed = 3.0f;
+    const float friction = 0.85f;
+    const float gravity = 0.5f;
+
+    if (input.left) tank.vx -= accel;
+    if (input.right) tank.vx += accel;
+    tank.vx *= friction;
+    if (tank.vx > maxspeed) tank.vx = maxspeed;
+    if (tank.vx < -maxspeed) tank.vx = -maxspeed;
+
+    tank.x += tank.vx;
+
+    if (input.jump && tank.on_ground) {
+        tank.vy = -8;
+        tank.on_ground = false;
+    }
+
+    if (input.rotate_cw) { tank.cannon_angle += 0.05f; if (tank.cannon_angle > M_PI * 0.9f) tank.cannon_angle = M_PI * 0.9f; }
+    if (input.rotate_ccw) { tank.cannon_angle -= 0.05f; if (tank.cannon_angle < 0.1f) tank.cannon_angle = 0.1f; }
+
+    tank.vy += gravity;
+    tank.y += tank.vy;
+
+    float ground = ground_y_at((int)tank.x);
+    if (tank.y > ground - 20) { tank.y = ground - 20; tank.vy = 0; tank.on_ground = true; }
+
+    if (input.change_weapon) { tank.weapon = 1 - tank.weapon; input.change_weapon = false; }
+
+    // 캐논 충전 처리
+    if (tank.weapon == 1) {
+        if (input.fire) {
+            tank.charging = true;
+            tank.cannon_power += 0.2f;
+            if (tank.cannon_power > 15.0f) tank.cannon_power = 15.0f;
+        }
+        else if (tank.charging) {
+            shoot_bullet();
+            tank.charging = false;
+            tank.cannon_power = 0;
+        }
+    }
+    else if (input.fire) { // 기관총
+        shoot_bullet();
+    }
+
+    bullets_update();
+
+    // 카메라 X, Y 모두 탱크 중심 기준
+    camera.x = tank.x - BUFFER_W / 3;
+    camera.y = tank.y - BUFFER_H / 2;
+}
+
+/* --- 그리기 --- */
+void draw_tank() {
+    float screen_x = tank.x - camera.x;
+    float screen_y = tank.y - camera.y;
+
+    al_draw_filled_rectangle(screen_x, screen_y, screen_x + 32, screen_y + 20, al_map_rgb(60, 120, 180));
+
+    float cx = screen_x + 16;
+    float cy = screen_y + 10;
+    float bx = cx + cosf(tank.cannon_angle) * 18;
+    float by = cy - sinf(tank.cannon_angle) * 18;
+    al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
+
+    // 캐논 충전 시 포물선 궤적
+    if (tank.charging) {
+        float px = tank.x;
+        float py = tank.y + 10;
+        float vx = cosf(tank.cannon_angle) * tank.cannon_power;
+        float vy = -sinf(tank.cannon_angle) * tank.cannon_power;
+        for (int i = 0; i < 60; i++) {
+            px += vx;
+            py += vy;
+            vy += 0.3f; // 중력
+            float sx = px - camera.x;
+            float sy = py - camera.y;
+            if (sx < 0 || sx > BUFFER_W || sy > BUFFER_H) break;
+            al_draw_filled_circle(sx, sy, 2, al_map_rgb(255, 255, 255));
+        }
+
+        // 게이지 표시
+        float gauge_w = tank.cannon_power * 10;
+        al_draw_filled_rectangle(screen_x, screen_y - 20, screen_x + gauge_w, screen_y - 10, al_map_rgb(255, 0, 0));
+        al_draw_rectangle(screen_x, screen_y - 20, screen_x + 150, screen_y - 10, al_map_rgb(255, 255, 255), 2);
+    }
+}
+
+void draw_map() {
+    for (int i = 0; i < MAP_W; i++) {
+        float sx = i * 4 - camera.x;
+        float sy = map_height[i] - camera.y;
+        al_draw_filled_rectangle(sx, sy, sx + 4, BUFFER_H, al_map_rgb(30, 150, 40));
+    }
+}
+
+void draw_bullets() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].alive) continue;
+        float sx = bullets[i].x - camera.x;
+        float sy = bullets[i].y - camera.y;
+        ALLEGRO_COLOR col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
+        al_draw_filled_circle(sx, sy, 4, col);
+    }
+}
+
+/* --- 메인 --- */
+int main() {
+    srand((unsigned int)time(NULL));
+    if (!al_init()) return 1;
+    al_install_keyboard();
+    al_init_primitives_addon();
+
+    disp_init();
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60);
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    al_register_event_source(queue, al_get_keyboard_event_source());
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+
+    map_init();
+    tank_init();
+    bullets_init();
+
+    al_start_timer(timer);
+    bool done = false;
+    ALLEGRO_EVENT event;
+
+    while (!done) {
+        al_wait_for_event(queue, &event);
+
+        switch (event.type) {
+        case ALLEGRO_EVENT_DISPLAY_CLOSE: done = true; break;
+        case ALLEGRO_EVENT_TIMER: tank_update(); break;
+        case ALLEGRO_EVENT_KEY_DOWN:
+        case ALLEGRO_EVENT_KEY_UP: keyboard_update(&event); break;
+        }
+
+        disp_pre_draw();
+        al_clear_to_color(al_map_rgb(20, 20, 30));
+        draw_map();
+        draw_tank();
+        draw_bullets();
+        disp_post_draw();
+    }
+
+    al_destroy_bitmap(buffer);
     al_destroy_display(disp);
     al_destroy_timer(timer);
     al_destroy_event_queue(queue);
