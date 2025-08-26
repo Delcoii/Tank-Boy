@@ -1,5 +1,88 @@
 #include "game_system.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+// Load game configuration from INI file
+void load_game_config(GameConfig* config, const char* config_file) {
+    IniParser* parser = ini_parser_create();
+    
+    if (!parser) {
+        printf("Error: Could not create INI parser\n");
+        return;
+    }
+    
+    // Create full path based on source file location
+    char full_path[512];
+    const char* source_file = __FILE__;  // This file's path
+    
+    // Find the last directory separator
+    const char* last_slash = strrchr(source_file, '\\');
+    if (!last_slash) last_slash = strrchr(source_file, '/');
+    
+    if (last_slash) {
+        // Copy directory part
+        size_t dir_len = last_slash - source_file + 1;
+        if (dir_len < sizeof(full_path)) {
+#pragma warning(push)
+#pragma warning(disable: 4996)
+            strncpy(full_path, source_file, dir_len);
+            full_path[dir_len] = '\0';
+            
+            // Append config filename
+            strcat(full_path, config_file);
+#pragma warning(pop)
+        } else {
+            strcpy_s(full_path, sizeof(full_path), config_file);
+        }
+    } else {
+        // No directory found, use relative path
+        strcpy_s(full_path, sizeof(full_path), config_file);
+    }
+    
+    // Load with default values as fallback
+    if (ini_parser_load_file(parser, full_path)) {
+        printf("Configuration loaded from '%s'\n", full_path);
+    } else {
+        printf("Warning: Could not load config file '%s', using defaults\n", full_path);
+    }
+    
+    // Load all values with defaults (whether file exists or not)
+    config->screen_width = ini_parser_get_int(parser, "screen_width", 800);
+    config->screen_height = ini_parser_get_int(parser, "screen_height", 600);
+    config->button_width = ini_parser_get_int(parser, "button_width", 200);
+    config->button_height = ini_parser_get_int(parser, "button_height", 50);
+    config->button_spacing = ini_parser_get_int(parser, "button_spacing", 70);
+    
+    config->menu_bg_r = ini_parser_get_int(parser, "menu_bg_r", 50);
+    config->menu_bg_g = ini_parser_get_int(parser, "menu_bg_g", 50);
+    config->menu_bg_b = ini_parser_get_int(parser, "menu_bg_b", 100);
+    
+    config->game_bg_r = ini_parser_get_int(parser, "game_bg_r", 0);
+    config->game_bg_g = ini_parser_get_int(parser, "game_bg_g", 100);
+    config->game_bg_b = ini_parser_get_int(parser, "game_bg_b", 0);
+    
+    config->button_normal_r = ini_parser_get_int(parser, "button_normal_r", 200);
+    config->button_normal_g = ini_parser_get_int(parser, "button_normal_g", 200);
+    config->button_normal_b = ini_parser_get_int(parser, "button_normal_b", 200);
+    
+    config->button_hover_r = ini_parser_get_int(parser, "button_hover_r", 150);
+    config->button_hover_g = ini_parser_get_int(parser, "button_hover_g", 150);
+    config->button_hover_b = ini_parser_get_int(parser, "button_hover_b", 150);
+    
+    config->button_clicked_r = ini_parser_get_int(parser, "button_clicked_r", 100);
+    config->button_clicked_g = ini_parser_get_int(parser, "button_clicked_g", 100);
+    config->button_clicked_b = ini_parser_get_int(parser, "button_clicked_b", 100);
+    
+    config->text_r = ini_parser_get_int(parser, "text_r", 255);
+    config->text_g = ini_parser_get_int(parser, "text_g", 255);
+    config->text_b = ini_parser_get_int(parser, "text_b", 255);
+    
+    config->game_speed = ini_parser_get_int(parser, "game_speed", 60);
+    config->max_lives = ini_parser_get_int(parser, "max_lives", 3);
+    
+    ini_parser_destroy(parser);
+}
 
 // Initialize button
 void init_button(Button* button, int x, int y, int width, int height, char* text) {
@@ -19,17 +102,17 @@ bool is_point_in_button(int x, int y, Button* button) {
 }
 
 // Draw a button
-void draw_button(Button* button, ALLEGRO_FONT* font) {
+void draw_button(Button* button, ALLEGRO_FONT* font, GameConfig* config) {
     ALLEGRO_COLOR bg_color, text_color;
     
     if (button->clicked) {
-        bg_color = al_map_rgb(100, 100, 100);
-        text_color = al_map_rgb(200, 200, 200);
+        bg_color = al_map_rgb(config->button_clicked_r, config->button_clicked_g, config->button_clicked_b);
+        text_color = al_map_rgb(config->text_r, config->text_g, config->text_b);
     } else if (button->hovered) {
-        bg_color = al_map_rgb(150, 150, 150);
-        text_color = al_map_rgb(255, 255, 255);
+        bg_color = al_map_rgb(config->button_hover_r, config->button_hover_g, config->button_hover_b);
+        text_color = al_map_rgb(config->text_r, config->text_g, config->text_b);
     } else {
-        bg_color = al_map_rgb(200, 200, 200);
+        bg_color = al_map_rgb(config->button_normal_r, config->button_normal_g, config->button_normal_b);
         text_color = al_map_rgb(0, 0, 0);
     }
     
@@ -45,40 +128,43 @@ void draw_button(Button* button, ALLEGRO_FONT* font) {
 }
 
 // Draw main menu screen
-void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font) {
-    al_clear_to_color(al_map_rgb(50, 50, 100));
+void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, GameConfig* config) {
+    al_clear_to_color(al_map_rgb(config->menu_bg_r, config->menu_bg_g, config->menu_bg_b));
     
-    al_draw_text(font, al_map_rgb(255, 255, 255),
-                 SCREEN_WIDTH/2, 100, ALLEGRO_ALIGN_CENTER,
+    al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
+                 config->screen_width/2, 100, ALLEGRO_ALIGN_CENTER,
                  "Tank-Boy Game");
     
-    draw_button(start_button, font);
-    draw_button(exit_button, font);
+    draw_button(start_button, font, config);
+    draw_button(exit_button, font, config);
 }
 
 // Draw game screen
-void draw_game(ALLEGRO_FONT* font) {
-    al_clear_to_color(al_map_rgb(0, 100, 0));
+void draw_game(ALLEGRO_FONT* font, GameConfig* config) {
+    al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
-    al_draw_text(font, al_map_rgb(255, 255, 255),
-                 SCREEN_WIDTH/2, SCREEN_HEIGHT/2, ALLEGRO_ALIGN_CENTER,
+    al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
+                 config->screen_width/2, config->screen_height/2, ALLEGRO_ALIGN_CENTER,
                  "Game is running!\nPress ESC to return to menu");
 }
 
 // Handle keyboard input
 bool handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
     if (event->type == ALLEGRO_EVENT_KEY_DOWN) {
+
+        // when user press ESC key
         if (event->keyboard.keycode == ALLEGRO_KEY_ESCAPE) {
+            // Return to menu
             if (game_system->current_state == STATE_GAME) {
                 game_system->current_state = STATE_MENU;
-                printf("Returning to menu.\n");
             } else {
+                // Exit game
                 game_system->running = false;
             }
-            return true; // Event was handled
+            return true;
         }
     }
-    return false; // Event was not handled
+    return false;
 }
 
 // Handle mouse input
@@ -132,9 +218,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize font
     game_system->font = al_create_builtin_font();
     
-    // Initialize buttons
-    init_button(&game_system->start_button, SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 - 50, 200, 50, "Start Game");
-    init_button(&game_system->exit_button, SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 20, 200, 50, "Exit Game");
+    // Initialize buttons using config
+    int button_x = game_system->config.screen_width/2 - game_system->config.button_width/2;
+    int start_y = game_system->config.screen_height/2 - game_system->config.button_spacing/2;
+    int exit_y = game_system->config.screen_height/2 + game_system->config.button_spacing/2;
+    
+    init_button(&game_system->start_button, button_x, start_y, 
+                game_system->config.button_width, game_system->config.button_height, "Start Game");
+    init_button(&game_system->exit_button, button_x, exit_y, 
+                game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
     // Initialize game state
     game_system->current_state = STATE_MENU;
@@ -151,6 +243,7 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     printf("Game system cleaned up.\n");
 }
 
+
 // Update game state based on events
 void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Handle keyboard input
@@ -163,8 +256,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
 // Render game based on current state
 void render_game(GameSystem* game_system) {
     if (game_system->current_state == STATE_MENU) {
-        draw_menu(&game_system->start_button, &game_system->exit_button, game_system->font);
+        draw_menu(&game_system->start_button, &game_system->exit_button, game_system->font, &game_system->config);
     } else if (game_system->current_state == STATE_GAME) {
-        draw_game(game_system->font);
+        draw_game(game_system->font, &game_system->config);
     }
 }

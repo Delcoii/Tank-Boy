@@ -14,32 +14,38 @@
 // local library
 #include "game_system.h"
 
-void must_init(bool test, const char* description) {
-    if (test) return;
+void* must_init(void* test, const char* description) {
+    if (test) return test;
 
     printf("couldn't initialize %s\n", description);
     exit(1);
+    return NULL;
 }
 
 
 int main(void) {
     srand((unsigned int)time(NULL));
-	must_init(al_init(), "allegro");
+	if (!al_init()) {
+        printf("couldn't initialize allegro\n");
+        exit(1);
+    }
     
-
-    ALLEGRO_DISPLAY* display = al_create_display(SCREEN_WIDTH, SCREEN_HEIGHT);
-    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
-    ALLEGRO_EVENT event;
-
-
+    // Load configuration first
     GameSystem game_system;
+    load_game_config(&game_system.config, "config.ini");
+    
+    // Create display with config values
+    ALLEGRO_DISPLAY* display = must_init(al_create_display(game_system.config.screen_width, game_system.config.screen_height), "display");
+    ALLEGRO_EVENT_QUEUE* queue = must_init(al_create_event_queue(), "event queue");
+    
+    // Initialize game system
     init_game_system(display, queue, &game_system);
     
+    ALLEGRO_EVENT event;
     
     while (game_system.running) {
         al_wait_for_event(queue, &event);
         
-        // Handle display close
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
             game_system.running = false;
         }

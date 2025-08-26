@@ -137,14 +137,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="config.ini" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="game_system.c" />
+    <ClCompile Include="ini_parser.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_system.h" />
+    <ClInclude Include="ini_parser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
