@@ -8,19 +8,19 @@
 #include <math.h>
 
 // ---------------------------------
-// 탱크의 물리적 상태를 저장하는 구조체 정의
+// 구조체 정의
 // ---------------------------------
 typedef struct {
-    float world_x;     // 맵에서의 X 좌표(게임 맵 전체)
-    float y_screen;    // 화면상의 Y 좌표(화면 상에서만 그려질 Y축)
+    float world_x;     // 맵에서의 X 좌표
+    float y_screen;    // 화면상의 Y 좌표
     float vx;          // X 속도
     float vy;          // Y 속도 (중력/점프)
-    bool on_ground;    // 땅에 닿아있는지 (점프 가능 여부 판단)
+    bool on_ground;    // 땅에 닿아있는지
 } Tank;
 
 typedef struct {
-    float camera_x; // 가로 스크롤 방식
-    float camera_y; // 세로는 화면 고정 방식
+    float camera_x;
+    float camera_y;
 } Camera;
 
 // ---------------------------------
@@ -28,14 +28,14 @@ typedef struct {
 // ---------------------------------
 Tank tank;
 Camera camera;
-float gravity = 0.5f; // 중력 가속도 설정
-float friction = 0.9f; // 표면 마찰 계수(원래는 한 0.8)
+float gravity = 0.5f;
+float friction = 0.8f;
 
 // ---------------------------------
 // 함수 원형
 // ---------------------------------
 void must_init(bool test, const char* description);
-float ground_y_at(float x); 
+float ground_y_at(float x);
 void init_game();
 void update_physics(ALLEGRO_KEYBOARD_STATE* ks);
 void render();
@@ -50,30 +50,9 @@ void must_init(bool test, const char* description) {
 }
 
 // 단순 지형 높이 함수
-float ground_y_at(float x) { //특정 x좌표에서의 지형 높이 계산
-  //  return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅 -> 다양한 렌더링 추가 가능 (sin x 함수로 지형 표현
-  // )
-    if (x < 300) {
-        return 400; // 평지 구간
-    }
-    else if (x < 500) {
-        // 발판: 왼쪽 50픽셀은 낮고, 오른쪽 50픽셀은 높음
-        if (((int)x % 100) < 50)
-            return 350;
-        else
-            return 400;
-    }
-    else if (x < 700) {
-        // 계단식 지형: 100픽셀마다 20씩 상승
-        int step = ((int)x - 500) / 100;
-        return 400 - step * 20;
-    }
-    else {
-        // 언덕: 부드러운 사인 곡선
-        return 360 + 40 * sinf((x - 700) * 0.05f);
-    }
+float ground_y_at(float x) {
+    return 400 + 40 * sinf(x * 0.01f); // 울퉁불퉁한 땅
 }
-
 
 // ---------------------------------
 // 초기화
@@ -96,14 +75,12 @@ void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
     static bool prev_space = false;
 
     // 좌우 이동
-    if (al_key_down(ks, ALLEGRO_KEY_LEFT)) { // left 자리에 내가 원하는 기호 넣으면 그게 키가 됌
-        tank.vx = -2; // -2는 왼쪽으로 라는것을 의미 (숫자 크기 = 속도)
-    }
-    else if (al_key_down(ks, ALLEGRO_KEY_RIGHT)) {
-        tank.vx = 2; // +2는 오른쪽을 의미
-    }
-    else {
-        tank.vx *= friction; // 관성 마찰 작용 0.8로서 일반적 1*0.8해서 관성 작용
+    if (al_key_down(ks, ALLEGRO_KEY_A)) {
+        tank.vx = -2;
+    } else if (al_key_down(ks, ALLEGRO_KEY_D)) {
+        tank.vx = 2;
+    } else {
+        tank.vx *= friction;
     }
 
     // 점프 (스페이스 키 눌렀을 때)
@@ -132,17 +109,17 @@ void update_physics(ALLEGRO_KEYBOARD_STATE* ks) {
 }
 
 // ---------------------------------
-// 렌더링 (맵 생성 sin 파형으로)
+// 렌더링
 // ---------------------------------
 void render() {
-    al_clear_to_color(al_map_rgb(100, 149, 237)); // 배경색 파란색
+    al_clear_to_color(al_map_rgb(100, 149, 237));
 
     // 땅 그리기
     for (int x = -50; x < 850; x++) {
         float world_x = x + camera.camera_x;
         float ground_y = ground_y_at(world_x);
         al_draw_filled_rectangle(x, ground_y, x + 1, 600, al_map_rgb(34, 139, 34));
-    } // 땅 색상을 풀 색으로 설정 (R,G,B 배열)
+    }
 
     // 탱크 (빨간색 사각형)
     float draw_x = tank.world_x - camera.camera_x;
@@ -158,7 +135,7 @@ int main() {
     must_init(al_install_keyboard(), "keyboard");
     must_init(al_init_primitives_addon(), "primitives");
 
-    ALLEGRO_DISPLAY* disp = al_create_display(800, 600); //800-600 픽셀
+    ALLEGRO_DISPLAY* disp = al_create_display(800, 600);
     must_init(disp, "display");
 
     ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
