@@ -25,10 +25,7 @@ void* must_init(void* test, const char* description) {
 
 int main(void) {
     srand((unsigned int)time(NULL));
-	if (!al_init()) {
-        printf("couldn't initialize allegro\n");
-        exit(1);
-    }
+	al_init();
     
     // Load configuration first
     GameSystem game_system;
