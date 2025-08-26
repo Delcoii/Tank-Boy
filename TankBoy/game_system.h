@@ -1,11 +1,20 @@
 #ifndef GAME_SYSTEM_H
 #define GAME_SYSTEM_H
 
+// standard C lib
+#include <stdbool.h>
+
+// allegro5 lib
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
-#include <stdbool.h>
+
+// algorithm
+#include "tank.h"
+
+// utils
 #include "ini_parser.h"
+#include "input_system.h"
 
 // Game configuration structure
 typedef struct {
@@ -56,6 +65,10 @@ typedef struct {
     GameState current_state;
     bool running;
     GameConfig config;
+    
+    // Game objects
+    Tank player_tank;
+    InputState input;
 } GameSystem;
 
 

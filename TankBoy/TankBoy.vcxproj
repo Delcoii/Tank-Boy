@@ -144,10 +144,14 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="game_system.c" />
     <ClCompile Include="ini_parser.c" />
+    <ClCompile Include="input_system.c" />
+    <ClCompile Include="tank.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_system.h" />
     <ClInclude Include="ini_parser.h" />
+    <ClInclude Include="input_system.h" />
+    <ClInclude Include="tank.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

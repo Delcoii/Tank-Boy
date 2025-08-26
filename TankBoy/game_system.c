@@ -140,12 +140,16 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 }
 
 // Draw game screen
-void draw_game(ALLEGRO_FONT* font, GameConfig* config) {
+void draw_game(ALLEGRO_FONT* font, GameConfig* config, Tank* player_tank) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
+    // Draw tank
+    tank_draw(player_tank);
+    
+    // Draw UI
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 config->screen_width/2, config->screen_height/2, ALLEGRO_ALIGN_CENTER,
-                 "Game is running!\nPress ESC to return to menu");
+                 10, 10, ALLEGRO_ALIGN_LEFT,
+                 "Use WASD or Arrow Keys to move, ESC to return to menu");
 }
 
 // Handle keyboard input
@@ -232,6 +236,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->current_state = STATE_MENU;
     game_system->running = true;
     
+    // Initialize input system
+    input_system_init(&game_system->input);
+    
+    // Initialize player tank at center of screen
+    tank_init(&game_system->player_tank, 
+              game_system->config.screen_width / 2.0f, 
+              game_system->config.screen_height / 2.0f,
+              al_map_rgb(0, 150, 0));  // Green tank
+    
     printf("Game system initialized!\n");
 }
 
@@ -251,6 +264,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Handle mouse input
     handle_mouse_input(event, game_system);
+    
+    // Update input system
+    input_system_update(&game_system->input, event);
+    
+    // Update game objects if in game state
+    if (game_system->current_state == STATE_GAME) {
+        tank_update(&game_system->player_tank, &game_system->input, 
+                   game_system->config.screen_width, game_system->config.screen_height);
+    }
 }
 
 // Render game based on current state
@@ -258,6 +280,6 @@ void render_game(GameSystem* game_system) {
     if (game_system->current_state == STATE_MENU) {
         draw_menu(&game_system->start_button, &game_system->exit_button, game_system->font, &game_system->config);
     } else if (game_system->current_state == STATE_GAME) {
-        draw_game(game_system->font, &game_system->config);
+        draw_game(game_system->font, &game_system->config, &game_system->player_tank);
     }
 }
