@@ -7,11 +7,12 @@
 * 제거한 적의 난이도에 따른 점수가 측정되고, 많은 적을 죽이며 높은 난이도까지 올라갈수록 점수가 높아진다.
 
 
-### vscode 환경구성 ()
+### vscode 환경구성
 ```sh
 winget install Microsoft.VisualStudio.2022.BuildTools
 
 # build tutorial game
+# visual studio must be installed in C maybe
 build_example.bat
 
 # launch tutorial game
