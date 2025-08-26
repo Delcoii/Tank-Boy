@@ -9,5 +9,6 @@
 #include <allegro5/allegro_image.h>
 
 int main(void) {
+	printf("Hello, World!\n");
 	return 0;
 }

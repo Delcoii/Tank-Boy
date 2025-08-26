@@ -9,22 +9,19 @@
 
 ### 환경 구성
 ```sh
-# 원하는 폴더에
+# any folder you want
 git clone https://github.com/Delcoii/Tank-Boy.git
 cd Tank-Boy
 ```
 
 ### VSCode 환경구성
-* Visual Studio (2022권장) 에서 최초 한 번 빌드 및 실행 필요
-
+* Visual Studio (2022권장) 설치 및 .sln파일에서 최초 한 번 빌드 및 실행 필요
+* Visual Studio 설치 경로 주의
 ```sh
-winget install Microsoft.VisualStudio.2022.BuildTools
-
-# build tutorial game
-# visual studio must be installed in C maybe
-build_example.bat
+# visual studio must be installed in
+# ("C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat")
+build.bat
 
 # launch tutorial game
-cd example_tutorial/game_tutorial
-x64\Debug\game_tutorial.exe
+run.bat
 ```
