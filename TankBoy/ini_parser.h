@@ -2,6 +2,11 @@
 #define INI_PARSER_H
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <malloc.h>
 
 // INI file parser structure
 typedef struct {
@@ -23,8 +28,6 @@ const char* ini_parser_get_string(IniParser* parser, const char* key, const char
 int ini_parser_get_int(IniParser* parser, const char* key, int default_value);
 double ini_parser_get_double(IniParser* parser, const char* key, double default_value);
 bool ini_parser_get_bool(IniParser* parser, const char* key, bool default_value);
-void ini_parser_set_value(IniParser* parser, const char* key, const char* value);
-bool ini_parser_save_file(IniParser* parser, const char* filename);
 
 // Helper function for bulk loading with default initialization
 bool ini_parser_load_with_defaults(const char* filename, void* config_struct, 

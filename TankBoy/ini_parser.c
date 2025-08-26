@@ -180,36 +180,3 @@ bool ini_parser_get_bool(IniParser* parser, const char* key, bool default_value)
     
     return default_value;
 }
-
-// Set value (for creating/modifying INI files)
-void ini_parser_set_value(IniParser* parser, const char* key, const char* value) {
-    if (!parser || !key) return;
-    
-    // Check if key already exists
-    for (int i = 0; i < parser->count; i++) {
-        if (strcmp(parser->entries[i].key, key) == 0) {
-            // Update existing value
-                    free(parser->entries[i].value);
-        parser->entries[i].value = _strdup(value);
-            return;
-        }
-    }
-    
-    // Add new entry
-    add_entry(parser, key, value);
-}
-
-// Save INI file
-bool ini_parser_save_file(IniParser* parser, const char* filename) {
-    if (!parser || !filename) return false;
-    
-    FILE* file = fopen(filename, "w");
-    if (!file) return false;
-    
-    for (int i = 0; i < parser->count; i++) {
-        fprintf(file, "%s=%s\n", parser->entries[i].key, parser->entries[i].value);
-    }
-    
-    fclose(file);
-    return true;
-}
