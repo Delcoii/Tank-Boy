@@ -141,10 +141,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
-    <ClCompile Include="mode_selection.c" />
+    <ClCompile Include="game_system.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="mode_selection.h" />
+    <ClInclude Include="game_system.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
