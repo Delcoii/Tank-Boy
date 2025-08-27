@@ -1,111 +1,19 @@
-#if 0
-#include "tank.h"
-#include <math.h>
-
-
-// Initialize tank
-void tank_init(Tank* tank, float x, float y, ALLEGRO_COLOR color) {
-    tank->x = x;
-    tank->y = y;
-    tank->angle = 0.0f;  // Facing right
-    tank->speed = 100.0f;  // pixels per second
-    tank->turn_speed = 2.0f;  // radians per second
-    tank->width = 40;
-    tank->height = 25;
-    tank->color = color;
-}
-
-
-// Update tank based on input
-void tank_update(Tank* tank, InputState* input, float map_width, float map_height) {
-    float dt = 1.0f / 60.0f;  // Assuming 60 FPS
-    
-    // Rotation
-    if (input->key_left) {
-        tank->angle -= tank->turn_speed * dt;
-    }
-    if (input->key_right) {
-        tank->angle += tank->turn_speed * dt;
-    }
-    
-    // Movement
-    float dx = 0, dy = 0;
-    if (input->key_up) {
-        dx = cosf(tank->angle) * tank->speed * dt;
-        dy = sinf(tank->angle) * tank->speed * dt;
-    }
-    if (input->key_down) {
-        dx = -cosf(tank->angle) * tank->speed * dt;
-        dy = -sinf(tank->angle) * tank->speed * dt;
-    }
-    
-    // Update position with boundary checking
-    tank->x += dx;
-    tank->y += dy;
-    
-    // Keep tank within map bounds
-    float half_width = tank->width / 2.0f;
-    float half_height = tank->height / 2.0f;
-    
-    if (tank->x - half_width < 0) tank->x = half_width;
-    if (tank->x + half_width > map_width) tank->x = map_width - half_width;
-    if (tank->y - half_height < 0) tank->y = half_height;
-    if (tank->y + half_height > map_height) tank->y = map_height - half_height;
-}
-
-// Draw tank
-void tank_draw(Tank* tank) {
-    float half_width = tank->width / 2.0f;
-    float half_height = tank->height / 2.0f;
-    
-    // Save current transform
-    ALLEGRO_TRANSFORM transform, identity;
-    al_copy_transform(&transform, al_get_current_transform());
-    al_identity_transform(&identity);
-    al_use_transform(&identity);
-    
-    // Translate to tank position and rotate
-    al_translate_transform(&identity, tank->x, tank->y);
-    al_rotate_transform(&identity, tank->angle);
-    al_use_transform(&identity);
-    
-    // Draw tank body (rectangle)
-    al_draw_filled_rectangle(-half_width, -half_height, half_width, half_height, tank->color);
-    al_draw_rectangle(-half_width, -half_height, half_width, half_height, al_map_rgb(0, 0, 0), 2);
-    
-    // Draw tank cannon (line pointing forward)
-    al_draw_line(0, 0, half_width + 10, 0, al_map_rgb(50, 50, 50), 4);
-    
-    // Draw direction indicator (small triangle at front)
-    al_draw_filled_triangle(
-        half_width, 0,
-        half_width - 8, -4,
-        half_width - 8, 4,
-        al_map_rgb(200, 200, 0)
-    );
-    
-    // Restore transform
-    al_use_transform(&transform);
-}
-#endif
-
 #include "tank.h"
 #include <math.h>
 #include <allegro5/allegro_primitives.h>
+
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
 
 // Initialize tank
-void tank_init(Tank* tank, float x, float y, ALLEGRO_COLOR color) {
+void tank_init(Tank* tank, double x, double y) {
     tank->x = x;
     tank->y = y;
-    tank->cannon_angle = M_PI / 4;
+    tank->vx = 0;
+    tank->vy = 0;
     tank->on_ground = true;
-    tank->angle = 0.0f;  // Facing right
-    tank->speed = 100.0f;  // pixels per second
-    tank->turn_speed = 2.0f;  // radians per second
-    tank->width = 40;
-    tank->height = 25;
-    tank->color = color;
+    tank->cannon_angle = M_PI / 4;
     tank->weapon = 0;
 
     tank->charging = false;
@@ -118,51 +26,78 @@ void tank_init(Tank* tank, float x, float y, ALLEGRO_COLOR color) {
     tank->mg_reload_time = 0;
 }
 
-
 // Update tank based on input
-void tank_update(Tank* tank, InputState* input, float map_width, float map_height) {
-    float dt = 1.0f / 60.0f;  // Assuming 60 FPS
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets) {
+    const double accel = 0.4;
+    const double maxspeed = 3.0;
     const double friction = 0.85;
     const double gravity = 0.5;
 
-    // Rotation
-    if (input->left) {
-        tank->angle -= tank->turn_speed * dt; // if you press a, you move to -x position
-    }
-    if (input->right) {
-        tank->angle += tank->turn_speed * dt; // if you press d, you move to +x position
-    }
-
     // Movement
-    float dx = 0, dy = 0;
-    if (input->jump && tank->on_ground) {
-        dx = cosf(tank->angle) * tank->speed * dt;
-        dy = sinf(tank->angle) * tank->speed * dt;
+    if (input->left) tank->vx -= accel;
+    if (input->right) tank->vx += accel;
+    tank->vx *= friction;
+    if (tank->vx > maxspeed) tank->vx = maxspeed;
+    if (tank->vx < -maxspeed) tank->vx = -maxspeed;
+    tank->x += tank->vx;
+
+    // Jump
+    if (input->jump && tank->on_ground) { 
+        tank->vy = -8; 
+        tank->on_ground = false; 
+    }
+    tank->vy += gravity;
+    tank->y += tank->vy;
+
+    // Ground collision (simplified - assume ground at y = 500)
+    if (tank->y > 500 - 20) { 
+        tank->y = 500 - 20; 
+        tank->vy = 0; 
+        tank->on_ground = true; 
     }
 
-    // Update position with boundary checking
-    tank->x += dx;
-    tank->y += dy;
+    // Weapon change
+    if (input->change_weapon) { 
+        tank->weapon = 1 - tank->weapon; 
+        input->change_weapon = false; 
+    }
+    
+    // Fire input handling
+    if (input->fire) {
+        if (tank->weapon == 1) {
+            tank->charging = true;
+        } else if (!tank->mg_reloading) {
+            tank->mg_firing = true;
+        }
+    } else {
+        if (tank->weapon == 1 && tank->charging) {
+            // Fire cannon
+            for (int i = 0; i < max_bullets; i++) {
+                if (!bullets[i].alive) {
+                    bullets[i].alive = true;
+                    bullets[i].x = tank->x + 16;
+                    bullets[i].y = tank->y + 10;
+                    bullets[i].weapon = 1;
+                    bullets[i].vx = cos(tank->cannon_angle) * tank->cannon_power * 0.7;
+                    bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 0.7;
+                    break;
+                }
+            }
+            tank->charging = false;
+            tank->cannon_power = 0;
+        } else if (tank->weapon == 0) {
+            tank->mg_firing = false;
+            tank->mg_fire_time = 0;
+        }
+    }
 
-    // Keep tank within map bounds
-    float half_width = tank->width / 2.0f;
-    float half_height = tank->height / 2.0f;
-
-    if (tank->x - half_width < 0) tank->x = half_width;
-    if (tank->x + half_width > map_width) tank->x = map_width - half_width;
-    if (tank->y - half_height < 0) tank->y = half_height;
-    if (tank->y + half_height > map_height) tank->y = map_height - half_height;
-
-    // change weappon
-    if (input->change_weapon) { tank->weapon = 1 - tank->weapon; input->change_weapon = false; }
-
-    //canon charge
+    // Cannon charging
     if (tank->weapon == 1 && tank->charging) {
         tank->cannon_power += 0.2;
         if (tank->cannon_power > 15) tank->cannon_power = 15;
     }
 
-    // m60 
+    // Machine gun firing
     if (tank->weapon == 0) {
         if (tank->mg_shot_cooldown > 0) tank->mg_shot_cooldown -= dt;
 
@@ -174,71 +109,60 @@ void tank_update(Tank* tank, InputState* input, float map_width, float map_heigh
                 tank->mg_shot_cooldown = 0;
             }
         }
-        else if (tank->mg_firing) {
-            tank->mg_fire_time += dt;
-            if (tank->mg_shot_cooldown <= 0) {
-                // 발사는 main에서 bullet에 구현
-                tank->mg_shot_cooldown = 0.1;
-            }
-            if (tank->mg_fire_time >= 3.0) {
-                tank->mg_reloading = true;
-                tank->mg_reload_time = 2.0;
-                tank->mg_firing = false;
-            }
-        }
         else {
-            tank->mg_fire_time = 0;
+            if (tank->mg_firing) {
+                tank->mg_fire_time += dt;
+                if (tank->mg_shot_cooldown <= 0) {
+                    // Fire bullet
+                    for (int i = 0; i < max_bullets; i++) {
+                        if (!bullets[i].alive) {
+                            bullets[i].alive = true;
+                            bullets[i].x = tank->x + 16;
+                            bullets[i].y = tank->y + 10;
+                            bullets[i].weapon = 0;
+                            bullets[i].vx = cos(tank->cannon_angle) * 8.0 * 1.5;
+                            bullets[i].vy = sin(tank->cannon_angle) * 8.0 * 1.5;
+                            tank->mg_shot_cooldown = 0.1;
+                            break;
+                        }
+                    }
+                }
+                if (tank->mg_fire_time >= 3.0) {
+                    tank->mg_reloading = true;
+                    tank->mg_reload_time = 2.0;
+                    tank->mg_firing = false;
+                }
+            }
+            else {
+                tank->mg_fire_time = 0;
+            }
         }
     }
 }
 
 // Draw tank
-void tank_draw(Tank* tank, double camera_x, double camera_y, Bullet* bullets, int max_bullets) {
-    float half_width = tank->width / 2.0f;
-    float half_height = tank->height / 2.0f;
+void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
+    // Tank body
+    al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, al_map_rgb(60, 120, 180));
 
-    // Save current transform
-    ALLEGRO_TRANSFORM transform, identity;
-    al_copy_transform(&transform, al_get_current_transform());
-    al_identity_transform(&identity);
-    al_use_transform(&identity);
-
-    // Translate to tank position and rotate
-    al_translate_transform(&identity, tank->x, tank->y);
-    al_rotate_transform(&identity, tank->angle);
-    al_use_transform(&identity);
-
-    // Draw tank body (rectangle)
-    al_draw_filled_rectangle(-half_width, -half_height, half_width, half_height, tank->color);
-    al_draw_rectangle(-half_width, -half_height, half_width, half_height, al_map_rgb(0, 0, 0), 2);
-
-    // Draw tank cannon (line pointing forward)
-    double cx = half_width + 16;
-    double cy = half_height + 10;
+    // Cannon
+    double cx = sx + 16;
+    double cy = sy + 10;
     double bx = cx + cos(tank->cannon_angle) * 18;
     double by = cy + sin(tank->cannon_angle) * 18;
-    al_draw_line(cx, cy, bx, by, al_map_rgb(50, 50, 50), 4);
+    al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
 
-    // Draw direction indicator (small triangle at front)
-    al_draw_filled_triangle(
-        half_width, 0,
-        half_width - 8, -4,
-        half_width - 8, 4,
-        al_map_rgb(200, 200, 0)
-    );
-
-
-    // canon charge gauge
+    // Cannon charge gauge
     if (tank->charging && tank->weapon == 1) {
         double gauge_w = tank->cannon_power * 10;
-        al_draw_filled_rectangle(half_width, half_width, half_width + gauge_w, half_height - 10, al_map_rgb(255, 0, 0));
-        al_draw_rectangle(half_width, half_height - 20, half_width + 150, half_height - 10, al_map_rgb(255, 255, 255), 2);
+        al_draw_filled_rectangle(sx, sy - 20, sx + gauge_w, sy - 10, al_map_rgb(255, 0, 0));
+        al_draw_rectangle(sx, sy - 20, sx + 150, sy - 10, al_map_rgb(255, 255, 255), 2);
     }
 
-    // m60 relaoding 
+    // Machine gun reload gauge
     if (tank->mg_reloading) {
         double total = 2.0;
         double filled = (total - tank->mg_reload_time) / total;
@@ -246,9 +170,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y, Bullet* bullets, in
         if (filled > 1) filled = 1;
         double full_w = 150;
         double gw = full_w * filled;
-        al_draw_rectangle(half_width, half_height - 35, half_width + full_w, half_height - 20, al_map_rgb(255, 255, 255), 2);
-        al_draw_filled_rectangle(half_width + 1, half_height - 34, half_width + 1 + gw, half_height - 21, al_map_rgb(0, 200, 255));
+        al_draw_rectangle(sx, sy - 35, sx + full_w, sy - 20, al_map_rgb(255, 255, 255), 2);
+        al_draw_filled_rectangle(sx + 1, sy - 34, sx + 1 + gw, sy - 21, al_map_rgb(0, 200, 255));
     }
-    // Restore transform
-    al_use_transform(&transform);
 }

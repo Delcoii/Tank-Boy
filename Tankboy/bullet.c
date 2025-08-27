@@ -13,13 +13,13 @@ void bullets_update(Bullet* bullets, int max_bullets) {
     for (int i = 0; i < max_bullets; i++) {
         if (!bullets[i].alive) continue;
 
-        // 중력: 캐논만 적용
+        // Gravity for cannon bullets
         if (bullets[i].weapon == 1) bullets[i].vy += 0.3;
 
         bullets[i].x += bullets[i].vx;
         bullets[i].y += bullets[i].vy;
 
-        // 화면 밖이면 삭제
+        // Remove if out of bounds
         if (bullets[i].x < 0 || bullets[i].x > MAP_W * 4 || bullets[i].y > BUFFER_H)
             bullets[i].alive = false;
     }

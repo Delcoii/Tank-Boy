@@ -35,20 +35,18 @@ void tank_draw(Tank* tank);
 
 // Tank structure
 typedef struct {
-    float x, y;          // Position
-    float angle;         // Rotation angle in radians
-    float speed;         // Movement speed
-    float turn_speed;    // Rotation speed
-    bool on_ground;      // on the map
-    int width, height;   // Size
-    ALLEGRO_COLOR color; // Tank color
-    double cannon_angle; // camera angle
+    double x, y;         // Position
+    double vx, vy;       // Velocity
+    double cannon_angle; // Cannon angle
+    bool on_ground;      // On the ground
+    int weapon;          // 0=MG, 1=Cannon
 
-    bool charging;       // canon guage
-    double cannon_power; // canon power
-    int weapon; // 0 = m60,1=cannon
+    // Cannon charging
+    bool charging;
+    double cannon_power;
 
-    bool mg_firing;      // m60, reloading
+    // Machine gun firing/reloading
+    bool mg_firing;
     double mg_fire_time;
     double mg_shot_cooldown;
     bool mg_reloading;
@@ -57,8 +55,8 @@ typedef struct {
 } Tank;
 
 // Function declarations
-void tank_init(Tank* tank, float x, float y, ALLEGRO_COLOR color);
-void tank_update(Tank* tank, InputState* input, float map_width, float map_height);
-void tank_draw(Tank* tank, double camera_x, double camera_y, Bullet* bullets, int max_bullets);
+void tank_init(Tank* tank, double x, double y);
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets);
+void tank_draw(Tank* tank, double camera_x, double camera_y);
 
 #endif // TANK_H

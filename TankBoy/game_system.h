@@ -82,9 +82,12 @@ typedef struct {
     Tank player_tank;
     InputState input;
 
-    // Bullets
+    // Bullet system
     Bullet bullets[MAX_BULLETS];  
     int max_bullets;
+    
+    // Camera
+    double camera_x, camera_y;
 } GameSystem;
 
 

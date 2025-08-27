@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 // Load game configuration from INI file
 void load_game_config(GameConfig* config, const char* config_file) {
@@ -132,12 +133,21 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
+    // Draw ground
+    al_draw_filled_rectangle(0, 500, config->buffer_width, config->buffer_height, 
+                            al_map_rgb(30, 150, 40));
+    
     // Draw tank
-    tank_draw(&game_system->player_tank, 0.0, 0.0, game_system->bullets, game_system->max_bullets);
+    tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
+    
+    // Draw bullets
+    bullets_draw(game_system->bullets, game_system->max_bullets, 
+                game_system->camera_x, game_system->camera_y);
+    
     // Draw UI
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
                  10, 10, ALLEGRO_ALIGN_LEFT,
-                 "Use WASD or Arrow Keys to move, ESC to return to menu");
+                 "Use A/D to move, W to jump, R to change weapon, Mouse to aim and shoot");
 }
 
 // Handle keyboard input
@@ -172,6 +182,16 @@ void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 // Update button hover states
                 game_system->start_button.hovered = is_point_in_button(buffer_x, buffer_y, &game_system->start_button);
                 game_system->exit_button.hovered = is_point_in_button(buffer_x, buffer_y, &game_system->exit_button);
+            } else if (game_system->current_state == STATE_GAME) {
+                // Convert display coordinates to buffer coordinates
+                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y, &game_system->config);
+                
+                // Update cannon angle based on mouse position
+                double cx = game_system->player_tank.x - game_system->camera_x + 16;
+                double cy = game_system->player_tank.y - game_system->camera_y + 10;
+                double dx = buffer_x - cx;
+                double dy = buffer_y - cy;
+                game_system->player_tank.cannon_angle = atan2(dy, dx);
             }
             break;
             
@@ -244,11 +264,16 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize input system
     input_system_init(&game_system->input);
     
-    // Initialize player tank at center of buffer
-    tank_init(&game_system->player_tank, 
-              game_system->config.buffer_width / 2.0f, 
-              game_system->config.buffer_height / 2.0f,
-              al_map_rgb(0, 150, 0));  // Green tank
+    // Initialize player tank
+    tank_init(&game_system->player_tank, 50.0, 480.0);
+    
+    // Initialize bullet system
+    game_system->max_bullets = MAX_BULLETS;
+    bullets_init(game_system->bullets, game_system->max_bullets);
+    
+    // Initialize camera
+    game_system->camera_x = 0;
+    game_system->camera_y = 0;
     
     printf("Game system initialized with double buffering!\n");
 }
@@ -276,8 +301,13 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Update game objects if in game state
     if (game_system->current_state == STATE_GAME) {
-        tank_update(&game_system->player_tank, &game_system->input, 
-                   game_system->config.buffer_width, game_system->config.buffer_height);
+        tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
+                   game_system->bullets, game_system->max_bullets);
+        bullets_update(game_system->bullets, game_system->max_bullets);
+        
+        // Update camera to follow tank
+        game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3;
+        game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2;
     }
 }
 
@@ -303,7 +333,7 @@ void render_game(GameSystem* game_system) {
     if (game_system->current_state == STATE_MENU) {
         draw_menu(&game_system->start_button, &game_system->exit_button, game_system->font, &game_system->config);
     } else if (game_system->current_state == STATE_GAME) {
-        draw_game(game_system->font, &game_system->config, &game_system->player_tank);
+        draw_game(game_system->font, &game_system->config, game_system);
     }
     
     disp_post_draw(game_system);

@@ -10,7 +10,7 @@ typedef struct {
     double x, y;
     double vx, vy;
     bool alive;
-    int weapon; // 0=MG, 1=Cannon, 2=Laser, 3=Missile
+    int weapon; // 0=MG, 1=Cannon
 } Bullet;
 
 void bullets_init(Bullet* bullets, int max_bullets);
