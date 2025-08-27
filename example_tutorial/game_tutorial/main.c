@@ -6,7 +6,7 @@
  * ./game
  */
 
-#if 0
+#if 1
 
 #include <time.h>
 #include <stdio.h>
@@ -1026,7 +1026,7 @@ int main()
 
 
 
-#if 1
+#if 0
 /* game.c
  *
  * TankBoy - single-file Allegro5 game prototype
