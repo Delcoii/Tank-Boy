@@ -180,6 +180,18 @@ float ini_parser_get_float(IniParser* parser, const char* section, const char* k
     return result;
 }
 
+// Get double value
+double ini_parser_get_double(IniParser* parser, const char* section, const char* key, double default_value) {
+    const char* value = ini_parser_get_string(parser, section, key, NULL);
+    if (!value) return default_value;
+    
+    char* endptr;
+    double result = strtod(value, &endptr);
+    
+    if (*endptr != '\0') return default_value;
+    return result;
+}
+
 // Get boolean value
 bool ini_parser_get_bool(IniParser* parser, const char* section, const char* key, bool default_value) {
     const char* value = ini_parser_get_string(parser, section, key, NULL);

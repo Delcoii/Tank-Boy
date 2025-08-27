@@ -48,12 +48,12 @@ void load_game_config(GameConfig* config, const char* config_file) {
     }
     
     // Load all values with defaults (whether file exists or not)
-    config->display_width = ini_parser_get_int(parser, "Display", "display_width", 800);
-    config->display_height = ini_parser_get_int(parser, "Display", "display_height", 600);
-    
     config->buffer_width = ini_parser_get_int(parser, "Buffer", "buffer_width", 320);
     config->buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 240);
-    config->display_scale = ini_parser_get_int(parser, "Buffer", "display_scale", 3);
+    config->display_scale = ini_parser_get_double(parser, "Buffer", "display_scale", 3.0);
+    
+    printf("Loaded config: buffer=%dx%d, scale=%.2f\n", 
+           config->buffer_width, config->buffer_height, config->display_scale);
     
     config->button_width = ini_parser_get_int(parser, "Buttons", "button_width", 200);
     config->button_height = ini_parser_get_int(parser, "Buttons", "button_height", 50);
@@ -102,10 +102,10 @@ void init_button(Button* button, int x, int y, int width, int height, char* text
 
 // Convert display coordinates to buffer coordinates
 void display_to_buffer_coords(int display_x, int display_y, int* buffer_x, int* buffer_y, GameConfig* config) {
-    int disp_w = config->buffer_width * config->display_scale;
-    int disp_h = config->buffer_height * config->display_scale;
-    *buffer_x = (display_x * config->buffer_width) / disp_w;
-    *buffer_y = (display_y * config->buffer_height) / disp_h;
+    double disp_w = config->buffer_width * config->display_scale;
+    double disp_h = config->buffer_height * config->display_scale;
+    *buffer_x = (int)((display_x * config->buffer_width) / disp_w);
+    *buffer_y = (int)((display_y * config->buffer_height) / disp_h);
 }
 
 // Check if point is inside button
@@ -314,8 +314,8 @@ void disp_pre_draw(GameSystem* game_system) {
 // Scale buffer to display and flip
 void disp_post_draw(GameSystem* game_system) {
     al_set_target_backbuffer(al_get_current_display());
-    int disp_w = game_system->config.buffer_width * game_system->config.display_scale;
-    int disp_h = game_system->config.buffer_height * game_system->config.display_scale;
+    double disp_w = game_system->config.buffer_width * game_system->config.display_scale;
+    double disp_h = game_system->config.buffer_height * game_system->config.display_scale;
     al_draw_scaled_bitmap(game_system->buffer, 0, 0, game_system->config.buffer_width, game_system->config.buffer_height, 
                           0, 0, disp_w, disp_h, 0);
     al_flip_display();

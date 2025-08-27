@@ -28,6 +28,7 @@ bool ini_parser_load_file(IniParser* parser, const char* filename);
 const char* ini_parser_get_string(IniParser* parser, const char* section, const char* key, const char* default_value);
 int ini_parser_get_int(IniParser* parser, const char* section, const char* key, int default_value);
 float ini_parser_get_float(IniParser* parser, const char* section, const char* key, float default_value);
+double ini_parser_get_double(IniParser* parser, const char* section, const char* key, double default_value);
 bool ini_parser_get_bool(IniParser* parser, const char* section, const char* key, bool default_value);
 
 // Helper function for bulk loading with default initialization
