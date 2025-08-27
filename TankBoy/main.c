@@ -1,4 +1,3 @@
-
 // standard c library
 #include <time.h>
 #include <stdio.h>
@@ -14,7 +13,6 @@
 
 // local library
 #include "game_system.h"
-#include "head_up_display.h"
 
 void* must_init(void* test, const char* description) {
     if (test) return test;
@@ -41,29 +39,19 @@ int main(void) {
     
     // Initialize game system
     init_game_system(display, queue, &game_system);
-    head_up_display_init();
     
     ALLEGRO_EVENT event;
     
     while (game_system.running) {
         al_wait_for_event(queue, &event);
-
+        
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
             game_system.running = false;
         }
-
+        
         update_game_state(&event, &game_system);
         render_game(&game_system);
-
-        // HUD 테스트용 렌더링
-        Head_Up_Display_Data hud = { 0 };
-        hud.weapon_type = 0;
-        hud.player_hp = 50;
-        hud.stage = 1;
-        hud.score = 12345;
-
-        head_up_display_draw(&hud);             // HUD 그리기 (체력바 포함)
-
+        
         al_flip_display();
     }
     
