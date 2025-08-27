@@ -16,11 +16,15 @@
 #include "ini_parser.h"
 #include "input_system.h"
 
+// Display buffer settings are now loaded from config.ini
+// No more hardcoded defines!
+
 // Game configuration structure
 typedef struct {
-    // Display settings
-    int screen_width;
-    int screen_height;
+    // Buffer settings
+    int buffer_width;
+    int buffer_height;
+    double display_scale;
     
     // Button settings
     int button_width;
@@ -66,6 +70,9 @@ typedef struct {
     bool running;
     GameConfig config;
     
+    // Display buffer
+    ALLEGRO_BITMAP* buffer;
+    
     // Game objects
     Tank player_tank;
     InputState input;
@@ -78,5 +85,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display);
 void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system);
 void render_game(GameSystem* game_system);
+
+// Display buffer functions
+void disp_pre_draw(GameSystem* game_system);
+void disp_post_draw(GameSystem* game_system);
 
 #endif // GAME_SYSTEM_H

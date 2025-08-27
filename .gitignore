@@ -69,7 +69,7 @@ nunit-*.xml
 # NuGet Symbol packages
 *.snupkg
 # Package folders are NOT excluded (libraries included)
-# packages/
+packages/
 
 # Microsoft Fakes
 FakesAssemblies/
