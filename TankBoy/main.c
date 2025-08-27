@@ -55,15 +55,13 @@ int main(void) {
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
             game_system.running = false;
         }
+        // only update display on timer event
         else if (event.type == ALLEGRO_EVENT_TIMER) {
-            // Update game logic on timer tick
-            update_game_state(&event, &game_system);
             redraw = true;
         }
-        else {
-            // Handle input events
-            update_game_state(&event, &game_system);
-        }
+        
+        // Handle all events (input, timer, etc.)
+        update_game_state(&event, &game_system);
         
         if (redraw && al_is_event_queue_empty(queue)) {
             redraw = false;
