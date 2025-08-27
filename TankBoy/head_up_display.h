@@ -12,16 +12,16 @@ typedef enum {
 
 /* HUD data structure */
 typedef struct {
-    int player_hp;      // Player health (0~100)
+    int player_hp;      // Health (0~100)
     int score;          // Time-based score
     WeaponType weapon;  // Current weapon
-    int stage;          // Current stage/level
+    int stage;          // Current stage
 } Head_Up_Display_Data;
 
 /* HUD initialization */
-void head_up_display_init();
+void head_up_display_init(const char* config_file);
 
-/* HUD update (damage, weapon, stage input) */
+/* HUD update */
 Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon, int stage);
 
 /* HUD draw */

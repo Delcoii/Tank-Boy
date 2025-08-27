@@ -1,4 +1,5 @@
 #include "head_up_display.h"
+#include "ini_parser.h"
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
@@ -10,11 +11,15 @@ static ALLEGRO_FONT* hud_font = NULL;
 /* Internal state */
 static int current_hp = 100;
 static int current_score = 0;
-static int current_stage = 1;
 static double last_time = 0;
 
-/* HUD initialization */
-void head_up_display_init() {
+/* HUD Colors */
+static ALLEGRO_COLOR hud_text_color;
+static ALLEGRO_COLOR hud_hp_color;
+static ALLEGRO_COLOR hud_border_color;
+
+/* HUD initialization (reads config.ini) */
+void head_up_display_init(const char* config_file) {
     al_init_font_addon();
     al_init_ttf_addon();
 
@@ -24,9 +29,33 @@ void head_up_display_init() {
         exit(1);
     }
 
+    // Load HUD colors from config.ini
+    IniParser* parser = ini_parser_create();
+    if (ini_parser_load_file(parser, config_file)) {
+        int tr = ini_parser_get_int(parser, "HUD Colors", "hud_text_r", 255);
+        int tg = ini_parser_get_int(parser, "HUD Colors", "hud_text_g", 255);
+        int tb = ini_parser_get_int(parser, "HUD Colors", "hud_text_b", 255);
+        hud_text_color = al_map_rgb(tr, tg, tb);
+
+        int hr = ini_parser_get_int(parser, "HUD Colors", "hud_hp_r", 255);
+        int hg = ini_parser_get_int(parser, "HUD Colors", "hud_hp_g", 0);
+        int hb = ini_parser_get_int(parser, "HUD Colors", "hud_hp_b", 0);
+        hud_hp_color = al_map_rgb(hr, hg, hb);
+
+        int br = ini_parser_get_int(parser, "HUD Colors", "hud_border_r", 255);
+        int bg = ini_parser_get_int(parser, "HUD Colors", "hud_border_g", 255);
+        int bb = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
+        hud_border_color = al_map_rgb(br, bg, bb);
+    }
+    else {
+        hud_text_color = al_map_rgb(255, 255, 255);
+        hud_hp_color = al_map_rgb(255, 0, 0);
+        hud_border_color = al_map_rgb(255, 255, 255);
+    }
+    ini_parser_destroy(parser);
+
     current_hp = 100;
     current_score = 0;
-    current_stage = 1;
     last_time = al_get_time();
 }
 
@@ -42,13 +71,11 @@ Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon, int s
         last_time = now;
     }
 
-    current_stage = stage;
-
     Head_Up_Display_Data hud;
     hud.player_hp = current_hp;
     hud.score = current_score;
     hud.weapon = weapon;
-    hud.stage = current_stage;
+    hud.stage = stage;
 
     return hud;
 }
@@ -65,11 +92,11 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     }
 
     // HUD text
-    al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 10, 0,
+    al_draw_textf(hud_font, hud_text_color, 10, 10, 0,
         "Weapon: %s", weapon_name);
-    al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 40, 0,
+    al_draw_textf(hud_font, hud_text_color, 10, 40, 0,
         "Score: %d", hud->score);
-    al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 70, 0,
+    al_draw_textf(hud_font, hud_text_color, 10, 70, 0,
         "Stage: %d", hud->stage);
 
     // Health bar
@@ -78,50 +105,20 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     if (ratio < 0) ratio = 0;
     if (ratio > 1) ratio = 1;
 
-    // Health bar outline
+    // Outline
     al_draw_rectangle(bar_x, bar_y, bar_x + bar_w, bar_y + bar_h,
-        al_map_rgb(255, 255, 255), 2);
+        hud_border_color, 2);
 
-    // Health fill
+    // Fill
     if (current_hp > 0) {
         al_draw_filled_rectangle(bar_x + 1, bar_y + 1,
             bar_x + (int)(bar_w * ratio) - 1,
             bar_y + bar_h - 1,
-            al_map_rgb(255, 0, 0));
+            hud_hp_color);
     }
 
     // Health text
-    al_draw_textf(hud_font, al_map_rgb(255, 255, 255),
+    al_draw_textf(hud_font, hud_text_color,
         bar_x + bar_w + 10, bar_y, 0,
         "%d / 100", hud->player_hp);
 }
-
-/* Usage:
-
-#include "head_up_display.h"
-
-head_up_display_init();
-
-Head_Up_Display_Data hud = head_up_display_update(damage, tank.weapon, stage);
-
-head_up_display_draw(&hud);
-
-*/
-
-
-
-/* 사용법
-
-* 추가
-#include "head_up_display.h"
-
-* HUD 초기화
-head_up_display_init();
-
-* 외부에서 쓸 때 / 구조체로 출력
-Head_Up_Display_Data hud = head_up_display_update(damage, tank.weapon);
-
-* head_up_display 출력
-head_up_display_draw(&hud);
-
-*/

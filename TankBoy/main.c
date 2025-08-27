@@ -11,8 +11,10 @@
 #include <allegro5/allegro_acodec.h>
 #include <allegro5/allegro_image.h>
 
+
 // local library
 #include "game_system.h"
+#include "head_up_display.h"
 
 void* must_init(void* test, const char* description) {
     if (test) return test;
@@ -39,6 +41,8 @@ int main(void) {
     
     // Initialize game system
     init_game_system(display, queue, &game_system);
+    // Initialize head_up_display
+    head_up_display_init("config.ini");
     
     ALLEGRO_EVENT event;
     
@@ -50,8 +54,13 @@ int main(void) {
         }
         
         update_game_state(&event, &game_system);
-        render_game(&game_system);
         
+        render_game(&game_system);
+
+        //head up display
+        Head_Up_Display_Data hud = head_up_display_update(1, 1, 1);// (damage, weapon, stage)
+        head_up_display_draw(&hud); 
+
         al_flip_display();
     }
     
