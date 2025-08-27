@@ -49,9 +49,10 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     tank->vy += gravity;
     tank->y += tank->vy;
 
-    // Ground collision (simplified - assume ground at y = 500)
-    if (tank->y > 500 - 20) { 
-        tank->y = 500 - 20; 
+    // Ground collision with proper calculation
+    double ground = 500.0; // Fixed ground level for now
+    if (tank->y > ground - 20) { 
+        tank->y = ground - 20; 
         tank->vy = 0; 
         tank->on_ground = true; 
     }

@@ -133,8 +133,9 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
-    // Draw ground
-    al_draw_filled_rectangle(0, 500, config->buffer_width, config->buffer_height, 
+    // Draw ground with camera offset
+    double ground_screen_y = 500 - game_system->camera_y;
+    al_draw_filled_rectangle(0, ground_screen_y, config->buffer_width, config->buffer_height, 
                             al_map_rgb(30, 150, 40));
     
     // Draw tank
@@ -299,15 +300,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update input system
     input_system_update(&game_system->input, event);
     
-    // Update game objects if in game state
-    if (game_system->current_state == STATE_GAME) {
+    // Update game objects if in game state (only on timer events for consistent physics)
+    if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
                    game_system->bullets, game_system->max_bullets);
         bullets_update(game_system->bullets, game_system->max_bullets);
         
-        // Update camera to follow tank
-        game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3;
-        game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2;
+        // Update camera to follow tank (like the working example)
+        game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
+        game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
     }
 }
 
