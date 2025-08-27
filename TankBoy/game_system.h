@@ -18,9 +18,6 @@
 #include "ini_parser.h"
 #include "input_system.h"
 
-//bullet 
-#define MAX_BULLETS 100
-
 // Display buffer settings are now loaded from config.ini
 // No more hardcoded defines!
 
