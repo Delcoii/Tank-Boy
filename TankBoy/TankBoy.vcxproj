@@ -141,6 +141,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="bullet.c" />
+    <ClCompile Include="bullet.h" />
     <ClCompile Include="main.c" />
     <ClCompile Include="game_system.c" />
     <ClCompile Include="ini_parser.c" />

@@ -1,6 +1,7 @@
 #ifndef GAME_SYSTEM_H
 #define GAME_SYSTEM_H
 
+
 // standard C lib
 #include <stdbool.h>
 
@@ -11,10 +12,14 @@
 
 // algorithm
 #include "tank.h"
+#include "bullet.h"
 
 // utils
 #include "ini_parser.h"
 #include "input_system.h"
+
+//bullet 
+#define MAX_BULLETS 100
 
 // Display buffer settings are now loaded from config.ini
 // No more hardcoded defines!
@@ -76,6 +81,10 @@ typedef struct {
     // Game objects
     Tank player_tank;
     InputState input;
+
+    // Bullets
+    Bullet bullets[MAX_BULLETS];  
+    int max_bullets;
 } GameSystem;
 
 

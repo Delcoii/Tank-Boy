@@ -129,12 +129,11 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 }
 
 // Draw game screen
-void draw_game(ALLEGRO_FONT* font, GameConfig* config, Tank* player_tank) {
+void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
     // Draw tank
-    tank_draw(player_tank);
-    
+    tank_draw(&game_system->player_tank, 0.0, 0.0, game_system->bullets, game_system->max_bullets);
     // Draw UI
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
                  10, 10, ALLEGRO_ALIGN_LEFT,

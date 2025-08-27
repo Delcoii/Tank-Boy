@@ -1,91 +1,60 @@
 #include "input_system.h"
 
-// Initialize input system
+// 초기화: 모든 키 false
 void input_system_init(InputState* input) {
-    input->key_up = false;
-    input->key_down = false;
-    input->key_left = false;
-    input->key_right = false;
-    input->key_escape = false;
-    input->key_space = false;
+    input->left = false;
+    input->right = false;
+    input->jump = false;
+    input->change_weapon = false;
+    input->esc = false;
+    input->fire = false;
 }
 
-// Update input state based on events
+// 이벤트를 기반으로 키 상태 갱신
 void input_system_update(InputState* input, ALLEGRO_EVENT* event) {
     if (event->type == ALLEGRO_EVENT_KEY_DOWN) {
         switch (event->keyboard.keycode) {
-            case ALLEGRO_KEY_UP:
-            case ALLEGRO_KEY_W:
-                input->key_up = true;
-                break;
-            case ALLEGRO_KEY_DOWN:
-            case ALLEGRO_KEY_S:
-                input->key_down = true;
-                break;
-            case ALLEGRO_KEY_LEFT:
-            case ALLEGRO_KEY_A:
-                input->key_left = true;
-                break;
-            case ALLEGRO_KEY_RIGHT:
-            case ALLEGRO_KEY_D:
-                input->key_right = true;
-                break;
-            case ALLEGRO_KEY_ESCAPE:
-                input->key_escape = true;
-                break;
-            case ALLEGRO_KEY_SPACE:
-                input->key_space = true;
-                break;
+        case ALLEGRO_KEY_A:
+        case ALLEGRO_KEY_LEFT:  input->left = true; break;
+        case ALLEGRO_KEY_D:
+        case ALLEGRO_KEY_RIGHT: input->right = true; break;
+        case ALLEGRO_KEY_W:
+        case ALLEGRO_KEY_UP:    input->jump = true; break;
+        case ALLEGRO_KEY_R:     input->change_weapon = true; break;
+        case ALLEGRO_KEY_ESCAPE: input->esc = true; break;
         }
     }
     else if (event->type == ALLEGRO_EVENT_KEY_UP) {
         switch (event->keyboard.keycode) {
-            case ALLEGRO_KEY_UP:
-            case ALLEGRO_KEY_W:
-                input->key_up = false;
-                break;
-            case ALLEGRO_KEY_DOWN:
-            case ALLEGRO_KEY_S:
-                input->key_down = false;
-                break;
-            case ALLEGRO_KEY_LEFT:
-            case ALLEGRO_KEY_A:
-                input->key_left = false;
-                break;
-            case ALLEGRO_KEY_RIGHT:
-            case ALLEGRO_KEY_D:
-                input->key_right = false;
-                break;
-            case ALLEGRO_KEY_ESCAPE:
-                input->key_escape = false;
-                break;
-            case ALLEGRO_KEY_SPACE:
-                input->key_space = false;
-                break;
+        case ALLEGRO_KEY_A:
+        case ALLEGRO_KEY_LEFT:  input->left = false; break;
+        case ALLEGRO_KEY_D:
+        case ALLEGRO_KEY_RIGHT: input->right = false; break;
+        case ALLEGRO_KEY_W:
+        case ALLEGRO_KEY_UP:    input->jump = false; break;
+        case ALLEGRO_KEY_R:     input->change_weapon = false; break;
+        case ALLEGRO_KEY_ESCAPE: input->esc = false; break;
         }
+    }
+    else if (event->type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+        if (event->mouse.button == 1) input->fire = true;
+    }
+    else if (event->type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) {
+        if (event->mouse.button == 1) input->fire = false;
     }
 }
 
-// Check if specific key is pressed
+// 특정 키가 눌려 있는지 확인 (선택적)
 bool input_is_key_pressed(InputState* input, int key) {
     switch (key) {
-        case ALLEGRO_KEY_UP:
-        case ALLEGRO_KEY_W:
-            return input->key_up;
-        case ALLEGRO_KEY_DOWN:
-        case ALLEGRO_KEY_S:
-            return input->key_down;
-        case ALLEGRO_KEY_LEFT:
-        case ALLEGRO_KEY_A:
-            return input->key_left;
-        case ALLEGRO_KEY_RIGHT:
-        case ALLEGRO_KEY_D:
-            return input->key_right;
-        case ALLEGRO_KEY_ESCAPE:
-            return input->key_escape;
-        case ALLEGRO_KEY_SPACE:
-            return input->key_space;
-        default:
-            return false;
+    case ALLEGRO_KEY_A:
+    case ALLEGRO_KEY_LEFT:  return input->left;
+    case ALLEGRO_KEY_D:
+    case ALLEGRO_KEY_RIGHT: return input->right;
+    case ALLEGRO_KEY_W:
+    case ALLEGRO_KEY_UP:    return input->jump;
+    case ALLEGRO_KEY_R:     return input->change_weapon;
+    case ALLEGRO_KEY_ESCAPE:return input->esc;
+    default: return false;
     }
 }
