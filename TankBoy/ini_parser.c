@@ -26,6 +26,7 @@ void ini_parser_destroy(IniParser* parser) {
     if (!parser) return;
     
     for (int i = 0; i < parser->count; i++) {
+        free(parser->entries[i].section);
         free(parser->entries[i].key);
         free(parser->entries[i].value);
     }
@@ -47,15 +48,17 @@ static bool expand_capacity(IniParser* parser) {
 }
 
 // Add a new entry to the parser
-static bool add_entry(IniParser* parser, const char* key, const char* value) {
+static bool add_entry(IniParser* parser, const char* section, const char* key, const char* value) {
     if (parser->count >= parser->capacity) {
         if (!expand_capacity(parser)) return false;
     }
     
+    parser->entries[parser->count].section = _strdup(section);
     parser->entries[parser->count].key = _strdup(key);
     parser->entries[parser->count].value = _strdup(value);
     
-    if (!parser->entries[parser->count].key || !parser->entries[parser->count].value) {
+    if (!parser->entries[parser->count].section || !parser->entries[parser->count].key || !parser->entries[parser->count].value) {
+        free(parser->entries[parser->count].section);
         free(parser->entries[parser->count].key);
         free(parser->entries[parser->count].value);
         return false;
@@ -89,14 +92,27 @@ bool ini_parser_load_file(IniParser* parser, const char* filename) {
     
     char line[MAX_LINE_LENGTH];
     int line_number = 0;
+    char* current_section = _strdup(""); // Default section
     
     while (fgets(line, sizeof(line), file)) {
         line_number++;
         char* trimmed_line = trim(line);
         
         // Skip empty lines and comments
-        if (strlen(trimmed_line) == 0 || trimmed_line[0] == '#' || trimmed_line[0] == '[') {
+        if (strlen(trimmed_line) == 0 || trimmed_line[0] == '#') {
             continue;
+        }
+        
+        // Check for section header [section_name]
+        if (trimmed_line[0] == '[') {
+            char* end_bracket = strchr(trimmed_line, ']');
+            if (end_bracket) {
+                *end_bracket = '\0';
+                char* section_name = trim(trimmed_line + 1);
+                free(current_section);
+                current_section = _strdup(section_name);
+                continue;
+            }
         }
         
         // Parse key=value
@@ -115,22 +131,24 @@ bool ini_parser_load_file(IniParser* parser, const char* filename) {
             continue;
         }
         
-        if (!add_entry(parser, key, value)) {
+        if (!add_entry(parser, current_section, key, value)) {
+            free(current_section);
             fclose(file);
             return false;
         }
     }
     
+    free(current_section);
     fclose(file);
     return true;
 }
 
 // Get string value
-const char* ini_parser_get_string(IniParser* parser, const char* key, const char* default_value) {
-    if (!parser || !key) return default_value;
+const char* ini_parser_get_string(IniParser* parser, const char* section, const char* key, const char* default_value) {
+    if (!parser || !section || !key) return default_value;
     
     for (int i = 0; i < parser->count; i++) {
-        if (strcmp(parser->entries[i].key, key) == 0) {
+        if (strcmp(parser->entries[i].section, section) == 0 && strcmp(parser->entries[i].key, key) == 0) {
             return parser->entries[i].value;
         }
     }
@@ -139,8 +157,8 @@ const char* ini_parser_get_string(IniParser* parser, const char* key, const char
 }
 
 // Get integer value
-int ini_parser_get_int(IniParser* parser, const char* key, int default_value) {
-    const char* value = ini_parser_get_string(parser, key, NULL);
+int ini_parser_get_int(IniParser* parser, const char* section, const char* key, int default_value) {
+    const char* value = ini_parser_get_string(parser, section, key, NULL);
     if (!value) return default_value;
     
     char* endptr;
@@ -151,8 +169,8 @@ int ini_parser_get_int(IniParser* parser, const char* key, int default_value) {
 }
 
 // Get float value
-float ini_parser_get_float(IniParser* parser, const char* key, float default_value) {
-    const char* value = ini_parser_get_string(parser, key, NULL);
+float ini_parser_get_float(IniParser* parser, const char* section, const char* key, float default_value) {
+    const char* value = ini_parser_get_string(parser, section, key, NULL);
     if (!value) return default_value;
     
     char* endptr;
@@ -163,8 +181,8 @@ float ini_parser_get_float(IniParser* parser, const char* key, float default_val
 }
 
 // Get boolean value
-bool ini_parser_get_bool(IniParser* parser, const char* key, bool default_value) {
-    const char* value = ini_parser_get_string(parser, key, NULL);
+bool ini_parser_get_bool(IniParser* parser, const char* section, const char* key, bool default_value) {
+    const char* value = ini_parser_get_string(parser, section, key, NULL);
     if (!value) return default_value;
     
     if (strcmp(value, "true") == 0 || strcmp(value, "1") == 0 || strcmp(value, "yes") == 0) {

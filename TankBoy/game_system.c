@@ -48,38 +48,38 @@ void load_game_config(GameConfig* config, const char* config_file) {
     }
     
     // Load all values with defaults (whether file exists or not)
-    config->screen_width = ini_parser_get_int(parser, "screen_width", 800);
-    config->screen_height = ini_parser_get_int(parser, "screen_height", 600);
-    config->button_width = ini_parser_get_int(parser, "button_width", 200);
-    config->button_height = ini_parser_get_int(parser, "button_height", 50);
-    config->button_spacing = ini_parser_get_int(parser, "button_spacing", 70);
+    config->display_width = ini_parser_get_int(parser, "Display", "display_width", 800);
+    config->display_height = ini_parser_get_int(parser, "Display", "display_height", 600);
+    config->button_width = ini_parser_get_int(parser, "Buttons", "button_width", 200);
+    config->button_height = ini_parser_get_int(parser, "Buttons", "button_height", 50);
+    config->button_spacing = ini_parser_get_int(parser, "Buttons", "button_spacing", 70);
     
-    config->menu_bg_r = ini_parser_get_int(parser, "menu_bg_r", 50);
-    config->menu_bg_g = ini_parser_get_int(parser, "menu_bg_g", 50);
-    config->menu_bg_b = ini_parser_get_int(parser, "menu_bg_b", 100);
+    config->menu_bg_r = ini_parser_get_int(parser, "Colors", "menu_bg_r", 50);
+    config->menu_bg_g = ini_parser_get_int(parser, "Colors", "menu_bg_g", 50);
+    config->menu_bg_b = ini_parser_get_int(parser, "Colors", "menu_bg_b", 100);
     
-    config->game_bg_r = ini_parser_get_int(parser, "game_bg_r", 0);
-    config->game_bg_g = ini_parser_get_int(parser, "game_bg_g", 100);
-    config->game_bg_b = ini_parser_get_int(parser, "game_bg_b", 0);
+    config->game_bg_r = ini_parser_get_int(parser, "Colors", "game_bg_r", 0);
+    config->game_bg_g = ini_parser_get_int(parser, "Colors", "game_bg_g", 100);
+    config->game_bg_b = ini_parser_get_int(parser, "Colors", "game_bg_b", 0);
     
-    config->button_normal_r = ini_parser_get_int(parser, "button_normal_r", 200);
-    config->button_normal_g = ini_parser_get_int(parser, "button_normal_g", 200);
-    config->button_normal_b = ini_parser_get_int(parser, "button_normal_b", 200);
+    config->button_normal_r = ini_parser_get_int(parser, "Colors", "button_normal_r", 200);
+    config->button_normal_g = ini_parser_get_int(parser, "Colors", "button_normal_g", 200);
+    config->button_normal_b = ini_parser_get_int(parser, "Colors", "button_normal_b", 200);
     
-    config->button_hover_r = ini_parser_get_int(parser, "button_hover_r", 150);
-    config->button_hover_g = ini_parser_get_int(parser, "button_hover_g", 150);
-    config->button_hover_b = ini_parser_get_int(parser, "button_hover_b", 150);
+    config->button_hover_r = ini_parser_get_int(parser, "Colors", "button_hover_r", 150);
+    config->button_hover_g = ini_parser_get_int(parser, "Colors", "button_hover_g", 150);
+    config->button_hover_b = ini_parser_get_int(parser, "Colors", "button_hover_b", 150);
     
-    config->button_clicked_r = ini_parser_get_int(parser, "button_clicked_r", 100);
-    config->button_clicked_g = ini_parser_get_int(parser, "button_clicked_g", 100);
-    config->button_clicked_b = ini_parser_get_int(parser, "button_clicked_b", 100);
+    config->button_clicked_r = ini_parser_get_int(parser, "Colors", "button_clicked_r", 100);
+    config->button_clicked_g = ini_parser_get_int(parser, "Colors", "button_clicked_g", 100);
+    config->button_clicked_b = ini_parser_get_int(parser, "Colors", "button_clicked_b", 100);
     
-    config->text_r = ini_parser_get_int(parser, "text_r", 255);
-    config->text_g = ini_parser_get_int(parser, "text_g", 255);
-    config->text_b = ini_parser_get_int(parser, "text_b", 255);
+    config->text_r = ini_parser_get_int(parser, "Colors", "text_r", 255);
+    config->text_g = ini_parser_get_int(parser, "Colors", "text_g", 255);
+    config->text_b = ini_parser_get_int(parser, "Colors", "text_b", 255);
     
-    config->game_speed = ini_parser_get_int(parser, "game_speed", 60);
-    config->max_lives = ini_parser_get_int(parser, "max_lives", 3);
+    config->game_speed = ini_parser_get_int(parser, "Game", "game_speed", 60);
+    config->max_lives = ini_parser_get_int(parser, "Game", "max_lives", 3);
     
     ini_parser_destroy(parser);
 }
@@ -132,7 +132,7 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
     al_clear_to_color(al_map_rgb(config->menu_bg_r, config->menu_bg_g, config->menu_bg_b));
     
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 config->screen_width/2, 100, ALLEGRO_ALIGN_CENTER,
+                 config->display_width/2, 100, ALLEGRO_ALIGN_CENTER,
                  "Tank-Boy Game");
     
     draw_button(start_button, font, config);
@@ -223,9 +223,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->font = al_create_builtin_font();
     
     // Initialize buttons using config
-    int button_x = game_system->config.screen_width/2 - game_system->config.button_width/2;
-    int start_y = game_system->config.screen_height/2 - game_system->config.button_spacing/2;
-    int exit_y = game_system->config.screen_height/2 + game_system->config.button_spacing/2;
+    int button_x = game_system->config.display_width/2 - game_system->config.button_width/2;
+    int start_y = game_system->config.display_height/2 - game_system->config.button_spacing/2;
+    int exit_y = game_system->config.display_height/2 + game_system->config.button_spacing/2;
     
     init_button(&game_system->start_button, button_x, start_y, 
                 game_system->config.button_width, game_system->config.button_height, "Start Game");
@@ -241,8 +241,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     
     // Initialize player tank at center of screen
     tank_init(&game_system->player_tank, 
-              game_system->config.screen_width / 2.0f, 
-              game_system->config.screen_height / 2.0f,
+              game_system->config.display_width / 2.0f, 
+              game_system->config.display_height / 2.0f,
               al_map_rgb(0, 150, 0));  // Green tank
     
     printf("Game system initialized!\n");
@@ -271,7 +271,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update game objects if in game state
     if (game_system->current_state == STATE_GAME) {
         tank_update(&game_system->player_tank, &game_system->input, 
-                   game_system->config.screen_width, game_system->config.screen_height);
+                   game_system->config.display_width, game_system->config.display_height);
     }
 }
 

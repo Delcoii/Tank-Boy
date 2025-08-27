@@ -19,8 +19,8 @@
 // Game configuration structure
 typedef struct {
     // Display settings
-    int screen_width;
-    int screen_height;
+    int display_width;
+    int display_height;
     
     // Button settings
     int button_width;
