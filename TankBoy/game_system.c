@@ -50,6 +50,11 @@ void load_game_config(GameConfig* config, const char* config_file) {
     // Load all values with defaults (whether file exists or not)
     config->display_width = ini_parser_get_int(parser, "Display", "display_width", 800);
     config->display_height = ini_parser_get_int(parser, "Display", "display_height", 600);
+    
+    config->buffer_width = ini_parser_get_int(parser, "Buffer", "buffer_width", 320);
+    config->buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 240);
+    config->display_scale = ini_parser_get_int(parser, "Buffer", "display_scale", 3);
+    
     config->button_width = ini_parser_get_int(parser, "Buttons", "button_width", 200);
     config->button_height = ini_parser_get_int(parser, "Buttons", "button_height", 50);
     config->button_spacing = ini_parser_get_int(parser, "Buttons", "button_spacing", 70);
@@ -96,9 +101,11 @@ void init_button(Button* button, int x, int y, int width, int height, char* text
 }
 
 // Convert display coordinates to buffer coordinates
-void display_to_buffer_coords(int display_x, int display_y, int* buffer_x, int* buffer_y) {
-    *buffer_x = (display_x * BUFFER_W) / DISP_W;
-    *buffer_y = (display_y * BUFFER_H) / DISP_H;
+void display_to_buffer_coords(int display_x, int display_y, int* buffer_x, int* buffer_y, GameConfig* config) {
+    int disp_w = config->buffer_width * config->display_scale;
+    int disp_h = config->buffer_height * config->display_scale;
+    *buffer_x = (display_x * config->buffer_width) / disp_w;
+    *buffer_y = (display_y * config->buffer_height) / disp_h;
 }
 
 // Check if point is inside button
@@ -138,7 +145,7 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
     al_clear_to_color(al_map_rgb(config->menu_bg_r, config->menu_bg_g, config->menu_bg_b));
     
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 BUFFER_W/2, 100, ALLEGRO_ALIGN_CENTER,
+                 config->buffer_width/2, 100, ALLEGRO_ALIGN_CENTER,
                  "Tank-Boy Game");
     
     draw_button(start_button, font, config);
@@ -185,7 +192,7 @@ void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
         case ALLEGRO_EVENT_MOUSE_AXES:
             if (game_system->current_state == STATE_MENU) {
                 // Convert display coordinates to buffer coordinates
-                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y);
+                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y, &game_system->config);
                 
                 // Update button hover states
                 game_system->start_button.hovered = is_point_in_button(buffer_x, buffer_y, &game_system->start_button);
@@ -196,7 +203,7 @@ void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
             if (event->mouse.button == 1 && game_system->current_state == STATE_MENU) { // Left mouse button
                 // Convert display coordinates to buffer coordinates
-                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y);
+                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y, &game_system->config);
                 
                 if (is_point_in_button(buffer_x, buffer_y, &game_system->start_button)) {
                     game_system->start_button.clicked = true;
@@ -236,7 +243,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_keyboard_event_source());
     
     // Initialize display buffer
-    game_system->buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
     if (!game_system->buffer) {
         printf("Error: Could not create display buffer\n");
         exit(1);
@@ -246,9 +253,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->font = al_create_builtin_font();
     
     // Initialize buttons using buffer dimensions
-    int button_x = BUFFER_W/2 - game_system->config.button_width/2;
-    int start_y = BUFFER_H/2 - game_system->config.button_spacing/2;
-    int exit_y = BUFFER_H/2 + game_system->config.button_spacing/2;
+    int button_x = game_system->config.buffer_width/2 - game_system->config.button_width/2;
+    int start_y = game_system->config.buffer_height/2 - game_system->config.button_spacing/2;
+    int exit_y = game_system->config.buffer_height/2 + game_system->config.button_spacing/2;
     
     init_button(&game_system->start_button, button_x, start_y, 
                 game_system->config.button_width, game_system->config.button_height, "Start Game");
@@ -264,8 +271,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     
     // Initialize player tank at center of buffer
     tank_init(&game_system->player_tank, 
-              BUFFER_W / 2.0f, 
-              BUFFER_H / 2.0f,
+              game_system->config.buffer_width / 2.0f, 
+              game_system->config.buffer_height / 2.0f,
               al_map_rgb(0, 150, 0));  // Green tank
     
     printf("Game system initialized with double buffering!\n");
@@ -295,7 +302,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update game objects if in game state
     if (game_system->current_state == STATE_GAME) {
         tank_update(&game_system->player_tank, &game_system->input, 
-                   BUFFER_W, BUFFER_H);
+                   game_system->config.buffer_width, game_system->config.buffer_height);
     }
 }
 
@@ -307,8 +314,10 @@ void disp_pre_draw(GameSystem* game_system) {
 // Scale buffer to display and flip
 void disp_post_draw(GameSystem* game_system) {
     al_set_target_backbuffer(al_get_current_display());
-    al_draw_scaled_bitmap(game_system->buffer, 0, 0, BUFFER_W, BUFFER_H, 
-                          0, 0, DISP_W, DISP_H, 0);
+    int disp_w = game_system->config.buffer_width * game_system->config.display_scale;
+    int disp_h = game_system->config.buffer_height * game_system->config.display_scale;
+    al_draw_scaled_bitmap(game_system->buffer, 0, 0, game_system->config.buffer_width, game_system->config.buffer_height, 
+                          0, 0, disp_w, disp_h, 0);
     al_flip_display();
 }
 

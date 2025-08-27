@@ -16,18 +16,19 @@
 #include "ini_parser.h"
 #include "input_system.h"
 
-// Display buffer settings
-#define BUFFER_W 320
-#define BUFFER_H 240
-#define DISP_SCALE 3
-#define DISP_W (BUFFER_W * DISP_SCALE)
-#define DISP_H (BUFFER_H * DISP_SCALE)
+// Display buffer settings are now loaded from config.ini
+// No more hardcoded defines!
 
 // Game configuration structure
 typedef struct {
     // Display settings
     int display_width;
     int display_height;
+    
+    // Buffer settings
+    int buffer_width;
+    int buffer_height;
+    int display_scale;
     
     // Button settings
     int button_width;
