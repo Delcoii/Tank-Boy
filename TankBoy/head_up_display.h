@@ -4,25 +4,25 @@
 
 #include <allegro5/allegro5.h>
 
-/* ¹«±â Å¸ÀÔ enum */ // Å×½ºÆ® ÀÔ·Â
+/* ë¬´ê¸° íƒ€ì… enum */ // í…ŒìŠ¤íŠ¸ ì…ë ¥
 typedef enum {
     WEAPON_MACHINE_GUN = 0,
     WEAPON_CANNON = 1
 } WeaponType;
 
-/* Head-Up Display µ¥ÀÌÅÍ ±¸Á¶Ã¼ */
+/* Head-Up Display ë°ì´í„° êµ¬ì¡°ì²´ */
 typedef struct {
-    WeaponType weapon_type; // ¹«±â Á¾·ù
+    WeaponType weapon_type; // ë¬´ê¸° ì¢…ë¥˜
     int player_hp;          // 0~100
-    int damage;             // ¹Ş´Â µ¥¹ÌÁö
-    int stage;              // ½ºÅ×ÀÌÁö ¹øÈ£
-    int score;              // Á¡¼ö
+    int damage;             // ë°›ëŠ” ë°ë¯¸ì§€
+    int stage;              // ìŠ¤í…Œì´ì§€ ë²ˆí˜¸
+    int score;              // ì ìˆ˜
 } Head_Up_Display_Data;
 
-/* HUD ÃÊ±âÈ­ */
+/* HUD ì´ˆê¸°í™” */
 void head_up_display_init();
 
-/* HUD ±×¸®±â */
+/* HUD ê·¸ë¦¬ê¸° */
 void head_up_display_draw(const Head_Up_Display_Data* head_up_display);
 
 #endif
