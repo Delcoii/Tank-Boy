@@ -31,8 +31,8 @@ int main(void) {
     GameSystem game_system;
     load_game_config(&game_system.config, "config.ini");
     
-    // Create display with config values
-    ALLEGRO_DISPLAY* display = must_init(al_create_display(game_system.config.display_width, game_system.config.display_height), "display");
+    // Create display with scaled buffer size
+    ALLEGRO_DISPLAY* display = must_init(al_create_display(DISP_W, DISP_H), "display");
     ALLEGRO_EVENT_QUEUE* queue = must_init(al_create_event_queue(), "event queue");
     
     // Initialize game system

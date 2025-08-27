@@ -16,6 +16,13 @@
 #include "ini_parser.h"
 #include "input_system.h"
 
+// Display buffer settings
+#define BUFFER_W 320
+#define BUFFER_H 240
+#define DISP_SCALE 3
+#define DISP_W (BUFFER_W * DISP_SCALE)
+#define DISP_H (BUFFER_H * DISP_SCALE)
+
 // Game configuration structure
 typedef struct {
     // Display settings
@@ -66,6 +73,9 @@ typedef struct {
     bool running;
     GameConfig config;
     
+    // Display buffer
+    ALLEGRO_BITMAP* buffer;
+    
     // Game objects
     Tank player_tank;
     InputState input;
@@ -78,5 +88,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display);
 void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system);
 void render_game(GameSystem* game_system);
+
+// Display buffer functions
+void disp_pre_draw(GameSystem* game_system);
+void disp_post_draw(GameSystem* game_system);
 
 #endif // GAME_SYSTEM_H

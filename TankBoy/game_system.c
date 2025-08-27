@@ -95,6 +95,12 @@ void init_button(Button* button, int x, int y, int width, int height, char* text
     button->clicked = false;
 }
 
+// Convert display coordinates to buffer coordinates
+void display_to_buffer_coords(int display_x, int display_y, int* buffer_x, int* buffer_y) {
+    *buffer_x = (display_x * BUFFER_W) / DISP_W;
+    *buffer_y = (display_y * BUFFER_H) / DISP_H;
+}
+
 // Check if point is inside button
 bool is_point_in_button(int x, int y, Button* button) {
     return (x >= button->x && x <= button->x + button->width &&
@@ -132,7 +138,7 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
     al_clear_to_color(al_map_rgb(config->menu_bg_r, config->menu_bg_g, config->menu_bg_b));
     
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 config->display_width/2, 100, ALLEGRO_ALIGN_CENTER,
+                 BUFFER_W/2, 100, ALLEGRO_ALIGN_CENTER,
                  "Tank-Boy Game");
     
     draw_button(start_button, font, config);
@@ -173,26 +179,36 @@ bool handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
 
 // Handle mouse input
 void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
+    int buffer_x, buffer_y;
+    
     switch (event->type) {
         case ALLEGRO_EVENT_MOUSE_AXES:
             if (game_system->current_state == STATE_MENU) {
+                // Convert display coordinates to buffer coordinates
+                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y);
+                
                 // Update button hover states
-                game_system->start_button.hovered = is_point_in_button(event->mouse.x, event->mouse.y, &game_system->start_button);
-                game_system->exit_button.hovered = is_point_in_button(event->mouse.x, event->mouse.y, &game_system->exit_button);
+                game_system->start_button.hovered = is_point_in_button(buffer_x, buffer_y, &game_system->start_button);
+                game_system->exit_button.hovered = is_point_in_button(buffer_x, buffer_y, &game_system->exit_button);
             }
             break;
             
         case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
             if (event->mouse.button == 1 && game_system->current_state == STATE_MENU) { // Left mouse button
-                if (is_point_in_button(event->mouse.x, event->mouse.y, &game_system->start_button)) {
+                // Convert display coordinates to buffer coordinates
+                display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y);
+                
+                if (is_point_in_button(buffer_x, buffer_y, &game_system->start_button)) {
                     game_system->start_button.clicked = true;
                     game_system->current_state = STATE_GAME;
-                    printf("Start Game button clicked!\n");
+                    printf("Start Game button clicked! (display: %d,%d -> buffer: %d,%d)\n", 
+                           event->mouse.x, event->mouse.y, buffer_x, buffer_y);
                 }
-                else if (is_point_in_button(event->mouse.x, event->mouse.y, &game_system->exit_button)) {
+                else if (is_point_in_button(buffer_x, buffer_y, &game_system->exit_button)) {
                     game_system->exit_button.clicked = true;
                     game_system->running = false;
-                    printf("Exit Game button clicked!\n");
+                    printf("Exit Game button clicked! (display: %d,%d -> buffer: %d,%d)\n", 
+                           event->mouse.x, event->mouse.y, buffer_x, buffer_y);
                 }
             }
             break;
@@ -219,13 +235,20 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_mouse_event_source());
     al_register_event_source(queue, al_get_keyboard_event_source());
     
+    // Initialize display buffer
+    game_system->buffer = al_create_bitmap(BUFFER_W, BUFFER_H);
+    if (!game_system->buffer) {
+        printf("Error: Could not create display buffer\n");
+        exit(1);
+    }
+    
     // Initialize font
     game_system->font = al_create_builtin_font();
     
-    // Initialize buttons using config
-    int button_x = game_system->config.display_width/2 - game_system->config.button_width/2;
-    int start_y = game_system->config.display_height/2 - game_system->config.button_spacing/2;
-    int exit_y = game_system->config.display_height/2 + game_system->config.button_spacing/2;
+    // Initialize buttons using buffer dimensions
+    int button_x = BUFFER_W/2 - game_system->config.button_width/2;
+    int start_y = BUFFER_H/2 - game_system->config.button_spacing/2;
+    int exit_y = BUFFER_H/2 + game_system->config.button_spacing/2;
     
     init_button(&game_system->start_button, button_x, start_y, 
                 game_system->config.button_width, game_system->config.button_height, "Start Game");
@@ -239,17 +262,18 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize input system
     input_system_init(&game_system->input);
     
-    // Initialize player tank at center of screen
+    // Initialize player tank at center of buffer
     tank_init(&game_system->player_tank, 
-              game_system->config.display_width / 2.0f, 
-              game_system->config.display_height / 2.0f,
+              BUFFER_W / 2.0f, 
+              BUFFER_H / 2.0f,
               al_map_rgb(0, 150, 0));  // Green tank
     
-    printf("Game system initialized!\n");
+    printf("Game system initialized with double buffering!\n");
 }
 
 // Cleanup game system
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
+    al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
     al_destroy_display(display);
@@ -271,15 +295,32 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update game objects if in game state
     if (game_system->current_state == STATE_GAME) {
         tank_update(&game_system->player_tank, &game_system->input, 
-                   game_system->config.display_width, game_system->config.display_height);
+                   BUFFER_W, BUFFER_H);
     }
+}
+
+// Set target to buffer for drawing
+void disp_pre_draw(GameSystem* game_system) {
+    al_set_target_bitmap(game_system->buffer);
+}
+
+// Scale buffer to display and flip
+void disp_post_draw(GameSystem* game_system) {
+    al_set_target_backbuffer(al_get_current_display());
+    al_draw_scaled_bitmap(game_system->buffer, 0, 0, BUFFER_W, BUFFER_H, 
+                          0, 0, DISP_W, DISP_H, 0);
+    al_flip_display();
 }
 
 // Render game based on current state
 void render_game(GameSystem* game_system) {
+    disp_pre_draw(game_system);
+    
     if (game_system->current_state == STATE_MENU) {
         draw_menu(&game_system->start_button, &game_system->exit_button, game_system->font, &game_system->config);
     } else if (game_system->current_state == STATE_GAME) {
         draw_game(game_system->font, &game_system->config, &game_system->player_tank);
     }
+    
+    disp_post_draw(game_system);
 }
