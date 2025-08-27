@@ -192,6 +192,33 @@ double ini_parser_get_double(IniParser* parser, const char* section, const char*
     return result;
 }
 
+// Path resolution helper function
+void ini_parser_resolve_path(const char* source_file, const char* config_file, char* full_path, size_t path_size) {
+    // Find the last directory separator
+    const char* last_slash = strrchr(source_file, '\\');
+    if (!last_slash) last_slash = strrchr(source_file, '/');
+    
+    if (last_slash) {
+        // Copy directory part
+        size_t dir_len = last_slash - source_file + 1;
+        if (dir_len < path_size) {
+#pragma warning(push)
+#pragma warning(disable: 4996)
+            strncpy(full_path, source_file, dir_len);
+            full_path[dir_len] = '\0';
+            
+            // Append config filename
+            strcat(full_path, config_file);
+#pragma warning(pop)
+        } else {
+            strcpy_s(full_path, path_size, config_file);
+        }
+    } else {
+        // No directory found, use relative path
+        strcpy_s(full_path, path_size, config_file);
+    }
+}
+
 // Get boolean value
 bool ini_parser_get_bool(IniParser* parser, const char* section, const char* key, bool default_value) {
     const char* value = ini_parser_get_string(parser, section, key, NULL);

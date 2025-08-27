@@ -36,4 +36,7 @@ bool ini_parser_load_with_defaults(const char* filename, void* config_struct,
                                    void (*init_defaults)(void*), 
                                    void (*load_values)(IniParser*, void*));
 
+// Path resolution helper function
+void ini_parser_resolve_path(const char* source_file, const char* config_file, char* full_path, size_t path_size);
+
 #endif // INI_PARSER_H

@@ -12,33 +12,9 @@ void load_game_config(GameConfig* config, const char* config_file) {
         return;
     }
     
-    // Create full path based on source file location
+    // Create full path using ini_parser helper
     char full_path[512];
-    const char* source_file = __FILE__;  // This file's path
-    
-    // Find the last directory separator
-    const char* last_slash = strrchr(source_file, '\\');
-    if (!last_slash) last_slash = strrchr(source_file, '/');
-    
-    if (last_slash) {
-        // Copy directory part
-        size_t dir_len = last_slash - source_file + 1;
-        if (dir_len < sizeof(full_path)) {
-#pragma warning(push)
-#pragma warning(disable: 4996)
-            strncpy(full_path, source_file, dir_len);
-            full_path[dir_len] = '\0';
-            
-            // Append config filename
-            strcat(full_path, config_file);
-#pragma warning(pop)
-        } else {
-            strcpy_s(full_path, sizeof(full_path), config_file);
-        }
-    } else {
-        // No directory found, use relative path
-        strcpy_s(full_path, sizeof(full_path), config_file);
-    }
+    ini_parser_resolve_path(__FILE__, config_file, full_path, sizeof(full_path));
     
     // Load with default values as fallback
     if (ini_parser_load_file(parser, full_path)) {
