@@ -4,15 +4,16 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdio.h>
 
-/* HUD 폰트 */
+/* HUD font */
 static ALLEGRO_FONT* hud_font = NULL;
 
-/* 내부 상태 */
+/* Internal state */
 static int current_hp = 100;
 static int current_score = 0;
+static int current_stage = 1;
 static double last_time = 0;
 
-/* HUD 초기화 */
+/* HUD initialization */
 void head_up_display_init() {
     al_init_font_addon();
     al_init_ttf_addon();
@@ -25,11 +26,12 @@ void head_up_display_init() {
 
     current_hp = 100;
     current_score = 0;
+    current_stage = 1;
     last_time = al_get_time();
 }
 
-/* HUD 상태 갱신 */ // 외부에서 사용 목적. (데미지, 무기 입력)(체력, 점수, 무기 출력)
-Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon) {
+/* HUD update */
+Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon, int stage) {
     current_hp -= damage;
     if (current_hp < 0) current_hp = 0;
 
@@ -40,52 +42,71 @@ Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon) {
         last_time = now;
     }
 
+    current_stage = stage;
+
     Head_Up_Display_Data hud;
     hud.player_hp = current_hp;
     hud.score = current_score;
     hud.weapon = weapon;
+    hud.stage = current_stage;
 
     return hud;
 }
 
-/* HUD 그리기 */
+/* HUD draw */
 void head_up_display_draw(const Head_Up_Display_Data* hud) {
     if (!hud || !hud_font) return;
 
-    // 무기 이름
+    // Weapon name
     const char* weapon_name = "Unknown";
     switch (hud->weapon) {
     case WEAPON_MACHINE_GUN: weapon_name = "Machine Gun"; break;
     case WEAPON_CANNON:      weapon_name = "Cannon"; break;
     }
 
-    // HUD 텍스트
+    // HUD text
     al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 10, 0,
         "Weapon: %s", weapon_name);
     al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 40, 0,
         "Score: %d", hud->score);
+    al_draw_textf(hud_font, al_map_rgb(255, 255, 255), 10, 70, 0,
+        "Stage: %d", hud->stage);
 
-    // 체력바
-    int bar_x = 10, bar_y = 70, bar_w = 200, bar_h = 20;
-    double ratio = hud->player_hp / 100.0;
+    // Health bar
+    int bar_x = 10, bar_y = 100, bar_w = 200, bar_h = 20;
+    double ratio = current_hp / 100.0;
     if (ratio < 0) ratio = 0;
     if (ratio > 1) ratio = 1;
 
+    // Health bar outline
     al_draw_rectangle(bar_x, bar_y, bar_x + bar_w, bar_y + bar_h,
         al_map_rgb(255, 255, 255), 2);
 
-    if (hud->player_hp > 0) {
+    // Health fill
+    if (current_hp > 0) {
         al_draw_filled_rectangle(bar_x + 1, bar_y + 1,
             bar_x + (int)(bar_w * ratio) - 1,
             bar_y + bar_h - 1,
             al_map_rgb(255, 0, 0));
     }
 
-    // 체력 텍스트
+    // Health text
     al_draw_textf(hud_font, al_map_rgb(255, 255, 255),
         bar_x + bar_w + 10, bar_y, 0,
         "%d / 100", hud->player_hp);
 }
+
+/* Usage:
+
+#include "head_up_display.h"
+
+head_up_display_init();
+
+Head_Up_Display_Data hud = head_up_display_update(damage, tank.weapon, stage);
+
+head_up_display_draw(&hud);
+
+*/
 
 
 
@@ -97,7 +118,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
 * HUD 초기화
 head_up_display_init();
 
-* 외부에서 쓸 때
+* 외부에서 쓸 때 / 구조체로 출력
 Head_Up_Display_Data hud = head_up_display_update(damage, tank.weapon);
 
 * head_up_display 출력
