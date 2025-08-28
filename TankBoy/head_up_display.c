@@ -32,28 +32,24 @@ void head_up_display_init(const char* config_file) {
     // Load HUD colors from config.ini
     IniParser* parser = ini_parser_create();
     if (ini_parser_load_file(parser, config_file)) {
-        int tr = ini_parser_get_int(parser, "HUD Colors", "hud_text_r", 255);
-        int tg = ini_parser_get_int(parser, "HUD Colors", "hud_text_g", 255);
-        int tb = ini_parser_get_int(parser, "HUD Colors", "hud_text_b", 255);
-        hud_text_color = al_map_rgb(tr, tg, tb);
+        int head_up_display_text_r = ini_parser_get_int(parser, "HUD Colors", "hud_text_r", 255);
+        int head_up_display_text_g = ini_parser_get_int(parser, "HUD Colors", "hud_text_g", 255);
+        int head_up_display_text_b = ini_parser_get_int(parser, "HUD Colors", "hud_text_b", 255);
+        hud_text_color = al_map_rgb(head_up_display_text_r, head_up_display_text_g, head_up_display_text_b);
 
-        int hr = ini_parser_get_int(parser, "HUD Colors", "hud_hp_r", 255);
-        int hg = ini_parser_get_int(parser, "HUD Colors", "hud_hp_g", 0);
-        int hb = ini_parser_get_int(parser, "HUD Colors", "hud_hp_b", 0);
-        hud_hp_color = al_map_rgb(hr, hg, hb);
+        int head_up_display_hp_r = ini_parser_get_int(parser, "HUD Colors", "hud_hp_r", 255);
+        int head_up_display_hp_g = ini_parser_get_int(parser, "HUD Colors", "hud_hp_g", 0);
+        int head_up_display_hp_b = ini_parser_get_int(parser, "HUD Colors", "hud_hp_b", 0);
+        hud_hp_color = al_map_rgb(head_up_display_hp_r, head_up_display_hp_g, head_up_display_hp_b);
 
-        int br = ini_parser_get_int(parser, "HUD Colors", "hud_border_r", 255);
-        int bg = ini_parser_get_int(parser, "HUD Colors", "hud_border_g", 255);
-        int bb = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
-        hud_border_color = al_map_rgb(br, bg, bb);
+        int head_up_display_border_r = ini_parser_get_int(parser, "HUD Colors", "hud_border_r", 255);
+        int head_up_display_border_g = ini_parser_get_int(parser, "HUD Colors", "hud_border_g", 255);
+        int head_up_display_border_b = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
+        hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
     }
-    else {
-        hud_text_color = al_map_rgb(255, 255, 255);
-        hud_hp_color = al_map_rgb(255, 0, 0);
-        hud_border_color = al_map_rgb(255, 255, 255);
-    }
+   
     ini_parser_destroy(parser);
-
+   
     current_hp = 100;
     current_score = 0;
     last_time = al_get_time();
@@ -122,3 +118,15 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
         bar_x + bar_w + 10, bar_y, 0,
         "%d / 100", hud->player_hp);
 }
+
+/* Usage:
+
+#include "head_up_display.h"
+
+head_up_display_init();
+
+Head_Up_Display_Data hud = head_up_display_update(int damage, int(enum)tank.weapon, (int) stage);
+
+head_up_display_draw(&hud);
+
+*/
