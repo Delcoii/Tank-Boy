@@ -129,6 +129,29 @@ void tank_touch_ground_enemy(void) {
     }
 }
 
+void tank_touch_flying_enemy(void) {
+    if (get_tank_hp() <= 0) return;
+    
+    double tank_x = get_tank_x();
+    double tank_y = get_tank_y();
+    int tank_w = get_tank_width();
+    int tank_h = get_tank_height();
+    
+    FlyingEnemy* f_enemies = get_flying_enemies();
+    
+    for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
+        FlyingEnemy* fe = &f_enemies[i];
+        if (!fe->alive) continue;
+
+        bool overlap = rect_rect_overlap(tank_x, tank_y, tank_w, tank_h,
+                                       fe->x, fe->y, fe->width, fe->height);
+
+        if (overlap) {
+            handle_tank_flying_enemy_collision(i);
+        }
+    }
+}
+
 // ===== Damage Application =====
 
 void apply_damage_to_tank(int damage) {
@@ -238,5 +261,39 @@ void handle_bullet_enemy_collision(int bullet_index, int enemy_index, bool is_fl
         if (enemy_index >= 0 && enemy_index < MAX_ENEMIES) {
             apply_damage_to_enemy(enemy_index, DMG_MG);
         }
+    }
+}
+
+void handle_tank_flying_enemy_collision(int enemy_index) {
+    if (enemy_index < 0 || enemy_index >= MAX_FLY_ENEMIES) return;
+    
+    FlyingEnemy* f_enemies = get_flying_enemies();
+    FlyingEnemy* fe = &f_enemies[enemy_index];
+    
+    if (!fe->alive) return;
+    
+    // contact damage (with invincibility window)
+    if (get_tank_invincible() <= 0.0) {
+        apply_damage_to_tank(DMG_ENEMY_CONTACT);
+    }
+
+    // symmetric knockback
+    double tank_cx = get_tank_x() + get_tank_width() * 0.5;
+    double enemy_cx = fe->x + fe->width * 0.5;
+    double dir = (tank_cx < enemy_cx) ? -1.0 : 1.0;
+
+    apply_knockback_to_tank(dir * KNOCKBACK_TANK_VX, -KNOCKBACK_TANK_VY);
+    
+    // flying enemy knockback (horizontal only, no vertical knockback)
+    fe->vx = -dir * KNOCKBACK_ENEMY_VX;
+
+    // small separation to resolve overlap
+    double tank_x = get_tank_x();
+    if (dir > 0) {
+        set_tank_x(tank_x + 2.0);
+        fe->x -= 2.0;
+    } else {
+        set_tank_x(tank_x - 2.0);
+        fe->x += 2.0;
     }
 }

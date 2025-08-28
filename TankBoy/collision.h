@@ -16,6 +16,7 @@ void bullets_hit_tank(void);
 
 // Tank-enemy collision detection
 void tank_touch_ground_enemy(void);
+void tank_touch_flying_enemy(void);
 
 // Damage application
 void apply_damage_to_tank(int damage);
@@ -28,6 +29,7 @@ void apply_knockback_to_enemy(int enemy_index, double vx, double vy);
 
 // Collision response
 void handle_tank_enemy_collision(int enemy_index);
+void handle_tank_flying_enemy_collision(int enemy_index);
 void handle_bullet_enemy_collision(int bullet_index, int enemy_index, bool is_flying);
 
 #endif // COLLISION_H

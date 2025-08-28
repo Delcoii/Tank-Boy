@@ -330,6 +330,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     bullets_hit_enemies();
     bullets_hit_tank();
     tank_touch_ground_enemy();
+    tank_touch_flying_enemy();
     
     // Check if all enemies are cleared for next round
     if (!any_ground_enemies_alive() && !any_flying_enemies_alive()) {
