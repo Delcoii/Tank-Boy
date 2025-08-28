@@ -26,6 +26,10 @@ void ini_parser_destroy(IniParser* parser) {
     if (!parser) return;
     
     for (int i = 0; i < parser->count; i++) {
+        parser->entries[i].section = NULL;
+        parser->entries[i].key = NULL;
+        parser->entries[i].value = NULL;
+
         free(parser->entries[i].section);
         free(parser->entries[i].key);
         free(parser->entries[i].value);
@@ -231,4 +235,19 @@ bool ini_parser_get_bool(IniParser* parser, const char* section, const char* key
     }
     
     return default_value;
+}
+
+bool ini_parser_load_with_defaults(const char* filename, void* config_struct,
+    void (*init_defaults)(void*),
+    void (*load_values)(IniParser*, void*)) {
+    if (init_defaults) init_defaults(config_struct);
+    IniParser* parser = ini_parser_create();
+    if (!parser) return false;
+    if (!ini_parser_load_file(parser, filename)) {
+        ini_parser_destroy(parser);
+        return false;
+    }
+    if (load_values) load_values(parser, config_struct);
+    ini_parser_destroy(parser);
+    return true;
 }

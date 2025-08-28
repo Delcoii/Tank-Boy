@@ -30,17 +30,17 @@ bool input_is_key_pressed(InputState* input, int key);
 #include <allegro5/allegro5.h>
 #include <stdbool.h>
 
-// Å° ÀÔ·Â »óÅÂ ±¸Á¶Ã¼
+// í‚¤ ì…ë ¥ ìƒíƒœ êµ¬ì¡°ì²´
 typedef struct {
-    bool left;        // A / ¡ç
-    bool right;       // D / ¡æ
-    bool jump;        // W / ¡è
+    bool left;        // A / â†
+    bool right;       // D / â†’
+    bool jump;        // W / â†‘
     bool change_weapon; // R
     bool esc;         // ESC
-    bool fire;        // ¸¶¿ì½º Å¬¸¯(¹ß»ç)
+    bool fire;        // ë§ˆìš°ìŠ¤ í´ë¦­(ë°œì‚¬)
 } InputState;
 
-// ÇÔ¼ö ¼±¾ğ
+// í•¨ìˆ˜ ì„ ì–¸
 void input_system_init(InputState* input);
 void input_system_update(InputState* input, ALLEGRO_EVENT* event);
 bool input_is_key_pressed(InputState* input, int key);
