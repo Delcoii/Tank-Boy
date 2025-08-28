@@ -74,13 +74,16 @@ void flying_enemies_init(void);
 
 /* Enemy spawning */
 void load_enemies_from_csv(int stage_number);
+void load_enemies_from_csv_with_map(int stage_number, const struct Map* map);
 void spawn_enemies(int round_number);
 void spawn_flying_enemy(int round_number);
 
 /* Enemy updates */
 void enemies_update(double dt);
+void enemies_update_with_map(double dt, const struct Map* map);
 void flying_enemies_update(double dt);
 void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height);
+void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height, const struct Map* map);
 void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height);
 
 /* Enemy rendering */
@@ -94,9 +97,9 @@ int get_alive_enemy_count(void);
 int get_alive_flying_enemy_count(void);
 
 /* Enemy damage and effects */
-void apply_cannon_explosion(double ex, double ey, double radius);
 void damage_enemy(Enemy* enemy, int damage);
 void damage_flying_enemy(FlyingEnemy* fe, int damage);
+void apply_cannon_explosion(double ex, double ey, double radius);
 
 /* Enemy movement helpers */
 double get_enemy_ground_y(double x);

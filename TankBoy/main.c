@@ -43,9 +43,6 @@ int main(void) {
     enemies_init();
     flying_enemies_init();
     
-    // Load enemies from CSV file
-    load_enemies_from_csv(1); // Load stage 1 enemies
-    
     // Initialize HUD
     head_up_display_init("config.ini");
     

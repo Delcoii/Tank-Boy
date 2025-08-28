@@ -291,6 +291,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
         map_init(&game_system->current_map);  // Initialize empty map as fallback
     }
     
+    // Load enemies from CSV file after map is loaded
+    load_enemies_from_csv_with_map(1, &game_system->current_map); // Load stage 1 enemies
+    
     // Initialize enemy system
     game_system->round_number = 1;
     game_system->enemies_spawned = false;
@@ -348,10 +351,10 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->enemies_spawned = true;
         }
         
-        // Update enemy systems
-            enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
-                      game_system->config.buffer_width, game_system->config.buffer_height);
-    flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+        // Update enemy systems with map reference
+        enemies_update_roi_with_map(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+                      game_system->config.buffer_width, game_system->config.buffer_height, &game_system->current_map);
+        flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
                              game_system->config.buffer_width, game_system->config.buffer_height);
         
         // Update collision detection

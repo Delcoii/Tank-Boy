@@ -51,7 +51,7 @@ void flying_enemies_init(void) {
 
 /* ===== Enemy Spawning ===== */
 
-void load_enemies_from_csv(int stage_number) {
+void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
     char csv_path[256];
     snprintf(csv_path, sizeof(csv_path), "TankBoy/resources/stages/enemies%d.csv", stage_number);
     
@@ -105,7 +105,15 @@ void load_enemies_from_csv(int stage_number) {
         if (strcmp(enemy_type, "tank") == 0) {
             enemies[enemy_index].alive = true;
             enemies[enemy_index].x = x;
-            enemies[enemy_index].y = y;
+            
+            // Use actual map ground level if map is available
+            if (map) {
+                int ground_level = map_get_ground_level(map, (int)x, 32);
+                enemies[enemy_index].y = ground_level - 20; // ENEMY_H = 20
+            } else {
+                enemies[enemy_index].y = y;
+            }
+            
             enemies[enemy_index].vx = 0.0;
             enemies[enemy_index].vy = 0.0;
             enemies[enemy_index].on_ground = true;
@@ -117,7 +125,7 @@ void load_enemies_from_csv(int stage_number) {
             enemies[enemy_index].accel = 0.15;
             enemies[enemy_index].friction = 0.90;
             
-            printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, y, difficulty);
+            printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
         else if (strcmp(enemy_type, "helicopter") == 0) {
             // Find available flying enemy slot
@@ -168,8 +176,8 @@ void spawn_enemies(int round_number) {
             }
 
             // Get ground level at spawn position and place enemy on ground
-            double ground_y = get_enemy_ground_y(enemies[i].x);
-            enemies[i].y = ground_y - 20; // ENEMY_H = 20
+            int ground_level = map_get_ground_level(NULL, (int)enemies[i].x, 32);
+            enemies[i].y = ground_level - 20; // ENEMY_H = 20
             
             enemies[i].vx = 0.0;
             enemies[i].vy = 0.0;
@@ -217,7 +225,7 @@ void spawn_flying_enemy(int round_number) {
 
 /* ===== Enemy Updates ===== */
 
-void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height) {
+void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height, const struct Map* map) {
     const double gravity = 0.5;
     const double jump_power = -8.5;
     const double stuck_threshold = 1.0;
@@ -257,20 +265,115 @@ void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_
         double old_x = e->x;
         double old_y = e->y;
 
-        e->x += e->vx;
-        e->y += e->vy;
+        // Check vertical collision before moving (like tank)
+        double new_y = e->y + e->vy;
+        if (map && map_rect_collision(map, (int)e->x, (int)new_y, 32, 20)) { // ENEMY_W = 32, ENEMY_H = 20
+            if (e->vy > 0) {  // Falling down, hit ground
+                e->vy = 0;
+                e->on_ground = true;
+                // Get actual ground level from map
+                int ground_level = map_get_ground_level(map, (int)e->x, 32);
+                e->y = ground_level - 20;  // ENEMY_H = 20
+            } else {  // Moving up, hit ceiling
+                e->vy = 0;
+            }
+        } else {
+            e->y = new_y;
+            // Check if still on ground by testing a small area below enemy
+            if (map && map_rect_collision(map, (int)e->x, (int)(e->y + 20 + 1), 32, 1)) {
+                e->on_ground = true;
+            } else {
+                e->on_ground = false;  // In air if no collision below
+            }
+        }
 
-        // Get ground level at current x position
-        double ground = get_enemy_ground_y(e->x);
-        
-        // Check if enemy is on ground
-        if (e->y > ground - 20) { // ENEMY_H = 20
-            e->y = ground - 20;
+        // Map boundary collision
+        if (e->x < 0) { 
+            e->x = 0; 
+            e->vx = fabs(e->vx); 
+        }
+        if (e->x > map_width - 32) { // ENEMY_W = 32
+            e->x = map_width - 32; 
+            e->vx = -fabs(e->vx); 
+        }
+
+        // Vertical boundary check
+        if (e->y < 0) {
+            e->y = 0;
+            e->vy = 0.0;
+        }
+        if (e->y > map_height - 20) { // ENEMY_H = 20
+            e->y = map_height - 20;
             e->vy = 0.0;
             e->on_ground = true;
         }
+
+        /* stuck detection */
+        if (fabs(e->x - e->last_x) <= stuck_threshold) {
+            e->stuck_time += dt;
+        }
         else {
-            e->on_ground = false;
+            e->stuck_time = 0.0;
+            e->last_x = e->x;
+        }
+
+        if (e->stuck_time >= stuck_jump_time && e->on_ground) {
+            e->vy = jump_power;
+            e->vx += dir * 1.5; /* small horizontal boost */
+            e->stuck_time = 0.0;
+        }
+    }
+}
+
+void enemies_update_with_map(double dt, const struct Map* map) {
+    const double gravity = 0.5;
+    const double jump_power = -8.5;
+    const double stuck_threshold = 1.0;
+    const double stuck_jump_time = 2.0;
+    int map_width = map_get_map_width();
+    int map_height = map_get_map_height();
+
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        Enemy* e = &enemies[i];
+        if (!e->alive) continue;
+
+        // Get tank position for AI
+        double tank_x = get_tank_x();
+        double dir = (tank_x > e->x) ? 1.0 : -1.0;
+        double target_vx = dir * e->speed;
+
+        double dv = target_vx - e->vx;
+        if (dv > e->accel) dv = e->accel;
+        if (dv < -e->accel) dv = -e->accel;
+        e->vx += dv;
+        e->vx *= e->friction;
+
+        e->vy += gravity;
+
+        // Store old position for collision detection
+        double old_x = e->x;
+        double old_y = e->y;
+
+        // Check vertical collision before moving (like tank)
+        double new_y = e->y + e->vy;
+        if (map && map_rect_collision(map, (int)e->x, (int)new_y, 32, 20)) { // ENEMY_W = 32, ENEMY_H = 20
+            if (e->vy > 0) {  // Falling down, hit ground
+                e->vy = 0;
+                e->on_ground = true;
+                // Get actual ground level from map
+                int ground_level = map_get_ground_level(map, (int)e->x, 32);
+                e->y = ground_level - 20;  // ENEMY_H = 20
+            } else {  // Moving up, hit ceiling
+                e->vy = 0;
+            }
+        } else {
+            e->y = new_y;
+            // Check if still on ground by testing a small area below enemy
+            if (map && map_rect_collision(map, (int)e->x, (int)(e->y + 20 + 1), 32, 1)) {
+                e->on_ground = true;
+            } else {
+                e->on_ground = false;  // In air if no collision below
+            }
         }
 
         // Map boundary collision
@@ -312,86 +415,7 @@ void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_
 }
 
 void enemies_update(double dt) {
-    const double gravity = 0.5;
-    const double jump_power = -8.5;
-    const double stuck_threshold = 1.0;
-    const double stuck_jump_time = 2.0;
-    int map_width = map_get_map_width();
-    int map_height = map_get_map_height();
-
-    for (int i = 0; i < MAX_ENEMIES; i++) {
-        Enemy* e = &enemies[i];
-        if (!e->alive) continue;
-
-        // Get tank position for AI
-        double tank_x = get_tank_x();
-        double dir = (tank_x > e->x) ? 1.0 : -1.0;
-        double target_vx = dir * e->speed;
-
-        double dv = target_vx - e->vx;
-        if (dv > e->accel) dv = e->accel;
-        if (dv < -e->accel) dv = -e->accel;
-        e->vx += dv;
-        e->vx *= e->friction;
-
-        e->vy += gravity;
-
-        // Store old position for collision detection
-        double old_x = e->x;
-        double old_y = e->y;
-
-        e->x += e->vx;
-        e->y += e->vy;
-
-        // Get ground level at current x position
-        double ground = get_enemy_ground_y(e->x);
-        
-        // Check if enemy is on ground
-        if (e->y > ground - 20) { // ENEMY_H = 20
-            e->y = ground - 20;
-            e->vy = 0.0;
-            e->on_ground = true;
-        }
-        else {
-            e->on_ground = false;
-        }
-
-        // Map boundary collision
-        if (e->x < 0) { 
-            e->x = 0; 
-            e->vx = fabs(e->vx); 
-        }
-        if (e->x > map_width - 32) { // ENEMY_W = 32
-            e->x = map_width - 32; 
-            e->vx = -fabs(e->vx); 
-        }
-
-        // Vertical boundary check
-        if (e->y < 0) {
-            e->y = 0;
-            e->vy = 0.0;
-        }
-        if (e->y > map_height - 20) { // ENEMY_H = 20
-            e->y = map_height - 20;
-            e->vy = 0.0;
-            e->on_ground = true;
-        }
-
-        /* stuck detection */
-        if (fabs(e->x - e->last_x) <= stuck_threshold) {
-            e->stuck_time += dt;
-        }
-        else {
-            e->stuck_time = 0.0;
-            e->last_x = e->x;
-        }
-
-        if (e->stuck_time >= stuck_jump_time && e->on_ground) {
-            e->vy = jump_power;
-            e->vx += dir * 1.5; /* small horizontal boost */
-            e->stuck_time = 0.0;
-        }
-    }
+    enemies_update_with_map(dt, NULL);
 }
 
 void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height) {
@@ -527,6 +551,8 @@ void enemies_draw(double camera_x, double camera_y) {
         // Convert world coordinates to screen coordinates
         double sx = e->x - camera_x;
         double sy = e->y - camera_y;
+        
+
         
         // Draw enemy (basic rectangle for now)
         al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, al_map_rgb(200, 50, 50));
