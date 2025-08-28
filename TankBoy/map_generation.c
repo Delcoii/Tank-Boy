@@ -21,6 +21,18 @@ void map_config_init(void) {
     g_map_config.map_width_multiplier = ini_parser_get_int(parser, "Map", "map_width_multiplier", 10);
     g_map_config.map_height_multiplier = ini_parser_get_int(parser, "Map", "map_height_multiplier", 3);
     
+    // Load enemy behavior settings
+    g_map_config.enemy_jump_interval_min = ini_parser_get_double(parser, "Enemy", "enemy_jump_interval_min", 1.8);
+    g_map_config.enemy_jump_interval_max = ini_parser_get_double(parser, "Enemy", "enemy_jump_interval_max", 2.2);
+    
+    // Load enemy physics settings
+    g_map_config.enemy_base_speed = ini_parser_get_double(parser, "Enemy", "enemy_base_speed", 200.0);
+    g_map_config.enemy_speed_per_difficulty = ini_parser_get_double(parser, "Enemy", "enemy_speed_per_difficulty", 5.0);
+    g_map_config.enemy_base_acceleration = ini_parser_get_double(parser, "Enemy", "enemy_base_acceleration", 3000.0);
+    g_map_config.enemy_acceleration_per_difficulty = ini_parser_get_double(parser, "Enemy", "enemy_acceleration_per_difficulty", 1.0);
+    g_map_config.enemy_base_friction = ini_parser_get_double(parser, "Enemy", "enemy_base_friction", 0.90);
+    g_map_config.enemy_friction_per_difficulty = ini_parser_get_double(parser, "Enemy", "enemy_friction_per_difficulty", -0.02);
+    
     ini_parser_destroy(parser);
     
     // Calculate derived values

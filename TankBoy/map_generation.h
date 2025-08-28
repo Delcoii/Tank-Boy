@@ -58,6 +58,18 @@ typedef struct {
     int buffer_height;
     int map_width_multiplier;
     int map_height_multiplier;
+    
+    // Enemy behavior settings
+    double enemy_jump_interval_min;
+    double enemy_jump_interval_max;
+    
+    // Enemy physics settings
+    double enemy_base_speed;
+    double enemy_speed_per_difficulty;
+    double enemy_base_acceleration;
+    double enemy_acceleration_per_difficulty;
+    double enemy_base_friction;
+    double enemy_friction_per_difficulty;
 } MapConfig;
 
 // Configuration functions
