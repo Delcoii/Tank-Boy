@@ -370,6 +370,17 @@ class MapEditor:
         brush_range = self.brush_size
         offset = (brush_range - 1) * BLOCK_SIZE // 2
         
+        # Calculate brush boundaries
+        brush_left = center_map_x - offset
+        brush_right = brush_left + (brush_range * BLOCK_SIZE)
+        brush_top = center_map_y - offset
+        brush_bottom = brush_top + (brush_range * BLOCK_SIZE)
+        
+        # Check if entire brush area is within map boundaries
+        if (brush_left < 0 or brush_right > MAP_WIDTH or 
+            brush_top < 0 or brush_bottom > MAP_HEIGHT):
+            return  # Don't draw if brush goes outside map
+        
         blocks_changed = False
         
         for dx in range(brush_range):
@@ -378,7 +389,7 @@ class MapEditor:
                 map_x = center_map_x - offset + dx * BLOCK_SIZE
                 map_y = center_map_y - offset + dy * BLOCK_SIZE
                 
-                # Check map range
+                # Additional safety check (should not be needed with above check, but just in case)
                 if map_x < 0 or map_x >= MAP_WIDTH or map_y < 0 or map_y >= MAP_HEIGHT:
                     continue
                     
