@@ -8,19 +8,19 @@
 #include <stdio.h>
 #include <string.h>
 
-/* ===== Globals ===== */
+// ===== Globals =====
 static Enemy enemies[MAX_ENEMIES];
 static FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
 
-/* Jump timing parameters loaded from config.ini */
+// Jump timing parameters loaded from config.ini
 double enemy_jump_interval_min = 1.8;  // Default values
 double enemy_jump_interval_max = 2.2;
 
-/* Enemy physics parameters loaded from config.ini */
+// Enemy physics parameters loaded from config.ini
 double enemy_base_speed = 0.1;  // Default values
 double enemy_speed_per_difficulty = 0.5;
 
-/* ===== Enemy Initialization ===== */
+// ===== Enemy Initialization =====
 
 void enemies_init(void) {
     // Load enemy parameters from config.ini
@@ -92,7 +92,7 @@ void flying_enemies_init(void) {
     }
 }
 
-/* ===== Enemy Spawning ===== */
+// ===== Enemy Spawning =====
 
 void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
     char csv_path[256];
@@ -309,7 +309,7 @@ void spawn_flying_enemy(int round_number) {
     }
 }
 
-/* ===== Enemy Updates ===== */
+// ===== Enemy Updates =====
 
 void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height, const struct Map* map) {
     const double gravity = 0.5;
@@ -414,7 +414,7 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
             e->on_ground = true;
         }
 
-        /* stuck detection */
+        // stuck detection
         if (fabs(e->x - e->last_x) <= stuck_threshold) {
             e->stuck_time += dt;
         }
@@ -425,7 +425,7 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
 
         if (e->stuck_time >= stuck_jump_time && e->on_ground) {
             e->vy = jump_power;
-            e->vx += dir * 1.5; /* small horizontal boost */
+            e->vx += dir * 1.5; // small horizontal boost
             e->stuck_time = 0.0;
         }
     }
@@ -523,7 +523,7 @@ void enemies_update_with_map(double dt, const struct Map* map) {
             e->on_ground = true;
         }
 
-        /* stuck detection */
+        // stuck detection
         if (fabs(e->x - e->last_x) <= stuck_threshold) {
             e->stuck_time += dt;
         }
@@ -534,7 +534,7 @@ void enemies_update_with_map(double dt, const struct Map* map) {
 
         if (e->stuck_time >= stuck_jump_time && e->on_ground) {
             e->vy = jump_power;
-            e->vx += dir * 1.5; /* small horizontal boost */
+            e->vx += dir * 1.5; // small horizontal boost
             e->stuck_time = 0.0;
         }
     }
@@ -605,7 +605,7 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
                 fe->burst_shots_left = 10;
-                fe->shot_timer = 0.0; /* fire immediately */
+                fe->shot_timer = 0.0; // fire immediately
             }
         }
     }
@@ -661,13 +661,13 @@ void flying_enemies_update(double dt) {
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
                 fe->burst_shots_left = 10;
-                fe->shot_timer = 0.0; /* fire immediately */
+                fe->shot_timer = 0.0; // fire immediately
             }
         }
     }
 }
 
-/* ===== Enemy Rendering ===== */
+// ===== Enemy Rendering =====
 
 void enemies_draw(double camera_x, double camera_y) {
     for (int i = 0; i < MAX_ENEMIES; i++) {
@@ -701,7 +701,7 @@ void flying_enemies_draw(double camera_x, double camera_y) {
     }
 }
 
-/* ===== Enemy Utilities ===== */
+// ===== Enemy Utilities =====
 
 bool any_ground_enemies_alive(void) {
     for (int i = 0; i < MAX_ENEMIES; ++i)
@@ -731,7 +731,7 @@ int get_alive_flying_enemy_count(void) {
     return count;
 }
 
-/* ===== Enemy Damage and Effects ===== */
+// ===== Enemy Damage and Effects =====
 
 void damage_enemy(Enemy* enemy, int damage) {
     if (!enemy || !enemy->alive) return;
@@ -752,7 +752,7 @@ void damage_flying_enemy(FlyingEnemy* fe, int damage) {
 }
 
 void apply_cannon_explosion(double ex, double ey, double radius) {
-    /* ground enemies */
+    // ground enemies
     for (int i = 0; i < MAX_ENEMIES; ++i) {
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
@@ -772,7 +772,7 @@ void apply_cannon_explosion(double ex, double ey, double radius) {
         }
     }
 
-    /* flying enemies: apply damage only */
+    // flying enemies: apply damage only
     for (int i = 0; i < MAX_FLY_ENEMIES; ++i) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
@@ -787,7 +787,7 @@ void apply_cannon_explosion(double ex, double ey, double radius) {
     }
 }
 
-/* ===== Enemy Movement Helpers ===== */
+// ===== Enemy Movement Helpers =====
 
 double get_enemy_ground_y(double x) {
     // Get map dimensions from config
@@ -834,7 +834,7 @@ void handle_enemy_stuck_jump(Enemy* enemy, double dt) {
         enemy->stuck_time = 0.0;
     }
 }
-/* ===== Getter functions for external access ===== */
+// ===== Getter functions for external access =====
 
 Enemy* get_enemies(void) {
     return enemies;

@@ -10,7 +10,7 @@
 // Forward declaration
 struct Map;
 
-/* Tank ����ü */
+// Tank structure
 typedef struct {
     double x, y;
     double vx, vy;
@@ -39,7 +39,7 @@ typedef struct {
 
 } Tank;
 
-/* Functions */
+// Functions
 void tank_init(Tank* tank, double x, double y);
 void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map);
 void tank_draw(Tank* tank, double camera_x, double camera_y);

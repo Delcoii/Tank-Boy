@@ -299,7 +299,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     }
 }
 
-/* ===== Getter Functions ===== */
+// ===== Getter Functions =====
 
 // Global tank instance (needed for getter functions)
 static Tank* g_tank = NULL;

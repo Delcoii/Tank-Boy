@@ -353,7 +353,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->hud.player_max_hp = get_tank_max_hp();
     }
 
-    // Stage Clear 처리
+    // Handle Stage Clear
     if (game_system->stage_clear) {
         game_system->stage_clear_timer -= 1.0 / 60.0;
         game_system->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - game_system->stage_clear_timer) * 3.14);

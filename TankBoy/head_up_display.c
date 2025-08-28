@@ -7,27 +7,27 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdio.h>
 
-/* HUD font */
+// HUD font
 static ALLEGRO_FONT* hud_font = NULL;
 
-/* Internal state */
+// Internal state
 static int current_hp = 100;
 static int current_score = 0;
 static double last_time = 0;
 
-/* HUD Colors */
+// HUD Colors
 static ALLEGRO_COLOR hud_text_color;
 static ALLEGRO_COLOR hud_hp_color;
 static ALLEGRO_COLOR hud_border_color;
 
-/* HUD initialization (reads config.ini) */
+// HUD initialization (reads config.ini)
 void head_up_display_init(const char* config_file) {
     al_init_font_addon();
     al_init_ttf_addon();
 
     hud_font = al_create_builtin_font();
     if (!hud_font) {
-        // 폰트 생성 실패 시에도 계속 진행
+        // Continue even if font creation fails
         return;
     }
 
@@ -51,7 +51,7 @@ void head_up_display_init(const char* config_file) {
         
 
     } else {
-        // 기본 색상 사용
+        // Use default colors
         hud_text_color = al_map_rgb(255, 255, 255);
         hud_hp_color = al_map_rgb(255, 0, 0);
         hud_border_color = al_map_rgb(255, 255, 255);
@@ -68,7 +68,7 @@ void head_up_display_init(const char* config_file) {
 
 }
 
-/* HUD update */
+// HUD update
 Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage) {
     current_hp -= damage;
     if (current_hp < 0) current_hp = 0;
@@ -89,7 +89,7 @@ Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage) {
     return hud;
 }
 
-/* HUD draw */
+// HUD draw
 void head_up_display_draw(const Head_Up_Display_Data* hud) {
     if (!hud) {
         return;
@@ -149,7 +149,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
 
 }
 
-/* ===== Enemy HP Display Functions ===== */
+// ===== Enemy HP Display Functions =====
 
 void draw_enemy_hp_bars(void) {
     Enemy* enemies = get_enemies();
@@ -183,7 +183,7 @@ void draw_flying_enemy_hp_bars(void) {
     }
 }
 
-/* ===== World-space HP Bar Drawing ===== */
+// ===== World-space HP Bar Drawing =====
 
 void draw_hp_bar_world(double wx, double wy, int hp, int hp_max, double bar_w) {
     if (hp_max <= 0) return;
@@ -208,7 +208,7 @@ void draw_hp_bar_world(double wx, double wy, int hp, int hp_max, double bar_w) {
     al_draw_rectangle(sx, sy, sx + bar_w, sy + 5, al_map_rgb(255, 255, 255), 1);
 }
 
-/* ===== HUD Update Functions ===== */
+// ===== HUD Update Functions =====
 
 void update_tank_hp_display(int new_hp) {
     current_hp = new_hp;

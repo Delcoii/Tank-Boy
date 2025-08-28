@@ -14,7 +14,7 @@ typedef struct {
     double vx, vy;
     bool alive;
     int weapon; // 0=MG, 1=Cannon
-    bool from_enemy; // 적이 발사한 총알인지 여부
+    bool from_enemy; // Whether bullet was fired by enemy
     
     // Bullet dimensions (different for MG vs Cannon)
     int width, height;
