@@ -2,6 +2,7 @@
 #include "map_generation.h"
 #include "tank.h"
 #include "bullet.h"
+#include "ini_parser.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -265,6 +266,9 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
         double old_x = e->x;
         double old_y = e->y;
 
+        // Update position based on velocity (same as tank.c)
+        e->x += e->vx;
+
         // Check vertical collision before moving (like tank)
         double new_y = e->y + e->vy;
         if (map && map_rect_collision(map, (int)e->x, (int)new_y, 32, 20)) { // ENEMY_W = 32, ENEMY_H = 20
@@ -349,6 +353,9 @@ void enemies_update_with_map(double dt, const struct Map* map) {
         e->vx *= e->friction;
 
         e->vy += gravity;
+
+        // Update position based on velocity (same as tank.c)
+        e->x += e->vx;
 
         // Store old position for collision detection
         double old_x = e->x;
@@ -708,7 +715,6 @@ void handle_enemy_stuck_jump(Enemy* enemy, double dt) {
         enemy->stuck_time = 0.0;
     }
 }
-
 /* ===== Getter functions for external access ===== */
 
 Enemy* get_enemies(void) {
@@ -718,3 +724,4 @@ Enemy* get_enemies(void) {
 FlyingEnemy* get_flying_enemies(void) {
     return f_enemies;
 }
+

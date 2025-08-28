@@ -116,7 +116,7 @@ class Enemy:
         self.x = x
         self.y = y
         self.enemy_type = enemy_type  # "basic", "fast", "tank"
-        self.difficulty = difficulty  # 0=easy, 1=normal, 2=hard
+        self.difficulty = difficulty  # 1=easy, 2=normal, 3=hard
     
     def to_csv_row(self):
         """Convert enemy to CSV row format"""
@@ -125,9 +125,9 @@ class Enemy:
     def get_color(self):
         """Return color according to enemy type and difficulty"""
         if self.enemy_type == "tank":
-            return "purple" if self.difficulty == 0 else "darkviolet" if self.difficulty == 1 else "indigo"
+            return "purple" if self.difficulty == 1 else "darkviolet" if self.difficulty == 2 else "indigo"
         elif self.enemy_type == "helicopter":
-            return "orange" if self.difficulty == 0 else "darkorange" if self.difficulty == 1 else "saddlebrown"
+            return "orange" if self.difficulty == 1 else "darkorange" if self.difficulty == 2 else "saddlebrown"
         else:
             return "gray"
     
@@ -224,7 +224,7 @@ class MapEditor:
         # Enemy difficulty selection
         tk.Label(self.enemy_frame, text="Difficulty:").pack(side=tk.LEFT)
         self.enemy_difficulty_var = tk.StringVar(value="1")
-        difficulty_combo = tk.OptionMenu(self.enemy_frame, self.enemy_difficulty_var, "0", "1", "2", command=self.change_enemy_difficulty)
+        difficulty_combo = tk.OptionMenu(self.enemy_frame, self.enemy_difficulty_var, "1", "2", "3", command=self.change_enemy_difficulty)
         difficulty_combo.pack(side=tk.LEFT, padx=5)
         
         # Initially hide enemy frame (it will be shown when enemy mode is selected)
