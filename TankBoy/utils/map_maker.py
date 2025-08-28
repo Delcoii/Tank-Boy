@@ -256,13 +256,17 @@ class MapEditor:
         canvas_x = self.canvas.canvasx(canvas_x)
         canvas_y = self.canvas.canvasy(canvas_y)
         
-        # Align to grid
-        grid_x = int(canvas_x // GRID_SIZE) * GRID_SIZE
-        grid_y = int(canvas_y // GRID_SIZE) * GRID_SIZE
+        # Convert to actual map coordinates first
+        actual_map_x = canvas_x * CANVAS_SCALE
+        actual_map_y = canvas_y * CANVAS_SCALE
         
-        # Convert to actual map coordinates
-        map_x = grid_x * CANVAS_SCALE
-        map_y = grid_y * CANVAS_SCALE
+        # Align to BLOCK_SIZE boundaries in map coordinates
+        map_x = int(actual_map_x // BLOCK_SIZE) * BLOCK_SIZE
+        map_y = int(actual_map_y // BLOCK_SIZE) * BLOCK_SIZE
+        
+        # Convert back to grid coordinates for display
+        grid_x = map_x // CANVAS_SCALE
+        grid_y = map_y // CANVAS_SCALE
         
         return map_x, map_y, grid_x, grid_y
         
