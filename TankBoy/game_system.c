@@ -28,8 +28,7 @@ void load_game_config(GameConfig* config, const char* config_file) {
     config->buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 240);
     config->display_scale = ini_parser_get_double(parser, "Buffer", "display_scale", 3.0);
     
-    printf("Loaded config: buffer=%dx%d, scale=%.2f\n", 
-           config->buffer_width, config->buffer_height, config->display_scale);
+
     
     config->button_width = ini_parser_get_int(parser, "Buttons", "button_width", 200);
     config->button_height = ini_parser_get_int(parser, "Buttons", "button_height", 50);
@@ -132,10 +131,9 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
-    // Draw ground with camera offset
-    double ground_screen_y = 500 - game_system->camera_y;
-    al_draw_filled_rectangle(0, ground_screen_y, config->buffer_width, config->buffer_height, 
-                            al_map_rgb(30, 150, 40));
+    // Draw map (blocks)
+    map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, 
+             config->buffer_width, config->buffer_height);
     
     // Draw tank
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
@@ -143,11 +141,6 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     // Draw bullets
     bullets_draw(game_system->bullets, game_system->max_bullets, 
                 game_system->camera_x, game_system->camera_y);
-    
-    // Draw UI
-    al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 10, 10, ALLEGRO_ALIGN_LEFT,
-                 "Use A/D to move, W to jump, R to change weapon, Mouse to aim and shoot");
     
     // Draw Head_Up_Display
     head_up_display_draw(&game_system->hud);
@@ -242,7 +235,6 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize display buffer
     game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
     if (!game_system->buffer) {
-        printf("Error: Could not create display buffer\n");
         exit(1);
     }
     
@@ -270,7 +262,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     tank_init(&game_system->player_tank, 50.0, 480.0);
     
     // Initialize bullet system
-    game_system->max_bullets = MAX_BULLETS;
+    game_system->max_bullets = MAX_BULLETS; // Use default, bullets_init will read from INI
     bullets_init(game_system->bullets, game_system->max_bullets);
     
     // Initialize camera
@@ -278,13 +270,27 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->camera_y = 0;
 
     // Initialize head_up_display
-    head_up_display_init("config.ini");
+    char config_path[512];
+    snprintf(config_path, sizeof(config_path), "config.ini");
+    head_up_display_init(config_path);
     
-    printf("Game system initialized with double buffering!\n");
+    // Initialize and load map
+    game_system->current_stage = 1;
+    char map_path[256];
+    snprintf(map_path, sizeof(map_path), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+    
+    if (!map_load(&game_system->current_map, map_path)) {
+        map_init(&game_system->current_map);  // Initialize empty map as fallback
+    }
+    
+
 }
 
 // Cleanup game system
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
+    // Free map resources
+    map_free(&game_system->current_map);
+    
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
@@ -303,17 +309,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update input system
     input_system_update(&game_system->input, event);
 
-    int temp_stage = 1;
-    int temp_damage = 0;
-    
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
-                   game_system->bullets, game_system->max_bullets);
-        bullets_update(game_system->bullets, game_system->max_bullets);
+                   game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
+        bullets_update(game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
 
-        // Update Head_up_display
-        game_system->hud = head_up_display_update(temp_damage, game_system->player_tank.weapon, temp_stage);
+        // Update Head_up_display with actual game data
+        int current_damage = 0; // 실제 데미지 시스템에서 가져와야 함
+        game_system->hud = head_up_display_update(current_damage, game_system->player_tank.weapon, game_system->current_stage);
 
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;

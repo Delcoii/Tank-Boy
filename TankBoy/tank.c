@@ -1,4 +1,6 @@
 #include "tank.h"
+#include "map_generation.h"
+#include "ini_parser.h"
 #include <math.h>
 #include <allegro5/allegro_primitives.h>
 
@@ -27,34 +29,102 @@ void tank_init(Tank* tank, double x, double y) {
 }
 
 // Update tank based on input
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets) {
-    const double accel = 0.4;
-    const double maxspeed = 3.0;
-    const double friction = 0.85;
-    const double gravity = 0.5;
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map) {
+    // Load physics settings from config.ini
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "config.ini");
+    const double accel = ini_parser_get_double(parser, "Tank", "tank_acceleration", 0.5);
+    const double maxspeed = ini_parser_get_double(parser, "Tank", "tank_max_speed", 5.0);
+    const double friction = ini_parser_get_double(parser, "Tank", "tank_friction", 0.85);
+    const double gravity = ini_parser_get_double(parser, "Tank", "tank_gravity", 0.3);
+    const double jump_power = ini_parser_get_double(parser, "Tank", "tank_jump_power", 8.0);
+    const int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
+    const int tank_height = ini_parser_get_int(parser, "Tank", "tank_height", 20);
+    const int max_step_height = ini_parser_get_int(parser, "Tank", "max_step_height", 10);
+    const int max_escape_height = ini_parser_get_int(parser, "Tank", "max_escape_height", 10);
+    const double escape_velocity = ini_parser_get_double(parser, "Tank", "escape_velocity", 2.0);
+    const int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
+    ini_parser_destroy(parser);
 
-    // Movement
+    // Movement with collision detection
     if (input->left) tank->vx -= accel;
     if (input->right) tank->vx += accel;
     tank->vx *= friction;
     if (tank->vx > maxspeed) tank->vx = maxspeed;
     if (tank->vx < -maxspeed) tank->vx = -maxspeed;
-    tank->x += tank->vx;
+    
+    // Check horizontal collision before moving
+    double new_x = tank->x + tank->vx;
+    if (map && map_rect_collision(map, (int)new_x, (int)tank->y, tank_width, tank_height)) {
+        // Try to escape from block gaps by pushing upward
+        bool escaped = false;
+        for (int push_up = 1; push_up <= max_escape_height && !escaped; push_up++) {
+            double escape_y = tank->y - push_up;
+            if (!map_rect_collision(map, (int)new_x, (int)escape_y, tank_width, tank_height)) {
+                tank->x = new_x;
+                tank->y = escape_y;
+                tank->vy = -escape_velocity;  // Small upward velocity to continue escaping
+                escaped = true;
+            }
+        }
+        
+        // Try auto step-up for small obstacles
+        if (!escaped && tank->on_ground) {
+            for (int step_up = 1; step_up <= max_step_height && !escaped; step_up += 1) {
+                double step_y = tank->y - step_up;
+                if (!map_rect_collision(map, (int)new_x, (int)step_y, tank_width, tank_height)) {
+                    // Check if there's solid ground to stand on
+                    double ground_check_y = step_y + 1;
+                    if (map_rect_collision(map, (int)new_x, (int)ground_check_y, tank_width, tank_height)) {
+                        tank->x = new_x;
+                        tank->y = step_y;
+                        escaped = true;
+                    }
+                }
+            }
+        }
+        
+        if (!escaped) {
+            tank->vx = 0;  // Stop horizontal movement if can't escape
+        }
+    } else {
+        tank->x = new_x;
+    }
 
     // Jump
     if (input->jump && tank->on_ground) { 
-        tank->vy = -8; 
+        tank->vy = -jump_power; 
         tank->on_ground = false; 
     }
     tank->vy += gravity;
-    tank->y += tank->vy;
-
-    // Ground collision with proper calculation
-    double ground = 500.0; // Fixed ground level for now
-    if (tank->y > ground - 20) { 
-        tank->y = ground - 20; 
-        tank->vy = 0; 
-        tank->on_ground = true; 
+    
+    // Check vertical collision before moving
+    double new_y = tank->y + tank->vy;
+    if (map && map_rect_collision(map, (int)tank->x, (int)new_y, tank_width, tank_height)) {
+        if (tank->vy > 0) {  // Falling down, hit ground
+            tank->vy = 0;
+            tank->on_ground = true;
+            // Improved ground alignment using tank's left edge for more stability
+            int ground_level = map_get_ground_level(map, (int)tank->x);
+            tank->y = ground_level - tank_height;  // Tank height from config
+        } else {  // Moving up, hit ceiling
+            tank->vy = 0;
+        }
+    } else {
+        tank->y = new_y;
+        // Check if still on ground by testing a small area below tank
+        if (map && map_rect_collision(map, (int)tank->x, (int)(tank->y + tank_height + 1), tank_width, 1)) {
+            tank->on_ground = true;
+        } else {
+            tank->on_ground = false;  // In air if no collision below
+        }
+    }
+    
+    // Fallback ground collision (if no map or below map bounds)
+    if (!map || tank->y > map_height - tank_height) {  // Map height - tank height
+        tank->y = map_height - tank_height;
+        tank->vy = 0;
+        tank->on_ground = true;
     }
 
     // Weapon change
@@ -99,7 +169,7 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     }
 
     // Machine gun firing
-    if (tank->weapon == 0) {
+            if (tank->weapon == 0) {
         if (tank->mg_shot_cooldown > 0) tank->mg_shot_cooldown -= dt;
 
         if (tank->mg_reloading) {
@@ -157,7 +227,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
 
     // Cannon charge gauge
-    if (tank->charging && tank->weapon == 1) {
+            if (tank->charging && tank->weapon == 1) {
         double gauge_w = tank->cannon_power * 10;
         al_draw_filled_rectangle(sx, sy - 20, sx + gauge_w, sy - 10, al_map_rgb(255, 0, 0));
         al_draw_rectangle(sx, sy - 20, sx + 150, sy - 10, al_map_rgb(255, 255, 255), 2);

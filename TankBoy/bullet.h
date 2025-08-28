@@ -6,6 +6,9 @@
 
 #define MAX_BULLETS 100
 
+// Forward declaration to avoid circular includes
+struct Map;
+
 typedef struct {
     double x, y;
     double vx, vy;
@@ -14,7 +17,7 @@ typedef struct {
 } Bullet;
 
 void bullets_init(Bullet* bullets, int max_bullets);
-void bullets_update(Bullet* bullets, int max_bullets);
+void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map);
 void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double camera_y);
 
 #endif
