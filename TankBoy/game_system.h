@@ -15,9 +15,11 @@
 #include "bullet.h"
 #include "map_generation.h"
 
+
 // utils
 #include "ini_parser.h"
 #include "input_system.h"
+#include "head_up_display.h"
 
 // Display buffer settings are now loaded from config.ini
 // No more hardcoded defines!
@@ -90,6 +92,10 @@ typedef struct {
     // Map system
     Map current_map;
     int current_stage;
+
+    // Head_Up_Display
+    Head_Up_Display_Data hud;
+
 } GameSystem;
 
 

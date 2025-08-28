@@ -141,6 +141,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="head_up_display.c" />
     <ClCompile Include="bullet.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="game_system.c" />
@@ -152,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="bullet.h" />
     <ClInclude Include="game_system.h" />
+    <ClInclude Include="head_up_display.h" />
     <ClInclude Include="ini_parser.h" />
     <ClInclude Include="input_system.h" />
     <ClInclude Include="tank.h" />
