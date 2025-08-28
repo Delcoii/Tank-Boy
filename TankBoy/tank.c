@@ -44,7 +44,37 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     // Check horizontal collision before moving
     double new_x = tank->x + tank->vx;
     if (map && map_rect_collision(map, (int)new_x, (int)tank->y, 32, 20)) {
-        tank->vx = 0;  // Stop horizontal movement on collision
+        // Try to escape from block gaps by pushing upward
+        bool escaped = false;
+        for (int push_up = 1; push_up <= 10 && !escaped; push_up++) {
+            double escape_y = tank->y - push_up;
+            if (!map_rect_collision(map, (int)new_x, (int)escape_y, 32, 20)) {
+                tank->x = new_x;
+                tank->y = escape_y;
+                tank->vy = -2;  // Small upward velocity to continue escaping
+                escaped = true;
+            }
+        }
+        
+        // Try auto step-up for small obstacles (max 1 block height = 50px)
+        if (!escaped && tank->on_ground) {
+            for (int step_up = 5; step_up <= 50 && !escaped; step_up += 5) {
+                double step_y = tank->y - step_up;
+                if (!map_rect_collision(map, (int)new_x, (int)step_y, 32, 20)) {
+                    // Check if there's solid ground to stand on
+                    double ground_check_y = step_y + 1;
+                    if (map_rect_collision(map, (int)new_x, (int)ground_check_y, 32, 20)) {
+                        tank->x = new_x;
+                        tank->y = step_y;
+                        escaped = true;
+                    }
+                }
+            }
+        }
+        
+        if (!escaped) {
+            tank->vx = 0;  // Stop horizontal movement if can't escape
+        }
     } else {
         tank->x = new_x;
     }
@@ -62,15 +92,20 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
         if (tank->vy > 0) {  // Falling down, hit ground
             tank->vy = 0;
             tank->on_ground = true;
-            // Align to block boundary
-            int ground_level = map_get_ground_level(map, (int)tank->x + 16);  // Center of tank
+            // Improved ground alignment using tank's left edge for more stability
+            int ground_level = map_get_ground_level(map, (int)tank->x);
             tank->y = ground_level - 20;  // Tank height is 20
         } else {  // Moving up, hit ceiling
             tank->vy = 0;
         }
     } else {
         tank->y = new_y;
-        tank->on_ground = false;  // In air if no collision below
+        // Check if still on ground by testing a small area below tank
+        if (map && map_rect_collision(map, (int)tank->x, (int)(tank->y + 21), 32, 1)) {
+            tank->on_ground = true;
+        } else {
+            tank->on_ground = false;  // In air if no collision below
+        }
     }
     
     // Fallback ground collision (if no map or below map bounds)

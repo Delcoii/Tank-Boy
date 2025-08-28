@@ -203,18 +203,19 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height) {
     return false;
 }
 
-// Get ground level at specific x coordinate
+// Get ground level at specific x coordinate (improved version)
 int map_get_ground_level(const Map* map, int x) {
-    if (!map) return map->map_height; // Return bottom if no map
+    if (!map) return 2160; // Return bottom if no map (720*3)
     
-    int ground_level = map->map_height;
+    int ground_level = 2160;
     
+    // Check blocks within tank width for more accurate ground detection
     for (size_t i = 0; i < map->block_count; i++) {
         const Block* block = &map->blocks[i];
         
-        // Check if block is at this x coordinate
-        if (x >= block->x && x < block->x + block->width) {
-            // Find the highest (lowest y value) block
+        // Check if block overlaps with tank's x range (tank width = 32)
+        if (block->x < x + 32 && block->x + block->width > x) {
+            // Find the highest solid surface (top of block)
             if (block->y < ground_level) {
                 ground_level = block->y;
             }
