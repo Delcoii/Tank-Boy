@@ -143,8 +143,8 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
                 game_system->camera_x, game_system->camera_y);
     
     // Draw enemies
-    enemies_draw();
-    flying_enemies_draw();
+    enemies_draw(game_system->camera_x, game_system->camera_y);
+    flying_enemies_draw(game_system->camera_x, game_system->camera_y);
     
     // Draw enemy HP bars
     draw_enemy_hp_bars();
@@ -349,8 +349,10 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         }
         
         // Update enemy systems
-        enemies_update(1.0/60.0);
-        flying_enemies_update(1.0/60.0);
+            enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+                      game_system->config.buffer_width, game_system->config.buffer_height);
+    flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+                             game_system->config.buffer_width, game_system->config.buffer_height);
         
         // Update collision detection
         bullets_hit_enemies();

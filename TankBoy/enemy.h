@@ -80,10 +80,12 @@ void spawn_flying_enemy(int round_number);
 /* Enemy updates */
 void enemies_update(double dt);
 void flying_enemies_update(double dt);
+void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height);
+void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height);
 
 /* Enemy rendering */
-void enemies_draw(void);
-void flying_enemies_draw(void);
+void enemies_draw(double camera_x, double camera_y);
+void flying_enemies_draw(double camera_x, double camera_y);
 
 /* Enemy utilities */
 bool any_ground_enemies_alive(void);

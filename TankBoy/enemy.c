@@ -160,10 +160,17 @@ void spawn_enemies(int round_number) {
         if (!enemies[i].alive) {
             enemies[i].alive = true;
 
-            if (rand() % 2) enemies[i].x = -50 + rand() % 30;
-            else enemies[i].x = map_width + (rand() % 30);
+            // Spawn enemies at map edges, but ensure they're within bounds
+            if (rand() % 2) {
+                enemies[i].x = 50 + rand() % 100; // Left side
+            } else {
+                enemies[i].x = map_width - 150 + rand() % 100; // Right side
+            }
 
-            enemies[i].y = get_enemy_ground_y(enemies[i].x) - 20; // ENEMY_H
+            // Get ground level at spawn position and place enemy on ground
+            double ground_y = get_enemy_ground_y(enemies[i].x);
+            enemies[i].y = ground_y - 20; // ENEMY_H = 20
+            
             enemies[i].vx = 0.0;
             enemies[i].vy = 0.0;
             enemies[i].on_ground = true;
@@ -210,16 +217,28 @@ void spawn_flying_enemy(int round_number) {
 
 /* ===== Enemy Updates ===== */
 
-void enemies_update(double dt) {
+void enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height) {
     const double gravity = 0.5;
     const double jump_power = -8.5;
     const double stuck_threshold = 1.0;
     const double stuck_jump_time = 2.0;
     int map_width = map_get_map_width();
+    int map_height = map_get_map_height();
+    
+    // Calculate ROI (Region of Interest) - 2x buffer size around camera
+    double roi_left = camera_x - buffer_width;
+    double roi_right = camera_x + buffer_width * 2;
+    double roi_top = camera_y - buffer_height;
+    double roi_bottom = camera_y + buffer_height * 2;
 
     for (int i = 0; i < MAX_ENEMIES; i++) {
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
+        
+        // Skip enemies outside ROI
+        if (e->x < roi_left || e->x > roi_right || e->y < roi_top || e->y > roi_bottom) {
+            continue;
+        }
 
         // Get tank position for AI
         double tank_x = get_tank_x();
@@ -234,11 +253,18 @@ void enemies_update(double dt) {
 
         e->vy += gravity;
 
+        // Store old position for collision detection
+        double old_x = e->x;
+        double old_y = e->y;
+
         e->x += e->vx;
         e->y += e->vy;
 
+        // Get ground level at current x position
         double ground = get_enemy_ground_y(e->x);
-        if (e->y > ground - 20) { // ENEMY_H
+        
+        // Check if enemy is on ground
+        if (e->y > ground - 20) { // ENEMY_H = 20
             e->y = ground - 20;
             e->vy = 0.0;
             e->on_ground = true;
@@ -247,8 +273,26 @@ void enemies_update(double dt) {
             e->on_ground = false;
         }
 
-        if (e->x < 0) { e->x = 0; e->vx = fabs(e->vx); }
-        if (e->x > map_width) { e->x = map_width; e->vx = -fabs(e->vx); }
+        // Map boundary collision
+        if (e->x < 0) { 
+            e->x = 0; 
+            e->vx = fabs(e->vx); 
+        }
+        if (e->x > map_width - 32) { // ENEMY_W = 32
+            e->x = map_width - 32; 
+            e->vx = -fabs(e->vx); 
+        }
+
+        // Vertical boundary check
+        if (e->y < 0) {
+            e->y = 0;
+            e->vy = 0.0;
+        }
+        if (e->y > map_height - 20) { // ENEMY_H = 20
+            e->y = map_height - 20;
+            e->vy = 0.0;
+            e->on_ground = true;
+        }
 
         /* stuck detection */
         if (fabs(e->x - e->last_x) <= stuck_threshold) {
@@ -267,8 +311,159 @@ void enemies_update(double dt) {
     }
 }
 
+void enemies_update(double dt) {
+    const double gravity = 0.5;
+    const double jump_power = -8.5;
+    const double stuck_threshold = 1.0;
+    const double stuck_jump_time = 2.0;
+    int map_width = map_get_map_width();
+    int map_height = map_get_map_height();
+
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        Enemy* e = &enemies[i];
+        if (!e->alive) continue;
+
+        // Get tank position for AI
+        double tank_x = get_tank_x();
+        double dir = (tank_x > e->x) ? 1.0 : -1.0;
+        double target_vx = dir * e->speed;
+
+        double dv = target_vx - e->vx;
+        if (dv > e->accel) dv = e->accel;
+        if (dv < -e->accel) dv = -e->accel;
+        e->vx += dv;
+        e->vx *= e->friction;
+
+        e->vy += gravity;
+
+        // Store old position for collision detection
+        double old_x = e->x;
+        double old_y = e->y;
+
+        e->x += e->vx;
+        e->y += e->vy;
+
+        // Get ground level at current x position
+        double ground = get_enemy_ground_y(e->x);
+        
+        // Check if enemy is on ground
+        if (e->y > ground - 20) { // ENEMY_H = 20
+            e->y = ground - 20;
+            e->vy = 0.0;
+            e->on_ground = true;
+        }
+        else {
+            e->on_ground = false;
+        }
+
+        // Map boundary collision
+        if (e->x < 0) { 
+            e->x = 0; 
+            e->vx = fabs(e->vx); 
+        }
+        if (e->x > map_width - 32) { // ENEMY_W = 32
+            e->x = map_width - 32; 
+            e->vx = -fabs(e->vx); 
+        }
+
+        // Vertical boundary check
+        if (e->y < 0) {
+            e->y = 0;
+            e->vy = 0.0;
+        }
+        if (e->y > map_height - 20) { // ENEMY_H = 20
+            e->y = map_height - 20;
+            e->vy = 0.0;
+            e->on_ground = true;
+        }
+
+        /* stuck detection */
+        if (fabs(e->x - e->last_x) <= stuck_threshold) {
+            e->stuck_time += dt;
+        }
+        else {
+            e->stuck_time = 0.0;
+            e->last_x = e->x;
+        }
+
+        if (e->stuck_time >= stuck_jump_time && e->on_ground) {
+            e->vy = jump_power;
+            e->vx += dir * 1.5; /* small horizontal boost */
+            e->stuck_time = 0.0;
+        }
+    }
+}
+
+void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height) {
+    int map_width = map_get_map_width();
+    int map_height = map_get_map_height();
+    
+    // Calculate ROI (Region of Interest) - 2x buffer size around camera
+    double roi_left = camera_x - buffer_width;
+    double roi_right = camera_x + buffer_width * 2;
+    double roi_top = camera_y - buffer_height;
+    double roi_bottom = camera_y + buffer_height * 2;
+
+    for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
+        FlyingEnemy* fe = &f_enemies[i];
+        if (!fe->alive) continue;
+        
+        // Skip enemies outside ROI
+        if (fe->x < roi_left || fe->x > roi_right || fe->y < roi_top || fe->y > roi_bottom) {
+            continue;
+        }
+
+        fe->angle += dt * 2.0;
+        fe->y = fe->base_y + sin(fe->angle) * 30.0;
+        fe->x += fe->vx;
+
+        // Horizontal boundary collision with bounce
+        if (fe->x < 0) { 
+            fe->x = 0; 
+            fe->vx *= -1; 
+        }
+        if (fe->x > map_width - 28) { // FLY_W = 28
+            fe->x = map_width - 28; 
+            fe->vx *= -1; 
+        }
+
+        // Vertical boundary check
+        if (fe->y < 50) { // Keep helicopters above ground
+            fe->y = 50;
+        }
+        if (fe->y > map_height - 16) { // FLY_H = 16
+            fe->y = map_height - 16;
+        }
+
+        if (fe->in_burst) {
+            fe->shot_timer -= dt;
+
+            while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
+                // Create enemy bullet (this would need bullet system integration)
+                // For now, just decrement shot counter
+                fe->burst_shots_left--;
+                fe->shot_timer += fe->shot_interval;
+
+                if (fe->burst_shots_left <= 0) {
+                    fe->in_burst = false;
+                    fe->rest_timer = 2.0;
+                }
+            }
+        }
+        else {
+            fe->rest_timer -= dt;
+            if (fe->rest_timer <= 0.0) {
+                fe->in_burst = true;
+                fe->burst_shots_left = 10;
+                fe->shot_timer = 0.0; /* fire immediately */
+            }
+        }
+    }
+}
+
 void flying_enemies_update(double dt) {
     int map_width = map_get_map_width();
+    int map_height = map_get_map_height();
 
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
@@ -278,8 +473,23 @@ void flying_enemies_update(double dt) {
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
         fe->x += fe->vx;
 
-        if (fe->x < 0) { fe->x = 0; fe->vx *= -1; }
-        if (fe->x > map_width) { fe->x = map_width; fe->vx *= -1; }
+        // Horizontal boundary collision with bounce
+        if (fe->x < 0) { 
+            fe->x = 0; 
+            fe->vx *= -1; 
+        }
+        if (fe->x > map_width - 28) { // FLY_W = 28
+            fe->x = map_width - 28; 
+            fe->vx *= -1; 
+        }
+
+        // Vertical boundary check
+        if (fe->y < 50) { // Keep helicopters above ground
+            fe->y = 50;
+        }
+        if (fe->y > map_height - 16) { // FLY_H = 16
+            fe->y = map_height - 16;
+        }
 
         if (fe->in_burst) {
             fe->shot_timer -= dt;
@@ -309,25 +519,31 @@ void flying_enemies_update(double dt) {
 
 /* ===== Enemy Rendering ===== */
 
-void enemies_draw(void) {
+void enemies_draw(double camera_x, double camera_y) {
     for (int i = 0; i < MAX_ENEMIES; i++) {
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
         
+        // Convert world coordinates to screen coordinates
+        double sx = e->x - camera_x;
+        double sy = e->y - camera_y;
+        
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(e->x, e->y, e->x + 32, e->y + 20, al_map_rgb(200, 50, 50));
+        al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, al_map_rgb(200, 50, 50));
         
         // HP bar would be drawn by HUD system
     }
 }
 
-void flying_enemies_draw(void) {
+void flying_enemies_draw(double camera_x, double camera_y) {
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
         
-        // Draw flying enemy (basic rectangle for now)
-        al_draw_filled_rectangle(fe->x, fe->y, fe->x + 28, fe->y + 16, al_map_rgb(180, 0, 180));
+        // Convert world coordinates to screen coordinates
+        al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
+                                fe->x - camera_x + 28, fe->y - camera_y + 16, 
+                                al_map_rgb(180, 0, 180));
         
         // HP bar would be drawn by HUD system
     }
@@ -422,10 +638,28 @@ void apply_cannon_explosion(double ex, double ey, double radius) {
 /* ===== Enemy Movement Helpers ===== */
 
 double get_enemy_ground_y(double x) {
-    // This would need to integrate with map generation system
-    // For now, return a simple ground level
-    // TODO: Integrate with actual map system
-    return 500.0; // Placeholder
+    // Get map dimensions from config
+    const MapConfig* config = map_get_config();
+    if (!config) return 500.0; // Fallback
+    
+    int map_width = config->map_width;
+    int map_height = config->map_height;
+    
+    // Create a simple terrain variation based on x position
+    // This simulates hills and valleys
+    double terrain_variation = sin(x * 0.01) * 50.0; // 50 pixel amplitude
+    double base_ground = (double)(map_height - 150); // Base ground level
+    
+    // Add some random variation for more interesting terrain
+    double random_offset = (sin(x * 0.005) + cos(x * 0.003)) * 20.0;
+    
+    double ground_level = base_ground + terrain_variation + random_offset;
+    
+    // Ensure ground level is within reasonable bounds
+    if (ground_level < map_height - 300) ground_level = map_height - 300;
+    if (ground_level > map_height - 50) ground_level = map_height - 50;
+    
+    return ground_level;
 }
 
 void handle_enemy_stuck_jump(Enemy* enemy, double dt) {
