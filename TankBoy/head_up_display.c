@@ -158,8 +158,12 @@ void draw_enemy_hp_bars(void) {
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
         
-        // Draw HP bar above enemy
-        draw_hp_bar_world(e->x, e->y + 20 + 4, e->hp, e->max_hp, 40.0);
+        // Draw HP bar above enemy (using dynamic size)
+        double hp_bar_width = e->width * 1.2; // HP bar width scales with enemy width
+        if (hp_bar_width < 30.0) hp_bar_width = 30.0; // Minimum width
+        if (hp_bar_width > 60.0) hp_bar_width = 60.0; // Maximum width
+        double hp_bar_x = e->x + (e->width - hp_bar_width) / 2; // Center HP bar above enemy
+        draw_hp_bar_world(hp_bar_x, e->y + e->height + 4, e->hp, e->max_hp, hp_bar_width);
     }
 }
 
@@ -170,8 +174,12 @@ void draw_flying_enemy_hp_bars(void) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
         
-        // Draw HP bar above flying enemy
-        draw_hp_bar_world(fe->x, fe->y + 16 + 4, fe->hp, fe->max_hp, 36.0);
+        // Draw HP bar above flying enemy (using dynamic size)
+        double hp_bar_width = fe->width * 1.2; // HP bar width scales with enemy width
+        if (hp_bar_width < 30.0) hp_bar_width = 30.0; // Minimum width
+        if (hp_bar_width > 60.0) hp_bar_width = 60.0; // Maximum width
+        double hp_bar_x = fe->x + (fe->width - hp_bar_width) / 2; // Center HP bar above enemy
+        draw_hp_bar_world(hp_bar_x, fe->y + fe->height + 4, fe->hp, fe->max_hp, hp_bar_width);
     }
 }
 
