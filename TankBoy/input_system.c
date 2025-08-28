@@ -1,6 +1,6 @@
 #include "input_system.h"
 
-// 초기화: 모든 키 false
+// Initialize all keys to false
 void input_system_init(InputState* input) {
     input->left = false;
     input->right = false;
@@ -10,7 +10,7 @@ void input_system_init(InputState* input) {
     input->fire = false;
 }
 
-// 이벤트를 기반으로 키 상태 갱신
+// Update key status based on events
 void input_system_update(InputState* input, ALLEGRO_EVENT* event) {
     if (event->type == ALLEGRO_EVENT_KEY_DOWN) {
         switch (event->keyboard.keycode) {
@@ -44,7 +44,7 @@ void input_system_update(InputState* input, ALLEGRO_EVENT* event) {
     }
 }
 
-// 특정 키가 눌려 있는지 확인 (선택적)
+// Check if a specific key is pressed (optional)
 bool input_is_key_pressed(InputState* input, int key) {
     switch (key) {
     case ALLEGRO_KEY_A:

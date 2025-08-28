@@ -1,46 +1,20 @@
-#if 0
-
 #ifndef INPUT_SYSTEM_H
 #define INPUT_SYSTEM_H
 
 #include <allegro5/allegro5.h>
 #include <stdbool.h>
 
-// Key states
+// key states structure
 typedef struct {
-    bool key_up;
-    bool key_down;
-    bool key_left;
-    bool key_right;
-    bool key_escape;
-    bool key_space;
+    bool left;        // A / ‚Üê
+    bool right;       // D / ‚Üí
+    bool jump;        // W / ‚Üë
+    bool change_weapon; // R
+    bool esc;         // ESC
+    bool fire;        // mouse click
 } InputState;
 
 // Function declarations
-void input_system_init(InputState* input);
-void input_system_update(InputState* input, ALLEGRO_EVENT* event);
-bool input_is_key_pressed(InputState* input, int key);
-
-#endif // INPUT_SYSTEM_H
-#endif
-
-#ifndef INPUT_SYSTEM_H
-#define INPUT_SYSTEM_H
-
-#include <allegro5/allegro5.h>
-#include <stdbool.h>
-
-// ≈∞ ¿‘∑¬ ªÛ≈¬ ±∏¡∂√º
-typedef struct {
-    bool left;        // A / °Á
-    bool right;       // D / °Ê
-    bool jump;        // W / °Ë
-    bool change_weapon; // R
-    bool esc;         // ESC
-    bool fire;        // ∏∂øÏΩ∫ ≈¨∏Ø(πﬂªÁ)
-} InputState;
-
-// «‘ºˆ º±æ
 void input_system_init(InputState* input);
 void input_system_update(InputState* input, ALLEGRO_EVENT* event);
 bool input_is_key_pressed(InputState* input, int key);

@@ -7,16 +7,16 @@
 #include "input_system.h"
 #include "bullet.h"
 
-// Forward declaration to avoid circular includes
-struct Map; 
+// Forward declaration
+struct Map;
 
-// Tank structure
+/* Tank ����ü */
 typedef struct {
-    double x, y;         // Position
-    double vx, vy;       // Velocity
-    double cannon_angle; // Cannon angle
-    bool on_ground;      // On the ground
-    int weapon;          // 0=MG, 1=Cannon
+    double x, y;
+    double vx, vy;
+    double cannon_angle;
+    bool on_ground;
+    int weapon; // 0=MG, 1=Cannon
 
     // HP & invincibility
     int hp;
@@ -27,7 +27,7 @@ typedef struct {
     bool charging;
     double cannon_power;
 
-    // Machine gun firing/reloading
+    // Machine gun
     bool mg_firing;
     double mg_fire_time;
     double mg_shot_cooldown;
@@ -36,7 +36,7 @@ typedef struct {
 
 } Tank;
 
-// Function declarations
+/* Functions */
 void tank_init(Tank* tank, double x, double y);
 void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map);
 void tank_draw(Tank* tank, double camera_x, double camera_y);
