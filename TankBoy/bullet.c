@@ -1,5 +1,6 @@
 #include "bullet.h"
 #include "map_generation.h"
+#include "ini_parser.h"
 #include <allegro5/allegro_primitives.h>
 
 #define BUFFER_H 720
@@ -11,11 +12,19 @@ void bullets_init(Bullet* bullets, int max_bullets) {
 }
 
 void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
+    // Load bullet physics settings from config.ini
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "config.ini");
+    const double bullet_gravity = ini_parser_get_double(parser, "Bullets", "bullet_gravity", 0.3);
+    const int map_width = ini_parser_get_int(parser, "Map", "map_width", 12800);
+    const int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
+    ini_parser_destroy(parser);
+    
     for (int i = 0; i < max_bullets; i++) {
         if (!bullets[i].alive) continue;
 
         // Gravity for cannon bullets
-        if (bullets[i].weapon == 1) bullets[i].vy += 0.3;
+        if (bullets[i].weapon == 1) bullets[i].vy += bullet_gravity;
 
         // Store old position for collision checking
         double old_x = bullets[i].x;
@@ -31,7 +40,7 @@ void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
         }
 
         // Remove if out of bounds
-        if (bullets[i].x < 0 || bullets[i].x > 12800 || bullets[i].y > 2160 || bullets[i].y < 0)
+        if (bullets[i].x < 0 || bullets[i].x > map_width || bullets[i].y > map_height || bullets[i].y < 0)
             bullets[i].alive = false;
     }
 }

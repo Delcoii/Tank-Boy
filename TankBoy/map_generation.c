@@ -206,11 +206,11 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height) {
 
 // Get ground level at specific x coordinate (improved version)
 int map_get_ground_level(const Map* map, int x) {
-    // Get map height and tank width from config
+    // Load map-specific settings from config.ini
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "config.ini");
     int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
-    int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
+    int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32); // Needed for collision calculation
     ini_parser_destroy(parser);
     
     if (!map) return map_height; // Return bottom if no map

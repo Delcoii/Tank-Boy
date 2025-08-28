@@ -264,10 +264,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     tank_init(&game_system->player_tank, 50.0, 480.0);
     
     // Initialize bullet system
-    IniParser* bullets_parser = ini_parser_create();
-    ini_parser_load_file(bullets_parser, "config.ini");
-    game_system->max_bullets = ini_parser_get_int(bullets_parser, "Bullets", "max_bullets", MAX_BULLETS);
-    ini_parser_destroy(bullets_parser);
+    game_system->max_bullets = MAX_BULLETS; // Use default, bullets_init will read from INI
     bullets_init(game_system->bullets, game_system->max_bullets);
     
     // Initialize camera
