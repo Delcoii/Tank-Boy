@@ -143,10 +143,6 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     bullets_draw(game_system->bullets, game_system->max_bullets, 
                 game_system->camera_x, game_system->camera_y);
     
-    // Draw UI
-    al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 10, 10, ALLEGRO_ALIGN_LEFT,
-                 "Use A/D to move, W to jump, R to change weapon, Mouse to aim and shoot");
     
     // Draw Head_Up_Display
     int temp_stage = 1;
