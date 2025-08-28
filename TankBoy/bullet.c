@@ -83,15 +83,9 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         float x4 = sx + (-half_w * cos_a - half_h * sin_a);
         float y4 = sy + (-half_w * sin_a + half_h * cos_a);
         
-        // 삼각형 두 개로 직사각형 그리기
-        float triangle1[6] = {x1, y1, x2, y2, x3, y3};
-        float triangle2[6] = {x1, y1, x3, y3, x4, y4};
-        
+        // 삼각형 두 개로 회전된 직사각형 그리기
         al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
         al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
-        
-        // Debug circle at bullet center
-        al_draw_filled_circle(sx, sy, 2, al_map_rgb(255, 0, 0));
     }
 }
 
