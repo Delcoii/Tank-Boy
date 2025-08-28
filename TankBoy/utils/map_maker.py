@@ -5,7 +5,7 @@ from tkinter import messagebox, filedialog, simpledialog
 import math
 
 # ===== Configuration =====
-MAP_WIDTH = 12800
+MAP_WIDTH = 1280*10
 MAP_HEIGHT = 720*3
 BLOCK_SIZE = 50  # Size of one block (pixels)
 
@@ -121,6 +121,10 @@ class MapEditor:
         # Information display
         self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block Size: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE}")
         self.info_label.pack(side=tk.RIGHT, padx=10)
+        
+        # Coordinate display
+        self.coord_label = tk.Label(toolbar, text="Click to see coordinates", fg="blue")
+        self.coord_label.pack(side=tk.RIGHT, padx=10)
         
 
         
@@ -261,8 +265,13 @@ class MapEditor:
         actual_map_y = canvas_y * CANVAS_SCALE
         
         # Align to BLOCK_SIZE boundaries in map coordinates
-        map_x = int(actual_map_x // BLOCK_SIZE) * BLOCK_SIZE
-        map_y = int(actual_map_y // BLOCK_SIZE) * BLOCK_SIZE
+        # Use round() for more precise alignment
+        map_x = round(actual_map_x / BLOCK_SIZE) * BLOCK_SIZE
+        map_y = round(actual_map_y / BLOCK_SIZE) * BLOCK_SIZE
+        
+        # Ensure coordinates are within map bounds
+        map_x = max(0, min(map_x, MAP_WIDTH - BLOCK_SIZE))
+        map_y = max(0, min(map_y, MAP_HEIGHT - BLOCK_SIZE))
         
         # Convert back to grid coordinates for display
         grid_x = map_x // CANVAS_SCALE
@@ -281,6 +290,9 @@ class MapEditor:
     def handle_canvas_action(self, canvas_x, canvas_y):
         """Handle drawing/erasing action on canvas"""
         center_map_x, center_map_y, center_grid_x, center_grid_y = self.canvas_to_map_coords(canvas_x, canvas_y)
+        
+        # Update coordinate display
+        self.coord_label.config(text=f"Map: ({center_map_x}, {center_map_y}) | Grid: ({center_grid_x}, {center_grid_y})")
         
         # Process multiple blocks according to brush size
         brush_range = self.brush_size
@@ -302,8 +314,12 @@ class MapEditor:
                     # Remove existing block (overwrite)
                     self.blocks = [b for b in self.blocks if not (b.x == map_x and b.y == map_y)]
                     
-                    # Add new block
-                    block = Block(map_x, map_y, self.current_block_type)
+                    # Ensure perfect alignment
+                    aligned_x = (map_x // BLOCK_SIZE) * BLOCK_SIZE
+                    aligned_y = (map_y // BLOCK_SIZE) * BLOCK_SIZE
+                    
+                    # Add new block with aligned coordinates
+                    block = Block(aligned_x, aligned_y, self.current_block_type)
                     self.blocks.append(block)
                     blocks_changed = True
                     
@@ -397,11 +413,16 @@ class MapEditor:
         ground_level_end = MAP_HEIGHT
         
         # Place ground blocks across entire map width
+        # Ensure perfect alignment with BLOCK_SIZE boundaries
         for y in range(ground_level_start, ground_level_end, BLOCK_SIZE):
             for x in range(0, MAP_WIDTH, BLOCK_SIZE):
+                # Ensure coordinates are perfectly aligned
+                aligned_x = (x // BLOCK_SIZE) * BLOCK_SIZE
+                aligned_y = (y // BLOCK_SIZE) * BLOCK_SIZE
+                
                 # Check if there's already a block at the same position
-                if not any(b.x == x and b.y == y for b in self.blocks):
-                    block = Block(x, y, "ground")
+                if not any(b.x == aligned_x and b.y == aligned_y for b in self.blocks):
+                    block = Block(aligned_x, aligned_y, "ground")
                     self.blocks.append(block)
 
 def main():
