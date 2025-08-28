@@ -13,6 +13,7 @@
 // algorithm
 #include "tank.h"
 #include "bullet.h"
+#include "map_generation.h"
 
 // utils
 #include "ini_parser.h"
@@ -85,6 +86,10 @@ typedef struct {
     
     // Camera
     double camera_x, camera_y;
+    
+    // Map system
+    Map current_map;
+    int current_stage;
 } GameSystem;
 
 

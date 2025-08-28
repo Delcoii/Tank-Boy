@@ -1,4 +1,5 @@
 #include "tank.h"
+#include "map_generation.h"
 #include <math.h>
 #include <allegro5/allegro_primitives.h>
 
@@ -27,19 +28,26 @@ void tank_init(Tank* tank, double x, double y) {
 }
 
 // Update tank based on input
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets) {
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map) {
     const double accel = 0.4;
     const double maxspeed = 3.0;
     const double friction = 0.85;
     const double gravity = 0.5;
 
-    // Movement
+    // Movement with collision detection
     if (input->left) tank->vx -= accel;
     if (input->right) tank->vx += accel;
     tank->vx *= friction;
     if (tank->vx > maxspeed) tank->vx = maxspeed;
     if (tank->vx < -maxspeed) tank->vx = -maxspeed;
-    tank->x += tank->vx;
+    
+    // Check horizontal collision before moving
+    double new_x = tank->x + tank->vx;
+    if (map && map_rect_collision(map, (int)new_x, (int)tank->y, 32, 20)) {
+        tank->vx = 0;  // Stop horizontal movement on collision
+    } else {
+        tank->x = new_x;
+    }
 
     // Jump
     if (input->jump && tank->on_ground) { 
@@ -47,14 +55,29 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
         tank->on_ground = false; 
     }
     tank->vy += gravity;
-    tank->y += tank->vy;
-
-    // Ground collision with proper calculation
-    double ground = 500.0; // Fixed ground level for now
-    if (tank->y > ground - 20) { 
-        tank->y = ground - 20; 
-        tank->vy = 0; 
-        tank->on_ground = true; 
+    
+    // Check vertical collision before moving
+    double new_y = tank->y + tank->vy;
+    if (map && map_rect_collision(map, (int)tank->x, (int)new_y, 32, 20)) {
+        if (tank->vy > 0) {  // Falling down, hit ground
+            tank->vy = 0;
+            tank->on_ground = true;
+            // Align to block boundary
+            int ground_level = map_get_ground_level(map, (int)tank->x + 16);  // Center of tank
+            tank->y = ground_level - 20;  // Tank height is 20
+        } else {  // Moving up, hit ceiling
+            tank->vy = 0;
+        }
+    } else {
+        tank->y = new_y;
+        tank->on_ground = false;  // In air if no collision below
+    }
+    
+    // Fallback ground collision (if no map or below map bounds)
+    if (!map || tank->y > 2140) {  // Map height - tank height
+        tank->y = 2140;
+        tank->vy = 0;
+        tank->on_ground = true;
     }
 
     // Weapon change

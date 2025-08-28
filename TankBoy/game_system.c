@@ -131,10 +131,9 @@ void draw_menu(Button* start_button, Button* exit_button, ALLEGRO_FONT* font, Ga
 void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(config->game_bg_r, config->game_bg_g, config->game_bg_b));
     
-    // Draw ground with camera offset
-    double ground_screen_y = 500 - game_system->camera_y;
-    al_draw_filled_rectangle(0, ground_screen_y, config->buffer_width, config->buffer_height, 
-                            al_map_rgb(30, 150, 40));
+    // Draw map (blocks)
+    map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, 
+             config->buffer_width, config->buffer_height);
     
     // Draw tank
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
@@ -272,11 +271,24 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->camera_x = 0;
     game_system->camera_y = 0;
     
+    // Initialize and load map
+    game_system->current_stage = 1;
+    char map_path[256];
+    snprintf(map_path, sizeof(map_path), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+    
+    if (!map_load(&game_system->current_map, map_path)) {
+        printf("Warning: Could not load map %s, using empty map\n", map_path);
+        map_init(&game_system->current_map);  // Initialize empty map as fallback
+    }
+    
     printf("Game system initialized with double buffering!\n");
 }
 
 // Cleanup game system
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
+    // Free map resources
+    map_free(&game_system->current_map);
+    
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
@@ -298,8 +310,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
-                   game_system->bullets, game_system->max_bullets);
-        bullets_update(game_system->bullets, game_system->max_bullets);
+                   game_system->bullets, game_system->max_bullets, &game_system->current_map);
+        bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
         
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
