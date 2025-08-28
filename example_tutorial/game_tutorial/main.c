@@ -6,6 +6,8 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
+#include <allegro5/allegro_image.h> // 이미지 로드
+#include "tank_sprite.h"
 
 /* --- constants --- */
 #ifndef M_PI
@@ -162,6 +164,10 @@ void disp_post_draw(void) {
     );
     al_flip_display();
 }
+// sprite
+TankSprite g_tankSpr;
+double g_anim_time = 0.0;
+int g_face = 1;
 
 /* =========================
    map / ground
@@ -861,6 +867,11 @@ int main(void) {
     spawn_enemies();
     spawn_flying_enemy();
     fx_init();
+    al_init_image_addon(); // 이미지 관련 알레그로 초기화
+    if (!tank_sprite_load(&g_tankSpr, "final_tank_sheet.png")) {
+        fprintf(stderr, "스프라이트 로드 실패\n");
+        return 1;
+    }
 
     al_start_timer(timer);
     bool done = false; ALLEGRO_EVENT event;
@@ -871,6 +882,9 @@ int main(void) {
         case ALLEGRO_EVENT_DISPLAY_CLOSE: done = true; break;
         case ALLEGRO_EVENT_TIMER: {
             double dt = 1.0 / 60.0;
+            g_anim_time += dt;
+            if (input.left)  g_face = -1;
+            if (input.right) g_face = 1;
             tank_update(dt);
             bullets_update();
             enemies_update(dt);
@@ -888,7 +902,7 @@ int main(void) {
                 done = true;
             }
             break;
-
+            
         }
         case ALLEGRO_EVENT_KEY_DOWN:
             if (event.keyboard.keycode == ALLEGRO_KEY_A) input.left = true;
@@ -947,13 +961,22 @@ int main(void) {
         al_clear_to_color(al_map_rgb(20, 20, 30));
         draw_map();
         draw_cannon_trajectory();
-        draw_tank();
+        tank_sprite_draw(&g_tankSpr,      
+            (float)(tank.x - camera.x),
+            (float)(tank.y - camera.y),
+            fabs(tank.vx) > 0.01,
+            tank.on_ground,
+            g_anim_time,
+            g_face,
+            tank.cannon_angle);
         draw_bullets();
         enemies_draw();
         flying_enemies_draw();
         fx_draw();
         disp_post_draw();
     }
+    tank_sprite_unload(&g_tankSpr);
+    al_shutdown_image_addon();
 
     al_destroy_bitmap(buffer);
     al_destroy_display(disp);

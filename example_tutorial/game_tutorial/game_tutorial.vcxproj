@@ -130,22 +130,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="explode1.flac" />
-    <None Include="explode2.flac" />
-    <None Include="shot.flac" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="tank_sprite.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="tank_sprite.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="game_tutorial.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="spritesheet.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

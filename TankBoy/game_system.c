@@ -277,8 +277,10 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize and load map
     game_system->current_stage = 1;
     char map_path[256];
-    snprintf(map_path, sizeof(map_path), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+    // snprintf(map_path, sizeof(map_path), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+    snprintf(map_path, sizeof(map_path), "../../resources/stages/stage%d.csv", game_system->current_stage);
     
+
     if (!map_load(&game_system->current_map, map_path)) {
         map_init(&game_system->current_map);  // Initialize empty map as fallback
     }

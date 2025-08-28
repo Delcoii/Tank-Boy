@@ -139,6 +139,7 @@
   <ItemGroup>
     <None Include="config.ini" />
     <None Include="packages.config" />
+    <None Include="resources\stages\stage1.csv" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="head_up_display.c" />

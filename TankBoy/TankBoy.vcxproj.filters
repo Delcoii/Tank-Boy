@@ -19,6 +19,9 @@
       <Filter>리소스 파일</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="resources\stages\stage1.csv">
+      <Filter>리소스 파일</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">

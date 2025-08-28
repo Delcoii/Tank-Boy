@@ -16,18 +16,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="explode1.flac">
-      <Filter>리소스 파일</Filter>
-    </None>
-    <None Include="explode2.flac">
-      <Filter>리소스 파일</Filter>
-    </None>
-    <None Include="shot.flac">
-      <Filter>리소스 파일</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="tank_sprite.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,15 +29,13 @@
     <ClInclude Include="resource.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="tank_sprite.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="game_tutorial.rc">
       <Filter>리소스 파일</Filter>
     </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="spritesheet.png">
-      <Filter>리소스 파일</Filter>
-    </Image>
   </ItemGroup>
 </Project>
