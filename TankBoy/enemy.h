@@ -20,10 +20,6 @@ extern double enemy_jump_interval_max;
 /* Enemy physics - loaded from config.ini */
 extern double enemy_base_speed;
 extern double enemy_speed_per_difficulty;
-extern double enemy_base_acceleration;
-extern double enemy_acceleration_per_difficulty;
-extern double enemy_base_friction;
-extern double enemy_friction_per_difficulty;
 
 #define FLY_BASE_HP 12
 #define FLY_HP_PER_ROUND 3
@@ -57,8 +53,6 @@ typedef struct {
     double stuck_time;
 
     double speed;
-    double accel;
-    double friction;
     double jump_timer;  // Timer for random jumping
 } Enemy;
 

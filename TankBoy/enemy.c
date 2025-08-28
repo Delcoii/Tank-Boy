@@ -17,12 +17,8 @@ double enemy_jump_interval_min = 1.8;  // Default values
 double enemy_jump_interval_max = 2.2;
 
 /* Enemy physics parameters loaded from config.ini */
-double enemy_base_speed = 200.0;  // Default values
-double enemy_speed_per_difficulty = 5.0;
-double enemy_base_acceleration = 3000.0;
-double enemy_acceleration_per_difficulty = 1.0;
-double enemy_base_friction = 0.90;
-double enemy_friction_per_difficulty = -0.02;
+double enemy_base_speed = 2.0;  // Default values
+double enemy_speed_per_difficulty = 0.5;
 
 /* ===== Enemy Initialization ===== */
 
@@ -34,16 +30,10 @@ void enemies_init(void) {
         enemy_jump_interval_max = config->enemy_jump_interval_max;
         enemy_base_speed = config->enemy_base_speed;
         enemy_speed_per_difficulty = config->enemy_speed_per_difficulty;
-        enemy_base_acceleration = config->enemy_base_acceleration;
-        enemy_acceleration_per_difficulty = config->enemy_acceleration_per_difficulty;
-        enemy_base_friction = config->enemy_base_friction;
-        enemy_friction_per_difficulty = config->enemy_friction_per_difficulty;
         
         printf("Loaded enemy parameters:\n");
         printf("  Jump timing: %.1f - %.1f seconds\n", enemy_jump_interval_min, enemy_jump_interval_max);
         printf("  Base speed: %.1f, Speed per difficulty: %.1f\n", enemy_base_speed, enemy_speed_per_difficulty);
-        printf("  Base acceleration: %.1f, Accel per difficulty: %.1f\n", enemy_base_acceleration, enemy_acceleration_per_difficulty);
-        printf("  Base friction: %.2f, Friction per difficulty: %.2f\n", enemy_base_friction, enemy_friction_per_difficulty);
     }
     
     for (int i = 0; i < MAX_ENEMIES; i++) {
@@ -58,8 +48,6 @@ void enemies_init(void) {
         enemies[i].last_x = 0.0;
         enemies[i].stuck_time = 0.0;
         enemies[i].speed = 0.0;
-        enemies[i].accel = 0.0;
-        enemies[i].friction = 0.0;
         enemies[i].jump_timer = 0.0;
     }
 }
@@ -154,9 +142,7 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
             enemies[enemy_index].hp = enemies[enemy_index].max_hp;
             enemies[enemy_index].last_x = x;
             enemies[enemy_index].stuck_time = 0.0;
-            enemies[enemy_index].speed = (enemy_base_speed + difficulty * enemy_speed_per_difficulty) * 0.01;  // Scale down to reasonable values
-            enemies[enemy_index].accel = (enemy_base_acceleration + difficulty * enemy_acceleration_per_difficulty) * 0.001;  // Scale down to reasonable values
-            enemies[enemy_index].friction = enemy_base_friction + difficulty * enemy_friction_per_difficulty;
+            enemies[enemy_index].speed = enemy_base_speed + difficulty * enemy_speed_per_difficulty;
             enemies[enemy_index].jump_timer = enemy_jump_interval_min + (rand() % (int)((enemy_jump_interval_max - enemy_jump_interval_min) * 10)) / 10.0;  // Random initial timer
             
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
@@ -223,9 +209,7 @@ void spawn_enemies(int round_number) {
             enemies[i].last_x = enemies[i].x;
             enemies[i].stuck_time = 0.0;
 
-            enemies[i].speed = (enemy_base_speed + round_number * enemy_speed_per_difficulty) * 0.01;  // Scale down to reasonable values
-            enemies[i].accel = (enemy_base_acceleration + round_number * enemy_acceleration_per_difficulty) * 0.001;  // Scale down to reasonable values
-            enemies[i].friction = enemy_base_friction + round_number * enemy_friction_per_difficulty;
+            enemies[i].speed = enemy_base_speed + round_number * enemy_speed_per_difficulty;
             enemies[i].jump_timer = enemy_jump_interval_min + (rand() % (int)((enemy_jump_interval_max - enemy_jump_interval_min) * 10)) / 10.0;  // Random initial timer
 
             count--;
@@ -286,13 +270,9 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
         // Get tank position for AI
         double tank_x = get_tank_x();
         double dir = (tank_x > e->x) ? 1.0 : -1.0;
-        double target_vx = dir * e->speed;
-
-        double dv = target_vx - e->vx;
-        if (dv > e->accel) dv = e->accel;
-        if (dv < -e->accel) dv = -e->accel;
-        e->vx += dv;
-        e->vx *= e->friction;
+        
+        // Set constant speed based on direction
+        e->vx = dir * e->speed;
 
         e->vy += gravity;
 
@@ -399,13 +379,9 @@ void enemies_update_with_map(double dt, const struct Map* map) {
         // Get tank position for AI
         double tank_x = get_tank_x();
         double dir = (tank_x > e->x) ? 1.0 : -1.0;
-        double target_vx = dir * e->speed;
-
-        double dv = target_vx - e->vx;
-        if (dv > e->accel) dv = e->accel;
-        if (dv < -e->accel) dv = -e->accel;
-        e->vx += dv;
-        e->vx *= e->friction;
+        
+        // Set constant speed based on direction
+        e->vx = dir * e->speed;
 
         e->vy += gravity;
 
