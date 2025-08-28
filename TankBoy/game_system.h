@@ -13,6 +13,7 @@
 // algorithm
 #include "tank.h"
 #include "bullet.h"
+#include "enemy.h"
 
 
 // utils

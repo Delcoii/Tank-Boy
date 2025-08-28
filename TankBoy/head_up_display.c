@@ -121,12 +121,16 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
 
 /* Usage:
 
+* game_system.c
+
 #include "head_up_display.h"
 
 head_up_display_init("config.ini");
 
-Head_Up_Display_Data hud = head_up_display_update(int damage, int(enum)tank.weapon, (int) stage);
-
-head_up_display_draw(&hud);
+// Draw Head_Up_Display
+    int temp_stage = 1;
+    int temp_damage = 0;
+    game_system->hud = head_up_display_update(temp_damage, game_system->player_tank.weapon, temp_stage);
+    head_up_display_draw(&game_system->hud);
 
 */

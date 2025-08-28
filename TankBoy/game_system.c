@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <math.h>
 
+// enemy test
+Enemy enemies[MAX_ENEMIES];
+FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
+
 // Load game configuration from INI file
 void load_game_config(GameConfig* config, const char* config_file) {
     IniParser* parser = ini_parser_create();
@@ -143,6 +147,10 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     // Draw bullets
     bullets_draw(game_system->bullets, game_system->max_bullets, 
                 game_system->camera_x, game_system->camera_y);
+
+    // Draw enemys test
+    enemies_draw(enemies, MAX_ENEMIES, game_system->camera_x, game_system->camera_y);
+    flying_enemies_draw(f_enemies, MAX_FLY_ENEMIES, game_system->camera_x, game_system->camera_y);
     
     // Draw UI
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
@@ -271,6 +279,14 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     
     // Initialize player tank
     tank_init(&game_system->player_tank, 50.0, 480.0);
+
+    // Initialize player enemy test
+    enemies_init(enemies, MAX_ENEMIES);
+    flying_enemies_init(f_enemies, MAX_FLY_ENEMIES);
+
+    int temp_stage = 1;
+    spawn_enemies(enemies, MAX_ENEMIES, temp_stage);
+    spawn_flying_enemy(f_enemies, MAX_FLY_ENEMIES, temp_stage);
     
     // Initialize bullet system
     game_system->max_bullets = MAX_BULLETS;
@@ -314,6 +330,9 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
                    game_system->bullets, game_system->max_bullets);
         bullets_update(game_system->bullets, game_system->max_bullets);
 
+        // Update enemy test
+        enemies_update(enemies, MAX_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
+        flying_enemies_update(f_enemies, MAX_FLY_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
 
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
