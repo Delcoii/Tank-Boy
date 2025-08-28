@@ -56,9 +56,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
             }
         }
         
-        // Try auto step-up for small obstacles (max 1 block height = 50px)
+        // Try auto step-up for small obstacles (max 10px)
         if (!escaped && tank->on_ground) {
-            for (int step_up = 5; step_up <= 50 && !escaped; step_up += 5) {
+            for (int step_up = 1; step_up <= 10 && !escaped; step_up += 1) {
                 double step_y = tank->y - step_up;
                 if (!map_rect_collision(map, (int)new_x, (int)step_y, 32, 20)) {
                     // Check if there's solid ground to stand on
