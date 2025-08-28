@@ -230,8 +230,8 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->exit_button.hovered = is_point_in_button(bx, by, &game_system->exit_button);
         }
         else if (game_system->current_state == STATE_GAME) {
-            double cx = game_system->player_tank.x - game_system->camera_x + 16;
-            double cy = game_system->player_tank.y - game_system->camera_y + 10;
+            double cx = game_system->player_tank.x - game_system->camera_x + get_tank_width() / 2;
+            double cy = game_system->player_tank.y - game_system->camera_y + get_tank_height() / 2;
             game_system->player_tank.cannon_angle = atan2(by - cy, bx - cx);
         }
         break;

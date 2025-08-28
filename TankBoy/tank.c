@@ -8,8 +8,20 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// Global tank size configuration
+static int g_tank_width = 32;
+static int g_tank_height = 20;
+
 // Initialize tank
 void tank_init(Tank* tank, double x, double y) {
+    // Load tank size from config at initialization
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "TankBoy/config.ini");
+    g_tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
+    g_tank_height = ini_parser_get_int(parser, "Tank", "tank_height", 20);
+    printf("tank_init: Loaded tank size from config: %dx%d\n", g_tank_width, g_tank_height);
+    ini_parser_destroy(parser);
+    
     tank->x = x;
     tank->y = y;
     tank->vx = 0;
@@ -43,14 +55,17 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     
     // Load physics settings from config.ini
     IniParser* parser = ini_parser_create();
-    ini_parser_load_file(parser, "config.ini");
+    ini_parser_load_file(parser, "TankBoy/config.ini");
     const double accel = ini_parser_get_double(parser, "Tank", "tank_acceleration", 0.5);
     const double maxspeed = ini_parser_get_double(parser, "Tank", "tank_max_speed", 5.0);
     const double friction = ini_parser_get_double(parser, "Tank", "tank_friction", 0.85);
     const double gravity = ini_parser_get_double(parser, "Tank", "tank_gravity", 0.3);
     const double jump_power = ini_parser_get_double(parser, "Tank", "tank_jump_power", 8.0);
-    const int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
-    const int tank_height = ini_parser_get_int(parser, "Tank", "tank_height", 20);
+    g_tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
+    g_tank_height = ini_parser_get_int(parser, "Tank", "tank_height", 20);
+    printf("tank_update: Tank size from config: %dx%d\n", g_tank_width, g_tank_height);
+    const int tank_width = g_tank_width;
+    const int tank_height = g_tank_height;
     const int max_step_height = ini_parser_get_int(parser, "Tank", "max_step_height", 10);
     const int max_escape_height = ini_parser_get_int(parser, "Tank", "max_escape_height", 10);
     const double escape_velocity = ini_parser_get_double(parser, "Tank", "escape_velocity", 2.0);
@@ -157,8 +172,8 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
             for (int i = 0; i < max_bullets; i++) {
                 if (!bullets[i].alive) {
                     bullets[i].alive = true;
-                    bullets[i].x = tank->x + 16;
-                    bullets[i].y = tank->y + 10;
+                    bullets[i].x = tank->x + g_tank_width / 2;
+                    bullets[i].y = tank->y + g_tank_height / 2;
                     bullets[i].weapon = 1;
                     bullets[i].vx = cos(tank->cannon_angle) * tank->cannon_power * 0.7;
                     bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 0.7;
@@ -199,8 +214,8 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                     for (int i = 0; i < max_bullets; i++) {
                         if (!bullets[i].alive) {
                             bullets[i].alive = true;
-                            bullets[i].x = tank->x + 16;
-                            bullets[i].y = tank->y + 10;
+                            bullets[i].x = tank->x + g_tank_width / 2;
+                            bullets[i].y = tank->y + g_tank_height / 2;
                             bullets[i].weapon = 0;
                             bullets[i].vx = cos(tank->cannon_angle) * 8.0 * 1.5;
                             bullets[i].vy = sin(tank->cannon_angle) * 8.0 * 1.5;
@@ -224,6 +239,12 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
 
 // Draw tank
 void tank_draw(Tank* tank, double camera_x, double camera_y) {
+    // Debug: Print tank size being used for drawing (only once per 60 frames)
+    static int debug_counter = 0;
+    if (debug_counter++ % 60 == 0) {
+        printf("Tank draw size: %dx%d\n", g_tank_width, g_tank_height);
+    }
+    
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
@@ -231,11 +252,11 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
         ? al_map_rgb(160, 160, 160)  // Gray when invincible
         : al_map_rgb(60, 120, 180);  // Normal blue color
-    al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, body_color);
+    al_draw_filled_rectangle(sx, sy, sx + g_tank_width, sy + g_tank_height, body_color);
 
     // Cannon
-    double cx = sx + 16;
-    double cy = sy + 10;
+    double cx = sx + g_tank_width / 2;
+    double cy = sy + g_tank_height / 2;
     double bx = cx + cos(tank->cannon_angle) * 18;
     double by = cy + sin(tank->cannon_angle) * 18;
     al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
@@ -287,11 +308,11 @@ double get_tank_y(void) {
 }
 
 int get_tank_width(void) {
-    return 32; // Hardcoded for now, could be made configurable
+    return g_tank_width;
 }
 
 int get_tank_height(void) {
-    return 20; // Hardcoded for now, could be made configurable
+    return g_tank_height;
 }
 
 int get_tank_hp(void) {
