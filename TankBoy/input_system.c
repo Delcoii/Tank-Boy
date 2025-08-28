@@ -1,6 +1,6 @@
 #include "input_system.h"
 
-// ÃÊ±âÈ­: ¸ğµç Å° false
+// ì´ˆê¸°í™”: ëª¨ë“  í‚¤ false
 void input_system_init(InputState* input) {
     input->left = false;
     input->right = false;
@@ -10,7 +10,7 @@ void input_system_init(InputState* input) {
     input->fire = false;
 }
 
-// ÀÌº¥Æ®¸¦ ±â¹İÀ¸·Î Å° »óÅÂ °»½Å
+// ì´ë²¤íŠ¸ë¥¼ ê¸°ë°˜ìœ¼ë¡œ í‚¤ ìƒíƒœ ê°±ì‹ 
 void input_system_update(InputState* input, ALLEGRO_EVENT* event) {
     if (event->type == ALLEGRO_EVENT_KEY_DOWN) {
         switch (event->keyboard.keycode) {
@@ -44,7 +44,7 @@ void input_system_update(InputState* input, ALLEGRO_EVENT* event) {
     }
 }
 
-// Æ¯Á¤ Å°°¡ ´­·Á ÀÖ´ÂÁö È®ÀÎ (¼±ÅÃÀû)
+// íŠ¹ì • í‚¤ê°€ ëˆŒë ¤ ìˆëŠ”ì§€ í™•ì¸ (ì„ íƒì )
 bool input_is_key_pressed(InputState* input, int key) {
     switch (key) {
     case ALLEGRO_KEY_A:

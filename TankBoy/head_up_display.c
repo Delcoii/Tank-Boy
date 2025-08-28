@@ -53,7 +53,6 @@ void head_up_display_init(const char* config_file) {
         hud_text_color = al_map_rgb(255, 255, 255);
         hud_hp_color = al_map_rgb(255, 0, 0);
         hud_border_color = al_map_rgb(255, 255, 255);
-
     }
    
     if (parser) {
