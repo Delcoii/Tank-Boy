@@ -95,6 +95,10 @@ typedef struct {
 
     // Head_Up_Display
     Head_Up_Display_Data hud;
+    
+    // Enemy system
+    int round_number;
+    bool enemies_spawned;
 
 } GameSystem;
 

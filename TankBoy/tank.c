@@ -18,6 +18,11 @@ void tank_init(Tank* tank, double x, double y) {
     tank->cannon_angle = M_PI / 4;
     tank->weapon = 0;
 
+    // Initialize HP and invincibility
+    tank->max_hp = 100;
+    tank->hp = tank->max_hp;
+    tank->invincible = 0.0;
+
     tank->charging = false;
     tank->cannon_power = 0;
 
@@ -30,6 +35,12 @@ void tank_init(Tank* tank, double x, double y) {
 
 // Update tank based on input
 void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map) {
+    // Update invincibility timer
+    if (tank->invincible > 0.0) {
+        tank->invincible -= dt;
+        if (tank->invincible < 0.0) tank->invincible = 0.0;
+    }
+    
     // Load physics settings from config.ini
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "config.ini");
@@ -216,8 +227,11 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
-    // Tank body
-    al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, al_map_rgb(60, 120, 180));
+    // Tank body (change color when invincible)
+    ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
+        ? al_map_rgb(160, 160, 160)  // Gray when invincible
+        : al_map_rgb(60, 120, 180);  // Normal blue color
+    al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, body_color);
 
     // Cannon
     double cx = sx + 16;
@@ -244,4 +258,85 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
         al_draw_rectangle(sx, sy - 35, sx + full_w, sy - 20, al_map_rgb(255, 255, 255), 2);
         al_draw_filled_rectangle(sx + 1, sy - 34, sx + 1 + gw, sy - 21, al_map_rgb(0, 200, 255));
     }
+}
+
+/* ===== Getter Functions ===== */
+
+// Global tank instance (needed for getter functions)
+static Tank* g_tank = NULL;
+static double g_camera_x = 0.0;
+static double g_camera_y = 0.0;
+
+// Set global tank reference (called from tank_init)
+void set_global_tank_ref(Tank* tank) {
+    g_tank = tank;
+}
+
+// Set camera position (called from main game loop)
+void set_camera_position(double x, double y) {
+    g_camera_x = x;
+    g_camera_y = y;
+}
+
+double get_tank_x(void) {
+    return g_tank ? g_tank->x : 0.0;
+}
+
+double get_tank_y(void) {
+    return g_tank ? g_tank->y : 0.0;
+}
+
+int get_tank_width(void) {
+    return 32; // Hardcoded for now, could be made configurable
+}
+
+int get_tank_height(void) {
+    return 20; // Hardcoded for now, could be made configurable
+}
+
+int get_tank_hp(void) {
+    return g_tank ? g_tank->hp : 0;
+}
+
+int get_tank_max_hp(void) {
+    return g_tank ? g_tank->max_hp : 0;
+}
+
+double get_tank_invincible(void) {
+    return g_tank ? g_tank->invincible : 0.0;
+}
+
+void set_tank_hp(int hp) {
+    if (g_tank) {
+        g_tank->hp = hp;
+        if (g_tank->hp < 0) g_tank->hp = 0;
+        if (g_tank->hp > g_tank->max_hp) g_tank->hp = g_tank->max_hp;
+    }
+}
+
+void set_tank_invincible(double time) {
+    if (g_tank) {
+        g_tank->invincible = time;
+    }
+}
+
+void set_tank_velocity(double vx, double vy) {
+    if (g_tank) {
+        g_tank->vx = vx;
+        g_tank->vy = vy;
+    }
+}
+
+void set_tank_x(double x) {
+    if (g_tank) {
+        g_tank->x = x;
+    }
+}
+
+double get_camera_x(void) {
+    return g_camera_x;
+}
+
+double get_camera_y(void) {
+    return g_camera_y;
 }

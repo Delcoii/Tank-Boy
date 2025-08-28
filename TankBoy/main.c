@@ -14,6 +14,9 @@
 // local library
 #include "game_system.h"
 #include "map_generation.h"
+#include "enemy.h"
+#include "collision.h"
+#include "head_up_display.h"
 
 
 void* must_init(void* test, const char* description) {
@@ -35,6 +38,16 @@ int main(void) {
     
     // Initialize map configuration
     map_config_init();
+    
+    // Initialize enemy system
+    enemies_init();
+    flying_enemies_init();
+    
+    // Load enemies from CSV file
+    load_enemies_from_csv(1); // Load stage 1 enemies
+    
+    // Initialize HUD
+    head_up_display_init("config.ini");
     
     // Create display with scaled buffer size
     int disp_w = (int)(game_system.config.buffer_width * game_system.config.display_scale);

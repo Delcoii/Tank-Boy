@@ -7,8 +7,10 @@
 #define MAP_W 200
 
 void bullets_init(Bullet* bullets, int max_bullets) {
-    for (int i = 0; i < max_bullets; i++)
+    for (int i = 0; i < max_bullets; i++) {
         bullets[i].alive = false;
+        bullets[i].from_enemy = false;
+    }
 }
 
 void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
@@ -53,4 +55,24 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         ALLEGRO_COLOR col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
         al_draw_filled_circle(sx, sy, 4, col);
     }
+}
+
+/* ===== Getter Functions ===== */
+
+// Global bullet array (needed for getter functions)
+static Bullet* g_bullets = NULL;
+static int g_max_bullets = MAX_BULLETS;
+
+// Set global bullet reference (called from bullets_init)
+void set_global_bullet_ref(Bullet* bullets, int max_bullets) {
+    g_bullets = bullets;
+    g_max_bullets = max_bullets;
+}
+
+Bullet* get_bullets(void) {
+    return g_bullets;
+}
+
+int get_max_bullets(void) {
+    return g_max_bullets;
 }

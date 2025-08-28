@@ -142,6 +142,14 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     bullets_draw(game_system->bullets, game_system->max_bullets, 
                 game_system->camera_x, game_system->camera_y);
     
+    // Draw enemies
+    enemies_draw();
+    flying_enemies_draw();
+    
+    // Draw enemy HP bars
+    draw_enemy_hp_bars();
+    draw_flying_enemy_hp_bars();
+    
     // Draw Head_Up_Display
     head_up_display_draw(&game_system->hud);
 
@@ -283,6 +291,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
         map_init(&game_system->current_map);  // Initialize empty map as fallback
     }
     
+    // Initialize enemy system
+    game_system->round_number = 1;
+    game_system->enemies_spawned = false;
+    
+    // Set global references for getter functions
+    set_global_tank_ref(&game_system->player_tank);
+    set_global_bullet_ref(game_system->bullets, game_system->max_bullets);
 
 }
 
@@ -322,6 +337,38 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
         game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
+        
+        // Set camera position for HP bar drawing
+        set_camera_position(game_system->camera_x, game_system->camera_y);
+        
+        // Spawn enemies if not spawned yet
+        if (!game_system->enemies_spawned) {
+            spawn_enemies(game_system->round_number);
+            spawn_flying_enemy(game_system->round_number);
+            game_system->enemies_spawned = true;
+        }
+        
+        // Update enemy systems
+        enemies_update(1.0/60.0);
+        flying_enemies_update(1.0/60.0);
+        
+        // Update collision detection
+        bullets_hit_enemies();
+        bullets_hit_tank();
+        tank_touch_ground_enemy();
+        
+        // Check if all enemies are cleared for next round
+        if (!any_ground_enemies_alive() && !any_flying_enemies_alive()) {
+            game_system->round_number++;
+            game_system->enemies_spawned = false;
+        }
+        
+        // Update HUD with enemy counts and round
+        game_system->hud.enemies_alive = get_alive_enemy_count();
+        game_system->hud.flying_enemies_alive = get_alive_flying_enemy_count();
+        game_system->hud.round = game_system->round_number;
+        game_system->hud.player_hp = get_tank_hp();
+        game_system->hud.player_max_hp = get_tank_max_hp();
     }
 }
 
