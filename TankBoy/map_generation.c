@@ -6,6 +6,7 @@
 #include <string.h>
 
 #define INITIAL_BLOCK_CAPACITY 1000
+#define INITIAL_SPAWN_CAPACITY 10
 
 // Global configuration cache
 static MapConfig g_map_config = {0};
@@ -298,4 +299,127 @@ int map_get_map_width(void) {
 int map_get_map_height(void) {
     const MapConfig* config = map_get_config();
     return config->map_height;
+}
+
+// Convert string to spawn type
+static SpawnType spawn_string_to_type(const char* type_str) {
+    if (strcmp(type_str, "tank") == 0) {
+        return SPAWN_TANK;
+    }
+    return SPAWN_TANK; // Default to tank
+}
+
+// Initialize spawn points collection
+bool spawn_points_init(SpawnPoints* spawns) {
+    if (!spawns) return false;
+    
+    spawns->points = malloc(INITIAL_SPAWN_CAPACITY * sizeof(SpawnPoint));
+    if (!spawns->points) return false;
+    
+    spawns->count = 0;
+    spawns->capacity = INITIAL_SPAWN_CAPACITY;
+    
+    return true;
+}
+
+// Free spawn points memory
+void spawn_points_free(SpawnPoints* spawns) {
+    if (spawns && spawns->points) {
+        free(spawns->points);
+        spawns->points = NULL;
+        spawns->count = 0;
+        spawns->capacity = 0;
+    }
+}
+
+// Add spawn point to collection (resize array if needed)
+static bool spawn_points_add(SpawnPoints* spawns, const SpawnPoint* point) {
+    if (spawns->count >= spawns->capacity) {
+        size_t new_capacity = spawns->capacity * 2;
+        SpawnPoint* new_points = realloc(spawns->points, new_capacity * sizeof(SpawnPoint));
+        if (!new_points) return false;
+        
+        spawns->points = new_points;
+        spawns->capacity = new_capacity;
+    }
+    
+    spawns->points[spawns->count] = *point;
+    spawns->count++;
+    return true;
+}
+
+// Load spawn points from CSV file
+bool spawn_points_load(SpawnPoints* spawns, const char* csv_path) {
+    if (!spawns || !csv_path) return false;
+    
+    FILE* file = fopen(csv_path, "r");
+    if (!file) {
+        printf("Info: No spawn points file found at: %s (using default position)\n", csv_path);
+        return false; // Not an error, just use default spawn
+    }
+    
+    // Initialize spawn points collection
+    if (!spawn_points_init(spawns)) {
+        fclose(file);
+        return false;
+    }
+    
+    char line[256];
+    bool first_line = true;
+    
+    while (fgets(line, sizeof(line), file)) {
+        // Skip header line
+        if (first_line) {
+            first_line = false;
+            continue;
+        }
+        
+        // Parse CSV line: x,y,spawn_type
+        char* token = strtok(line, ",");
+        if (!token) continue;
+        int x = atoi(token);
+        
+        token = strtok(NULL, ",");
+        if (!token) continue;
+        int y = atoi(token);
+        
+        token = strtok(NULL, ",\n\r");
+        if (!token) continue;
+        
+        // Remove trailing whitespace
+        char* end = token + strlen(token) - 1;
+        while (end > token && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+            *end = '\0';
+            end--;
+        }
+        
+        // Create spawn point
+        SpawnPoint point;
+        point.x = x;
+        point.y = y;
+        point.type = spawn_string_to_type(token);
+        
+        // Add to collection
+        if (!spawn_points_add(spawns, &point)) {
+            spawn_points_free(spawns);
+            fclose(file);
+            return false;
+        }
+    }
+    
+    fclose(file);
+    printf("Loaded %zu spawn points from %s\n", spawns->count, csv_path);
+    return true;
+}
+
+// Get tank spawn point (returns first tank spawn found, or NULL)
+SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns) {
+    if (!spawns) return NULL;
+    
+    for (size_t i = 0; i < spawns->count; i++) {
+        if (spawns->points[i].type == SPAWN_TANK) {
+            return &spawns->points[i];
+        }
+    }
+    return NULL;
 }

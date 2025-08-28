@@ -135,6 +135,27 @@ class Enemy:
         """Get text to display on enemy"""
         return f"{self.enemy_type[0].upper()}{self.difficulty}"
 
+class SpawnPoint:
+    def __init__(self, x, y, spawn_type="tank"):
+        self.x = x
+        self.y = y
+        self.spawn_type = spawn_type  # "tank" for main tank spawn
+    
+    def to_csv_row(self):
+        """Convert spawn point to CSV row format"""
+        return (self.x, self.y, self.spawn_type)
+    
+    def get_color(self):
+        """Return color according to spawn type"""
+        if self.spawn_type == "tank":
+            return "lime"  # Bright green for tank spawn
+        else:
+            return "yellow"
+    
+    def get_display_text(self):
+        """Get text to display on spawn point"""
+        return "T" if self.spawn_type == "tank" else "S"
+
 class MapEditor:
     def __init__(self, root):
         self.root = root
@@ -148,7 +169,10 @@ class MapEditor:
         # Store enemy data
         self.enemies = []
         
-        # Current drawing mode ('draw', 'erase', or 'enemy')
+        # Store spawn point data
+        self.spawn_points = []
+        
+        # Current drawing mode ('draw', 'erase', 'enemy', or 'spawn')
         self.draw_mode = 'draw'
         
         # Current block type ('ground' or 'grass')
@@ -157,6 +181,9 @@ class MapEditor:
         # Current enemy type and difficulty
         self.current_enemy_type = 'tank'
         self.current_enemy_difficulty = 1
+        
+        # Current spawn type
+        self.current_spawn_type = 'tank'
         
         # Brush size (number of blocks to paint at once)
         self.brush_size = 1
@@ -198,6 +225,8 @@ class MapEditor:
                       command=self.change_mode).pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(toolbar, text="Enemy", variable=self.mode_var, value="enemy", 
                       command=self.change_mode).pack(side=tk.LEFT, padx=5)
+        tk.Radiobutton(toolbar, text="Spawn", variable=self.mode_var, value="spawn", 
+                      command=self.change_mode).pack(side=tk.LEFT, padx=5)
         
         # Separator
         tk.Frame(toolbar, width=2, bg="gray").pack(side=tk.LEFT, fill=tk.Y, padx=10)
@@ -229,6 +258,20 @@ class MapEditor:
         
         # Initially hide enemy frame (it will be shown when enemy mode is selected)
         self.enemy_frame.pack_forget()
+        
+        # Spawn point settings frame (only visible when spawn mode is selected)
+        self.spawn_frame = tk.Frame(self.root)
+        tk.Label(self.spawn_frame, text="Spawn Type:").pack(side=tk.LEFT)
+        self.spawn_type_var = tk.StringVar(value="tank")
+        spawn_types = ["tank"]  # Can be extended for other spawn types in the future
+        spawn_combo = tk.OptionMenu(self.spawn_frame, self.spawn_type_var, *spawn_types, command=self.change_spawn_type)
+        spawn_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Add note for spawn point
+        tk.Label(self.spawn_frame, text="(Only one tank spawn allowed per stage)", fg="gray").pack(side=tk.LEFT, padx=10)
+        
+        # Initially hide spawn frame
+        self.spawn_frame.pack_forget()
         
         # Separator
         tk.Frame(toolbar, width=2, bg="gray").pack(side=tk.LEFT, fill=tk.Y, padx=10)
@@ -339,12 +382,17 @@ class MapEditor:
         """Change drawing mode"""
         self.draw_mode = self.mode_var.get()
         
-        # Show/hide enemy settings based on mode
+        # Hide all mode-specific frames first
+        self.enemy_frame.pack_forget()
+        self.spawn_frame.pack_forget()
+        
+        # Show appropriate frame based on mode
         if self.draw_mode == 'enemy':
             # Pack enemy frame below toolbar
             self.enemy_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
-        else:
-            self.enemy_frame.pack_forget()
+        elif self.draw_mode == 'spawn':
+            # Pack spawn frame below toolbar
+            self.spawn_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
         
     def change_block_type(self):
         """Change block type"""
@@ -361,6 +409,10 @@ class MapEditor:
     def change_enemy_difficulty(self, value):
         """Change enemy difficulty"""
         self.current_enemy_difficulty = int(value)
+        
+    def change_spawn_type(self, value):
+        """Change spawn type"""
+        self.current_spawn_type = value
         
     def on_mouse_wheel(self, event):
         """Handle mouse wheel events for scroll"""
@@ -475,9 +527,10 @@ class MapEditor:
                     blocks_changed = True
                     
                 elif self.draw_mode == 'erase':
-                    # Remove block and enemy at this position
+                    # Remove block, enemy, and spawn point at this position
                     original_blocks_count = len(self.blocks)
                     original_enemies_count = len(self.enemies)
+                    original_spawns_count = len(self.spawn_points)
                     
                     # Remove blocks
                     self.blocks = [b for b in self.blocks if not (b.x == map_x and b.y == map_y)]
@@ -485,9 +538,13 @@ class MapEditor:
                     # Remove enemies
                     self.enemies = [e for e in self.enemies if not (e.x == map_x and e.y == map_y)]
                     
+                    # Remove spawn points
+                    self.spawn_points = [s for s in self.spawn_points if not (s.x == map_x and s.y == map_y)]
+                    
                     # Check if anything was removed
                     if (len(self.blocks) != original_blocks_count or 
-                        len(self.enemies) != original_enemies_count):
+                        len(self.enemies) != original_enemies_count or
+                        len(self.spawn_points) != original_spawns_count):
                         blocks_changed = True
                         
                 elif self.draw_mode == 'enemy':
@@ -497,6 +554,20 @@ class MapEditor:
                     # Add new enemy
                     enemy = Enemy(map_x, map_y, self.current_enemy_type, self.current_enemy_difficulty)
                     self.enemies.append(enemy)
+                    blocks_changed = True
+                    
+                elif self.draw_mode == 'spawn':
+                    # For tank spawn, only allow one spawn point
+                    if self.current_spawn_type == 'tank':
+                        # Remove existing tank spawn points
+                        self.spawn_points = [s for s in self.spawn_points if s.spawn_type != 'tank']
+                    
+                    # Remove any existing spawn point at this position
+                    self.spawn_points = [s for s in self.spawn_points if not (s.x == map_x and s.y == map_y)]
+                    
+                    # Add new spawn point
+                    spawn = SpawnPoint(map_x, map_y, self.current_spawn_type)
+                    self.spawn_points.append(spawn)
                     blocks_changed = True
         
         # Redraw canvas if there are changes
@@ -523,12 +594,28 @@ class MapEditor:
         # Draw enemy text
         self.canvas.create_text(center_x, center_y, text=enemy.get_display_text(),
                                fill="white", font=("Arial", 8, "bold"), tags="enemy")
+                               
+    def draw_spawn_on_canvas(self, grid_x, grid_y, spawn):
+        """Draw spawn point on canvas"""
+        # Draw spawn point as a square
+        center_x = grid_x + GRID_SIZE // 2
+        center_y = grid_y + GRID_SIZE // 2
+        size = GRID_SIZE // 2
+        
+        self.canvas.create_rectangle(center_x - size//2, center_y - size//2,
+                                   center_x + size//2, center_y + size//2,
+                                   fill=spawn.get_color(), outline="black", width=2, tags="spawn")
+        
+        # Draw spawn text
+        self.canvas.create_text(center_x, center_y, text=spawn.get_display_text(),
+                               fill="black", font=("Arial", 10, "bold"), tags="spawn")
                                    
     def redraw_canvas(self):
         """Redraw entire canvas"""
-        # Clear only blocks and enemies, keep grid and boundaries
+        # Clear only blocks, enemies, and spawn points, keep grid and boundaries
         self.canvas.delete("block")
         self.canvas.delete("enemy")
+        self.canvas.delete("spawn")
         
         # Draw blocks
         for block in self.blocks:
@@ -542,10 +629,16 @@ class MapEditor:
             grid_y = enemy.y // CANVAS_SCALE
             self.draw_enemy_on_canvas(grid_x, grid_y, enemy)
             
+        # Draw spawn points
+        for spawn in self.spawn_points:
+            grid_x = spawn.x // CANVAS_SCALE
+            grid_y = spawn.y // CANVAS_SCALE
+            self.draw_spawn_on_canvas(grid_x, grid_y, spawn)
+            
 
             
     def load_map(self):
-        """Load map and enemies"""
+        """Load map, enemies, and spawn points"""
         stage_num = self.stage_var.get()
         
         # Load map blocks
@@ -555,6 +648,10 @@ class MapEditor:
         # Load enemy data
         enemy_filename = f"enemies{stage_num}.csv"
         enemy_filepath = os.path.join(OUTPUT_DIR, enemy_filename)
+        
+        # Load spawn point data
+        spawn_filename = f"spawns{stage_num}.csv"
+        spawn_filepath = os.path.join(OUTPUT_DIR, spawn_filename)
         
         try:
             # Load blocks
@@ -593,14 +690,29 @@ class MapEditor:
                             enemy = Enemy(x, y, enemy_type, difficulty)
                             self.enemies.append(enemy)
                             
+            # Load spawn points
+            self.spawn_points = []
+            if os.path.exists(spawn_filepath):
+                with open(spawn_filepath, 'r', newline='') as f:
+                    reader = csv.reader(f)
+                    header = next(reader)  # Skip header
+                    
+                    for row in reader:
+                        if len(row) >= 3:
+                            x, y, spawn_type = row
+                            x, y = int(float(x)), int(float(y))
+                            
+                            spawn = SpawnPoint(x, y, spawn_type)
+                            self.spawn_points.append(spawn)
+                            
             self.redraw_canvas()
-            messagebox.showinfo("Success", f"Stage {stage_num} loaded successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}")
+            messagebox.showinfo("Success", f"Stage {stage_num} loaded successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}, Spawns: {len(self.spawn_points)}")
             
         except Exception as e:
             messagebox.showerror("Error", f"Error loading files: {e}")
             
     def save_map(self):
-        """Save map and enemies"""
+        """Save map, enemies, and spawn points"""
         stage_num = self.stage_var.get()
         
         try:
@@ -628,7 +740,19 @@ class MapEditor:
                 for enemy in self.enemies:
                     writer.writerow(enemy.to_csv_row())
                     
-            messagebox.showinfo("Success", f"Stage {stage_num} saved successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}\nLocation: {OUTPUT_DIR}")
+            # Save spawn point data
+            spawn_filename = f"spawns{stage_num}.csv"
+            spawn_filepath = os.path.join(OUTPUT_DIR, spawn_filename)
+            
+            with open(spawn_filepath, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["x", "y", "spawn_type"])
+                
+                # Save all spawn points
+                for spawn in self.spawn_points:
+                    writer.writerow(spawn.to_csv_row())
+                    
+            messagebox.showinfo("Success", f"Stage {stage_num} saved successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}, Spawns: {len(self.spawn_points)}\nLocation: {OUTPUT_DIR}")
             
         except Exception as e:
             messagebox.showerror("Error", f"Error saving files: {e}")
@@ -664,6 +788,7 @@ class MapEditor:
         # Recreate default ground
         self.blocks = []
         self.enemies = []
+        self.spawn_points = []
         self.create_default_ground()
         self.redraw_canvas()
         

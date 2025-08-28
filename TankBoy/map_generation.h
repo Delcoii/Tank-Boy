@@ -18,6 +18,24 @@ typedef struct {
     BlockType type;
 } Block;
 
+/* Spawn point types */
+typedef enum {
+    SPAWN_TANK
+} SpawnType;
+
+/* Spawn point structure */
+typedef struct {
+    int x, y;
+    SpawnType type;
+} SpawnPoint;
+
+/* Spawn points collection */
+typedef struct {
+    SpawnPoint* points;
+    size_t count;
+    size_t capacity;
+} SpawnPoints;
+
 /* Map structure */
 typedef struct {
     Block* blocks;
@@ -31,6 +49,12 @@ typedef struct {
 bool map_load(Map* map, const char* csv_path);
 bool map_init(Map* map);
 void map_free(Map* map);
+
+/* Spawn point management */
+bool spawn_points_init(SpawnPoints* spawns);
+void spawn_points_free(SpawnPoints* spawns);
+bool spawn_points_load(SpawnPoints* spawns, const char* csv_path);
+SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns);
 
 /* Collision detection ROI */
 size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 

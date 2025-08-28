@@ -127,9 +127,29 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     game_system->current_state = STATE_MENU;
     game_system->running = true;
+    game_system->current_stage = 1; // Initialize current stage first
 
     input_system_init(&game_system->input);
-    tank_init(&game_system->player_tank, 50.0, 480.0);
+    
+    // Load spawn points and initialize tank position
+    char spawn_file[256];
+    snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+    
+    double tank_x = 100.0; // Default position
+    double tank_y = 2000.0; // Default position
+    
+    if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+        SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+        if (tank_spawn) {
+            tank_x = (double)tank_spawn->x;
+            tank_y = (double)tank_spawn->y;
+            printf("Tank spawn loaded from file: (%.0f, %.0f)\n", tank_x, tank_y);
+        }
+    } else {
+        printf("Using default tank spawn position: (%.0f, %.0f)\n", tank_x, tank_y);
+    }
+    
+    tank_init(&game_system->player_tank, tank_x, tank_y);
 
     game_system->max_bullets = game_system->config.max_bullets;
     game_system->bullets = malloc(sizeof(Bullet) * game_system->max_bullets);
@@ -141,7 +161,6 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     head_up_display_init("config.ini");
 
     // Initialize and load map
-    game_system->current_stage = 1;
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
     if (!map_load(&game_system->current_map, map_file))
@@ -168,6 +187,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
     map_free(&game_system->current_map);
+    spawn_points_free(&game_system->spawn_points);
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
@@ -228,7 +248,29 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
                 if (!map_load(&game_system->current_map, map_file))
                     map_init(&game_system->current_map);
-                tank_init(&game_system->player_tank, 50.0, 480.0);
+                
+                // Load spawn points for the new stage
+                char spawn_file[256];
+                snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+                
+                double tank_x = 100.0; // Default position
+                double tank_y = 2000.0; // Default position
+                
+                // Free previous spawn points
+                spawn_points_free(&game_system->spawn_points);
+                
+                if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+                    SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+                    if (tank_spawn) {
+                        tank_x = (double)tank_spawn->x;
+                        tank_y = (double)tank_spawn->y;
+                        printf("Tank spawn loaded for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                    }
+                } else {
+                    printf("Using default tank spawn position for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                }
+                
+                tank_init(&game_system->player_tank, tank_x, tank_y);
 
                 game_system->current_state = STATE_GAME;
             }
