@@ -303,13 +303,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update input system
     input_system_update(&game_system->input, event);
 
+    int temp_stage = 1;
+    int temp_damage = 0;
     
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
                    game_system->bullets, game_system->max_bullets);
         bullets_update(game_system->bullets, game_system->max_bullets);
-        game_system->hud = head_up_display_update(0, game_system->player_tank.weapon, 1);
+        game_system->hud = head_up_display_update(temp_damage, game_system->player_tank.weapon, temp_stage);
 
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
