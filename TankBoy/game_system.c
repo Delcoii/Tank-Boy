@@ -18,9 +18,7 @@ void load_game_config(GameConfig* config, const char* config_file) {
     ini_parser_resolve_path(__FILE__, config_file, full_path, sizeof(full_path));
     
     // Load with default values as fallback
-    if (ini_parser_load_file(parser, full_path)) {
-        printf("Configuration loaded from '%s'\n", full_path);
-    } else {
+    if (!ini_parser_load_file(parser, full_path)) {
         printf("Warning: Could not load config file '%s', using defaults\n", full_path);
     }
     
@@ -201,17 +199,15 @@ void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 // Convert display coordinates to buffer coordinates
                 display_to_buffer_coords(event->mouse.x, event->mouse.y, &buffer_x, &buffer_y, &game_system->config);
                 
+                // if the user click on the start button, the game will start
                 if (is_point_in_button(buffer_x, buffer_y, &game_system->start_button)) {
                     game_system->start_button.clicked = true;
                     game_system->current_state = STATE_GAME;
-                    printf("Start Game button clicked! (display: %d,%d -> buffer: %d,%d)\n", 
-                           event->mouse.x, event->mouse.y, buffer_x, buffer_y);
                 }
+                // if the user click on the exit button, the game will exit
                 else if (is_point_in_button(buffer_x, buffer_y, &game_system->exit_button)) {
                     game_system->exit_button.clicked = true;
                     game_system->running = false;
-                    printf("Exit Game button clicked! (display: %d,%d -> buffer: %d,%d)\n", 
-                           event->mouse.x, event->mouse.y, buffer_x, buffer_y);
                 }
             }
             break;
@@ -285,7 +281,6 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
     al_destroy_display(display);
-    printf("Game system cleaned up.\n");
 }
 
 
