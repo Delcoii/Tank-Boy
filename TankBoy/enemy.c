@@ -469,7 +469,7 @@ void enemies_update_with_map(double dt, const struct Map* map) {
         double new_x = e->x + e->vx;
         
         // Simple horizontal collision check (no auto step-up)
-        if (map && map_rect_collision(map, (int)new_x, (int)e->y, 32, 20)) {
+        if (map && map_rect_collision(map, (int)new_x, (int)e->y, e->width, e->height)) {
             // Just stop horizontal movement if collision
             e->vx = 0;
         } else {
@@ -482,7 +482,7 @@ void enemies_update_with_map(double dt, const struct Map* map) {
 
         // Check vertical collision before moving (like tank)
         double new_y = e->y + e->vy;
-        if (map && map_rect_collision(map, (int)e->x, (int)new_y, 32, 20)) { // ENEMY_W = 32, ENEMY_H = 20
+        if (map && map_rect_collision(map, (int)e->x, (int)new_y, e->width, e->height)) {
             if (e->vy > 0) {  // Falling down, hit ground
                 e->vy = 0;
                 e->on_ground = true;
@@ -572,8 +572,8 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->x = 0; 
             fe->vx *= -1; 
         }
-        if (fe->x > map_width - 28) { // FLY_W = 28
-            fe->x = map_width - 28; 
+        if (fe->x > map_width - fe->width) {
+            fe->x = map_width - fe->width; 
             fe->vx *= -1; 
         }
 
@@ -581,8 +581,8 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }
-        if (fe->y > map_height - 16) { // FLY_H = 16
-            fe->y = map_height - 16;
+        if (fe->y > map_height - fe->height) {
+            fe->y = map_height - fe->height;
         }
 
         if (fe->in_burst) {
@@ -628,8 +628,8 @@ void flying_enemies_update(double dt) {
             fe->x = 0; 
             fe->vx *= -1; 
         }
-        if (fe->x > map_width - 28) { // FLY_W = 28
-            fe->x = map_width - 28; 
+        if (fe->x > map_width - fe->width) {
+            fe->x = map_width - fe->width; 
             fe->vx *= -1; 
         }
 
@@ -637,8 +637,8 @@ void flying_enemies_update(double dt) {
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }
-        if (fe->y > map_height - 16) { // FLY_H = 16
-            fe->y = map_height - 16;
+        if (fe->y > map_height - fe->height) {
+            fe->y = map_height - fe->height;
         }
 
         if (fe->in_burst) {

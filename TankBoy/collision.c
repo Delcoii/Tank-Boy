@@ -29,6 +29,8 @@ void bullets_hit_enemies(void) {
 
         double bx = bullets[b].x;
         double by = bullets[b].y;
+        int bw = bullets[b].width;
+        int bh = bullets[b].height;
 
         bool hit = false;
 
@@ -37,7 +39,8 @@ void bullets_hit_enemies(void) {
         for (int i = 0; i < MAX_ENEMIES; i++) {
             Enemy* e = &enemies[i];
             if (!e->alive) continue;
-            if (point_in_rect(bx, by, e->x, e->y, 32, 20)) { // ENEMY_W, ENEMY_H
+            // Use rectangle-to-rectangle collision instead of point-to-rectangle
+            if (rect_rect_overlap(bx - bw/2, by - bh/2, bw, bh, e->x, e->y, e->width, e->height)) {
                 if (bullets[b].weapon == 1) {
                     // Cannon explosion
                     apply_cannon_explosion(bx, by, CANNON_SPLASH_RADIUS);
@@ -59,7 +62,8 @@ void bullets_hit_enemies(void) {
         for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
             FlyingEnemy* fe = &f_enemies[i];
             if (!fe->alive) continue;
-            if (point_in_rect(bx, by, fe->x, fe->y, 28, 16)) { // FLY_W, FLY_H
+            // Use rectangle-to-rectangle collision instead of point-to-rectangle
+            if (rect_rect_overlap(bx - bw/2, by - bh/2, bw, bh, fe->x, fe->y, fe->width, fe->height)) {
                 if (bullets[b].weapon == 1) {
                     // Cannon explosion
                     apply_cannon_explosion(bx, by, CANNON_SPLASH_RADIUS);
@@ -117,7 +121,7 @@ void tank_touch_ground_enemy(void) {
         if (!e->alive) continue;
 
         bool overlap = rect_rect_overlap(tank_x, tank_y, tank_w, tank_h,
-                                       e->x, e->y, 32, 20); // ENEMY_W, ENEMY_H
+                                       e->x, e->y, e->width, e->height);
 
         if (overlap) {
             handle_tank_enemy_collision(i);
@@ -201,7 +205,7 @@ void handle_tank_enemy_collision(int enemy_index) {
 
     /* symmetric knockback */
     double tank_cx = get_tank_x() + get_tank_width() * 0.5;
-    double enemy_cx = e->x + 32 * 0.5; // ENEMY_W * 0.5
+    double enemy_cx = e->x + e->width * 0.5;
     double dir = (tank_cx < enemy_cx) ? -1.0 : 1.0;
 
     apply_knockback_to_tank(dir * KNOCKBACK_TANK_VX, -KNOCKBACK_TANK_VY);

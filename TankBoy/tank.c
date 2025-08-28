@@ -169,12 +169,21 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
             // Fire cannon
             for (int i = 0; i < max_bullets; i++) {
                 if (!bullets[i].alive) {
+                    // Load cannon bullet size from config
+                    IniParser* parser = ini_parser_create();
+                    ini_parser_load_file(parser, "TankBoy/config.ini");
+                    int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 6);
+                    int cannon_height = ini_parser_get_int(parser, "Bullets", "cannon_bullet_height", 6);
+                    ini_parser_destroy(parser);
+                    
                     bullets[i].alive = true;
                     bullets[i].x = tank->x + tank->width / 2;
                     bullets[i].y = tank->y + tank->height / 2;
                     bullets[i].weapon = 1;
                     bullets[i].vx = cos(tank->cannon_angle) * tank->cannon_power * 0.7;
                     bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 0.7;
+                    bullets[i].width = cannon_width;
+                    bullets[i].height = cannon_height;
                     break;
                 }
             }
@@ -211,12 +220,21 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                     // Fire bullet
                     for (int i = 0; i < max_bullets; i++) {
                         if (!bullets[i].alive) {
+                            // Load MG bullet size from config
+                            IniParser* parser = ini_parser_create();
+                            ini_parser_load_file(parser, "TankBoy/config.ini");
+                            int mg_width = ini_parser_get_int(parser, "Bullets", "mg_bullet_width", 8);
+                            int mg_height = ini_parser_get_int(parser, "Bullets", "mg_bullet_height", 3);
+                            ini_parser_destroy(parser);
+                            
                             bullets[i].alive = true;
                             bullets[i].x = tank->x + tank->width / 2;
                             bullets[i].y = tank->y + tank->height / 2;
                             bullets[i].weapon = 0;
                             bullets[i].vx = cos(tank->cannon_angle) * 8.0 * 1.5;
                             bullets[i].vy = sin(tank->cannon_angle) * 8.0 * 1.5;
+                            bullets[i].width = mg_width;
+                            bullets[i].height = mg_height;
                             tank->mg_shot_cooldown = 0.1;
                             break;
                         }

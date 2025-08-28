@@ -15,6 +15,9 @@ typedef struct {
     bool alive;
     int weapon; // 0=MG, 1=Cannon
     bool from_enemy; // 적이 발사한 총알인지 여부
+    
+    // Bullet dimensions (different for MG vs Cannon)
+    int width, height;
 } Bullet;
 
 void bullets_init(Bullet* bullets, int max_bullets);

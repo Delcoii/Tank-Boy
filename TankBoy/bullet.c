@@ -51,8 +51,13 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         if (!bullets[i].alive) continue;
         double sx = bullets[i].x - camera_x;
         double sy = bullets[i].y - camera_y;
+        
+        // Different colors for different weapons
         ALLEGRO_COLOR col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
-        al_draw_filled_circle(sx, sy, 4, col);
+        
+        // Draw as rectangle instead of circle
+        al_draw_filled_rectangle(sx - bullets[i].width/2, sy - bullets[i].height/2, 
+                                 sx + bullets[i].width/2, sy + bullets[i].height/2, col);
     }
 }
 
