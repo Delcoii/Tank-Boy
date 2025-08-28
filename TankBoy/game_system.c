@@ -311,6 +311,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
                    game_system->bullets, game_system->max_bullets);
         bullets_update(game_system->bullets, game_system->max_bullets);
+
+        // Update Head_up_display
         game_system->hud = head_up_display_update(temp_damage, game_system->player_tank.weapon, temp_stage);
 
         // Update camera to follow tank (like the working example)
