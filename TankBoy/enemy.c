@@ -36,6 +36,13 @@ void enemies_init(void) {
         printf("  Base speed: %.1f, Speed per difficulty: %.1f\n", enemy_base_speed, enemy_speed_per_difficulty);
     }
     
+    // Load enemy dimensions from config
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "TankBoy/config.ini");
+    int enemy_width = ini_parser_get_int(parser, "Enemy", "enemy_width", 25);
+    int enemy_height = ini_parser_get_int(parser, "Enemy", "enemy_height", 15);
+    ini_parser_destroy(parser);
+    
     for (int i = 0; i < MAX_ENEMIES; i++) {
         enemies[i].alive = false;
         enemies[i].x = 0.0;
@@ -49,10 +56,21 @@ void enemies_init(void) {
         enemies[i].stuck_time = 0.0;
         enemies[i].speed = 0.0;
         enemies[i].jump_timer = 0.0;
+        
+        // Set dimensions from config
+        enemies[i].width = enemy_width;
+        enemies[i].height = enemy_height;
     }
 }
 
 void flying_enemies_init(void) {
+    // Load flying enemy dimensions from config
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "TankBoy/config.ini");
+    int flying_enemy_width = ini_parser_get_int(parser, "Enemy", "flying_enemy_width", 30);
+    int flying_enemy_height = ini_parser_get_int(parser, "Enemy", "flying_enemy_height", 20);
+    ini_parser_destroy(parser);
+    
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         f_enemies[i].alive = false;
         f_enemies[i].x = 0.0;
@@ -67,6 +85,10 @@ void flying_enemies_init(void) {
         f_enemies[i].rest_timer = 2.0;
         f_enemies[i].hp = 0;
         f_enemies[i].max_hp = 0;
+        
+        // Set dimensions from config
+        f_enemies[i].width = flying_enemy_width;
+        f_enemies[i].height = flying_enemy_height;
     }
 }
 
@@ -124,13 +146,20 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
         
         // Initialize enemy based on type
         if (strcmp(enemy_type, "tank") == 0) {
+            // Load enemy dimensions from config
+            IniParser* parser = ini_parser_create();
+            ini_parser_load_file(parser, "TankBoy/config.ini");
+            int enemy_width = ini_parser_get_int(parser, "Enemy", "enemy_width", 25);
+            int enemy_height = ini_parser_get_int(parser, "Enemy", "enemy_height", 15);
+            ini_parser_destroy(parser);
+            
             enemies[enemy_index].alive = true;
             enemies[enemy_index].x = x;
             
             // Use actual map ground level if map is available
             if (map) {
-                int ground_level = map_get_ground_level(map, (int)x, 32);
-                enemies[enemy_index].y = ground_level - 20; // ENEMY_H = 20
+                int ground_level = map_get_ground_level(map, (int)x, enemy_width);
+                enemies[enemy_index].y = ground_level - enemy_height;
             } else {
                 enemies[enemy_index].y = y;
             }
@@ -145,6 +174,10 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
             enemies[enemy_index].speed = enemy_base_speed + difficulty * enemy_speed_per_difficulty;
             enemies[enemy_index].jump_timer = enemy_jump_interval_min + (rand() % (int)((enemy_jump_interval_max - enemy_jump_interval_min) * 10)) / 10.0;  // Random initial timer
             
+            // Set dimensions from config
+            enemies[enemy_index].width = enemy_width;
+            enemies[enemy_index].height = enemy_height;
+            
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
         else if (strcmp(enemy_type, "helicopter") == 0) {
@@ -155,6 +188,13 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
             }
             
             if (fly_index < MAX_FLY_ENEMIES) {
+                // Load flying enemy dimensions from config
+                IniParser* parser = ini_parser_create();
+                ini_parser_load_file(parser, "TankBoy/config.ini");
+                int flying_enemy_width = ini_parser_get_int(parser, "Enemy", "flying_enemy_width", 30);
+                int flying_enemy_height = ini_parser_get_int(parser, "Enemy", "flying_enemy_height", 20);
+                ini_parser_destroy(parser);
+                
                 f_enemies[fly_index].alive = true;
                 f_enemies[fly_index].x = x;
                 f_enemies[fly_index].y = y;
@@ -168,6 +208,10 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
                 f_enemies[fly_index].rest_timer = 0.5 + (rand() % 50) / 100.0;
                 f_enemies[fly_index].max_hp = FLY_BASE_HP + FLY_HP_PER_ROUND * difficulty;
                 f_enemies[fly_index].hp = f_enemies[fly_index].max_hp;
+                
+                // Set dimensions from config
+                f_enemies[fly_index].width = flying_enemy_width;
+                f_enemies[fly_index].height = flying_enemy_height;
                 
                 printf("Spawned helicopter enemy at (%f, %f) with difficulty %d\n", x, y, difficulty);
             }
@@ -186,6 +230,13 @@ void spawn_enemies(int round_number) {
     
     for (int i = 0; i < MAX_ENEMIES && count > 0; i++) {
         if (!enemies[i].alive) {
+            // Load enemy dimensions from config
+            IniParser* parser = ini_parser_create();
+            ini_parser_load_file(parser, "TankBoy/config.ini");
+            int enemy_width = ini_parser_get_int(parser, "Enemy", "enemy_width", 25);
+            int enemy_height = ini_parser_get_int(parser, "Enemy", "enemy_height", 15);
+            ini_parser_destroy(parser);
+            
             enemies[i].alive = true;
 
             // Spawn enemies at map edges, but ensure they're within bounds
@@ -196,8 +247,8 @@ void spawn_enemies(int round_number) {
             }
 
             // Get ground level at spawn position and place enemy on ground
-            int ground_level = map_get_ground_level(NULL, (int)enemies[i].x, 32);
-            enemies[i].y = ground_level - 20; // ENEMY_H = 20
+            int ground_level = map_get_ground_level(NULL, (int)enemies[i].x, enemy_width);
+            enemies[i].y = ground_level - enemy_height;
             
             enemies[i].vx = 0.0;
             enemies[i].vy = 0.0;
@@ -212,6 +263,10 @@ void spawn_enemies(int round_number) {
             enemies[i].speed = enemy_base_speed + round_number * enemy_speed_per_difficulty;
             enemies[i].jump_timer = enemy_jump_interval_min + (rand() % (int)((enemy_jump_interval_max - enemy_jump_interval_min) * 10)) / 10.0;  // Random initial timer
 
+            // Set dimensions from config
+            enemies[i].width = enemy_width;
+            enemies[i].height = enemy_height;
+
             count--;
         }
     }
@@ -222,6 +277,13 @@ void spawn_flying_enemy(int round_number) {
     
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         if (!f_enemies[i].alive) {
+            // Load flying enemy dimensions from config
+            IniParser* parser = ini_parser_create();
+            ini_parser_load_file(parser, "TankBoy/config.ini");
+            int flying_enemy_width = ini_parser_get_int(parser, "Enemy", "flying_enemy_width", 30);
+            int flying_enemy_height = ini_parser_get_int(parser, "Enemy", "flying_enemy_height", 20);
+            ini_parser_destroy(parser);
+            
             f_enemies[i].alive = true;
             f_enemies[i].x = rand() % map_width;
             f_enemies[i].base_y = 100 + rand() % 100;
@@ -237,6 +299,11 @@ void spawn_flying_enemy(int round_number) {
 
             f_enemies[i].max_hp = FLY_BASE_HP + FLY_HP_PER_ROUND * round_number;
             f_enemies[i].hp = f_enemies[i].max_hp;
+            
+            // Set dimensions from config
+            f_enemies[i].width = flying_enemy_width;
+            f_enemies[i].height = flying_enemy_height;
+            
             break;
         }
     }
@@ -297,7 +364,7 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
         double new_x = e->x + e->vx;
         
         // Simple horizontal collision check (no auto step-up)
-        if (map && map_rect_collision(map, (int)new_x, (int)e->y, 32, 20)) {
+        if (map && map_rect_collision(map, (int)new_x, (int)e->y, e->width, e->height)) {
             // Just stop horizontal movement if collision
             e->vx = 0;
         } else {
@@ -306,20 +373,20 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
 
         // Check vertical collision before moving (like tank)
         double new_y = e->y + e->vy;
-        if (map && map_rect_collision(map, (int)e->x, (int)new_y, 32, 20)) { // ENEMY_W = 32, ENEMY_H = 20
+        if (map && map_rect_collision(map, (int)e->x, (int)new_y, e->width, e->height)) {
             if (e->vy > 0) {  // Falling down, hit ground
                 e->vy = 0;
                 e->on_ground = true;
                 // Get actual ground level from map
-                int ground_level = map_get_ground_level(map, (int)e->x, 32);
-                e->y = ground_level - 20;  // ENEMY_H = 20
+                int ground_level = map_get_ground_level(map, (int)e->x, e->width);
+                e->y = ground_level - e->height;
             } else {  // Moving up, hit ceiling
                 e->vy = 0;
             }
         } else {
             e->y = new_y;
             // Check if still on ground by testing a small area below enemy
-            if (map && map_rect_collision(map, (int)e->x, (int)(e->y + 20 + 1), 32, 1)) {
+            if (map && map_rect_collision(map, (int)e->x, (int)(e->y + e->height + 1), e->width, 1)) {
                 e->on_ground = true;
             } else {
                 e->on_ground = false;  // In air if no collision below
@@ -331,8 +398,8 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
             e->x = 0; 
             e->vx = fabs(e->vx); 
         }
-        if (e->x > map_width - 32) { // ENEMY_W = 32
-            e->x = map_width - 32; 
+        if (e->x > map_width - e->width) {
+            e->x = map_width - e->width; 
             e->vx = -fabs(e->vx); 
         }
 
@@ -614,7 +681,7 @@ void enemies_draw(double camera_x, double camera_y) {
 
         
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(sx, sy, sx + 32, sy + 20, al_map_rgb(200, 50, 50));
+        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
         // HP bar would be drawn by HUD system
     }
@@ -627,7 +694,7 @@ void flying_enemies_draw(double camera_x, double camera_y) {
         
         // Convert world coordinates to screen coordinates
         al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
-                                fe->x - camera_x + 28, fe->y - camera_y + 16, 
+                                fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
                                 al_map_rgb(180, 0, 180));
         
         // HP bar would be drawn by HUD system
@@ -689,8 +756,8 @@ void apply_cannon_explosion(double ex, double ey, double radius) {
     for (int i = 0; i < MAX_ENEMIES; ++i) {
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
-        double cx = e->x + 32 * 0.5; // ENEMY_W * 0.5
-        double cy = e->y + 20 * 0.5; // ENEMY_H * 0.5
+        double cx = e->x + e->width * 0.5;
+        double cy = e->y + e->height * 0.5;
         double dx = cx - ex, dy = cy - ey;
         double dist = sqrt(dx * dx + dy * dy);
         int dmg = (int)(DMG_CANNON * (1.0 - (dist / radius)));
@@ -709,8 +776,8 @@ void apply_cannon_explosion(double ex, double ey, double radius) {
     for (int i = 0; i < MAX_FLY_ENEMIES; ++i) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
-        double cx = fe->x + 28 * 0.5; // FLY_W * 0.5
-        double cy = fe->y + 16 * 0.5; // FLY_H * 0.5
+        double cx = fe->x + fe->width * 0.5;
+        double cy = fe->y + fe->height * 0.5;
         double dx = cx - ex, dy = cy - ey;
         double dist = sqrt(dx * dx + dy * dy);
         int dmg = (int)(DMG_CANNON * (1.0 - (dist / radius)));

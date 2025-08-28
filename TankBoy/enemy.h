@@ -54,6 +54,9 @@ typedef struct {
 
     double speed;
     double jump_timer;  // Timer for random jumping
+    
+    // Enemy dimensions (loaded from config)
+    int width, height;
 } Enemy;
 
 /* Flying enemy: sine flight, burst fire (10 shots in ~0.5s) then rest */
@@ -71,6 +74,9 @@ typedef struct {
 
     int hp;
     int max_hp;
+    
+    // Flying enemy dimensions (loaded from config)
+    int width, height;
 } FlyingEnemy;
 
 /* ===== Function Declarations ===== */
