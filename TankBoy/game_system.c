@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-// enemy test
-Enemy enemies[MAX_ENEMIES];
-FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
 
 // Load game configuration from INI file
 void load_game_config(GameConfig* config, const char* config_file) {
@@ -274,6 +271,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     tank_init(&game_system->player_tank, 50.0, 480.0);
 
     // Initialize player enemy test
+    Enemy enemies[MAX_ENEMIES];
+    FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
+
     enemies_init(enemies, MAX_ENEMIES);
     flying_enemies_init(f_enemies, MAX_FLY_ENEMIES);
 
@@ -338,6 +338,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         bullets_update(game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
 
         // Update enemy test
+        Enemy enemies[MAX_ENEMIES];
+        FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
         enemies_update(enemies, MAX_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
         flying_enemies_update(f_enemies, MAX_FLY_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
         // Update Head_up_display with actual game data

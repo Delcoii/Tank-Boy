@@ -18,11 +18,11 @@ void spawn_enemies(Enemy* enemies, int max_enemies, int round_number) {
         if (!enemies[i].alive) {
             enemies[i].alive = true;
             if (rand() % 2) enemies[i].x = -50 + rand() % 30;
-            else enemies[i].x = 1280 + rand() % 30; // 화면 오른쪽 스폰
+            else enemies[i].x = 1280 + rand() % 30; // spawn from right side of screen
 
-            // Ground collision with proper calculation
-            double ground = 500.0; // Fixed ground level for now
-            enemies[i].y = ground-20;
+            // Ground collision with fixed level
+            double ground = 500.0; // temporary ground level
+            enemies[i].y = ground - 20;
             enemies[i].vx = (rand() % 2 ? 1 : -1) * (1.0 + round_number * 0.2);
             enemies[i].cannon_angle = M_PI / 4;
             enemies[i].weapon = rand() % 2;
@@ -39,18 +39,18 @@ void enemies_update(Enemy* enemies, int max_enemies, double dt,
         Enemy* e = &enemies[i];
         if (!e->alive) continue;
 
-        // 이동
+        // movement
         e->x += e->vx;
-        // Ground collision with proper calculation
-        double ground = 500.0; // Fixed ground level for now
+        // ground collision
+        double ground = 500.0; // temporary ground level
         if (e->y > ground - 20) { e->y = ground - 20; e->vy = 0; }
 
-        // 화면 끝 튕기기
+        // bounce at screen edge
         if (e->x < 0) { e->x = 0; e->vx *= -1; }
-        int temp_MAP_W = 20; // 임시 화면 끝
+        int temp_MAP_W = 20; // temporary map width
         if (e->x > temp_MAP_W * 4) { e->x = temp_MAP_W * 4; e->vx *= -1; }
 
-        // 플레이어 조준 & 발사
+        // aim at player & fire
         double dx = tank->x - e->x, dy = tank->y - e->y;
         e->cannon_angle = atan2(dy, dx);
         e->fire_cooldown -= dt;
@@ -110,16 +110,16 @@ void flying_enemies_update(FlyingEnemy* f_enemies, int max_fly, double dt,
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
 
-        // 위아래 진동 이동
+        // up and down oscillation
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30;
         fe->x += fe->vx;
 
         if (fe->x < 0) { fe->x = 0; fe->vx *= -1; }
-        int temp_MAP_W = 20; // 임시 화면 끝
+        int temp_MAP_W = 20; // temporary map width
         if (fe->x > temp_MAP_W * 4) { fe->x = temp_MAP_W * 4; fe->vx *= -1; }
 
-        // 총알 발사
+        // shooting bullets
         fe->fire_timer -= dt;
         if (fe->fire_timer <= 0) {
             for (int j = 0; j < max_bullets; j++) {
@@ -127,7 +127,7 @@ void flying_enemies_update(FlyingEnemy* f_enemies, int max_fly, double dt,
                     bullets[j].alive = true;
                     bullets[j].x = fe->x;
                     bullets[j].y = fe->y;
-                    bullets[j].weapon = 0; // MG
+                    bullets[j].weapon = 0; // machine gun
                     double dx = tank->x - fe->x, dy = tank->y - fe->y;
                     double angle = atan2(dy, dx);
                     bullets[j].vx = cos(angle) * 8;
@@ -151,33 +151,29 @@ void flying_enemies_draw(FlyingEnemy* f_enemies, int max_fly, double camera_x, d
 }
 
 
-/* usage
-* 
-* 
-
-
+/* usage example
+*
 * game_system.c
+*
+* // enemy test global
 
-// enemy test global
-Enemy enemies[MAX_ENEMIES];
-FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
-
-void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
-// Initialize player enemy test
-    enemies_init(enemies, MAX_ENEMIES);
-    flying_enemies_init(f_enemies, MAX_FLY_ENEMIES);
-}
-
-void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system){
-
-// Update enemy test
-        enemies_update(enemies, MAX_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
-        flying_enemies_update(f_enemies, MAX_FLY_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
-}
-
-void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
-enemies_draw(enemies, MAX_ENEMIES, camera.x, camera.y);
-flying_enemies_draw(f_enemies, MAX_FLY_ENEMIES, camera.x, camera.y);
-}
-
+*
+* void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
+*     // Initialize player enemy test
+*     Enemy enemies[MAX_ENEMIES];
+*     FlyingEnemy f_enemies[MAX_FLY_ENEMIES];
+*     enemies_init(enemies, MAX_ENEMIES);
+*     flying_enemies_init(f_enemies, MAX_FLY_ENEMIES);
+* }
+*
+* void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system){
+*     // Update enemy test
+*     enemies_update(enemies, MAX_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
+*     flying_enemies_update(f_enemies, MAX_FLY_ENEMIES, 1.0 / 60, &game_system->player_tank, game_system->bullets, MAX_BULLETS);
+* }
+*
+* void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) {
+*     enemies_draw(enemies, MAX_ENEMIES, camera.x, camera.y);
+*     flying_enemies_draw(f_enemies, MAX_FLY_ENEMIES, camera.x, camera.y);
+* }
 */
