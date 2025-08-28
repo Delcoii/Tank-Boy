@@ -25,7 +25,6 @@ void head_up_display_init(const char* config_file) {
 
     hud_font = al_create_builtin_font();
     if (!hud_font) {
-        fprintf(stderr, "Failed to create HUD font!\n");
         // 폰트 생성 실패 시에도 계속 진행
         return;
     }
@@ -48,13 +47,13 @@ void head_up_display_init(const char* config_file) {
         int head_up_display_border_b = ini_parser_get_int(parser, "HUD Colors", "hud_border_b", 255);
         hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
         
-        printf("HUD colors loaded successfully from %s\n", config_file);
+
     } else {
         // 기본 색상 사용
         hud_text_color = al_map_rgb(255, 255, 255);
         hud_hp_color = al_map_rgb(255, 0, 0);
         hud_border_color = al_map_rgb(255, 255, 255);
-        printf("Warning: Could not load HUD colors from %s, using defaults\n", config_file);
+
     }
    
     if (parser) {
@@ -65,7 +64,7 @@ void head_up_display_init(const char* config_file) {
     current_score = 0;
     last_time = al_get_time();
     
-    printf("HUD initialized successfully\n");
+
 }
 
 /* HUD update */
@@ -92,12 +91,10 @@ Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage) {
 /* HUD draw */
 void head_up_display_draw(const Head_Up_Display_Data* hud) {
     if (!hud) {
-        printf("Warning: HUD data is NULL\n");
         return;
     }
     
     if (!hud_font) {
-        printf("Warning: HUD font is NULL, cannot draw HUD\n");
         return;
     }
 
@@ -139,8 +136,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
         bar_x + bar_w + 10, bar_y, 0,
         "%d / 100", hud->player_hp);
         
-    printf("HUD drawn: HP=%d, Score=%d, Weapon=%s, Stage=%d\n", 
-           hud->player_hp, hud->score, weapon_name, hud->stage);
+
 }
 
 /* Usage:

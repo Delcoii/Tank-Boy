@@ -126,10 +126,9 @@ bool ini_parser_load_file(IniParser* parser, const char* filename) {
         char* key = trim(trimmed_line);
         char* value = trim(separator + 1);
         
-        if (strlen(key) == 0) {
-            printf("Warning: Empty key at line %d in %s\n", line_number, filename);
-            continue;
-        }
+                    if (strlen(key) == 0) {
+                continue;
+            }
         
         if (!add_entry(parser, current_section, key, value)) {
             free(current_section);

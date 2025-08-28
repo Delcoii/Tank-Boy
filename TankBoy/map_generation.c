@@ -128,7 +128,6 @@ bool map_load(Map* map, const char* csv_path) {
         
         // Add to map
         if (!map_add_block(map, &block)) {
-            printf("Failed to add block to map\n");
             map_free(map);
             fclose(file);
             return false;
@@ -136,15 +135,6 @@ bool map_load(Map* map, const char* csv_path) {
     }
     
     fclose(file);
-    printf("Loaded %zu blocks from %s\n", map->block_count, csv_path);
-    
-    // Print first few blocks for debugging
-    printf("First 5 blocks:\n");
-    for (size_t i = 0; i < map->block_count && i < 5; i++) {
-        Block* b = &map->blocks[i];
-        printf("  Block %zu: type=%d, pos=(%d,%d), size=(%d,%d)\n", 
-               i, b->type, b->x, b->y, b->width, b->height);
-    }
     return true;
 }
 

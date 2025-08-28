@@ -28,8 +28,7 @@ void load_game_config(GameConfig* config, const char* config_file) {
     config->buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 240);
     config->display_scale = ini_parser_get_double(parser, "Buffer", "display_scale", 3.0);
     
-    printf("Loaded config: buffer=%dx%d, scale=%.2f\n", 
-           config->buffer_width, config->buffer_height, config->display_scale);
+
     
     config->button_width = ini_parser_get_int(parser, "Buttons", "button_width", 200);
     config->button_height = ini_parser_get_int(parser, "Buttons", "button_height", 50);
@@ -236,7 +235,6 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize display buffer
     game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
     if (!game_system->buffer) {
-        printf("Error: Could not create display buffer\n");
         exit(1);
     }
     
@@ -282,11 +280,10 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     snprintf(map_path, sizeof(map_path), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
     
     if (!map_load(&game_system->current_map, map_path)) {
-        printf("Warning: Could not load map %s, using empty map\n", map_path);
         map_init(&game_system->current_map);  // Initialize empty map as fallback
     }
     
-    printf("Game system initialized with double buffering!\n");
+
 }
 
 // Cleanup game system
