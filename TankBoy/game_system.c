@@ -66,7 +66,7 @@ static void init_button(Button* btn, int x, int y, int w, int h, char* text) {
 
 static bool is_point_in_button(int x, int y, const Button* btn) {
     return x >= btn->x && x <= btn->x + btn->width &&
-           y >= btn->y && y <= btn->y + btn->height;
+        y >= btn->y && y <= btn->y + btn->height;
 }
 
 static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* font) {
@@ -86,12 +86,12 @@ static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* 
     al_draw_text(font, fg, btn->x + btn->width / 2, btn->y + btn->height / 2 - 8, ALLEGRO_ALIGN_CENTER, btn->text);
 }
 
-static void draw_menu(const GameSystem* gs) {
-    al_clear_to_color(al_map_rgb(gs->config.menu_bg_r, gs->config.menu_bg_g, gs->config.menu_bg_b));
-    al_draw_text(gs->font, al_map_rgb(gs->config.text_r, gs->config.text_g, gs->config.text_b),
-                 gs->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "Tank-Boy Game");
-    draw_button(&gs->start_button, &gs->config, gs->font);
-    draw_button(&gs->exit_button, &gs->config, gs->font);
+static void draw_menu(const GameSystem* game_system) {
+    al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+    al_draw_text(game_system->font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
+        game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "Tank-Boy Game");
+    draw_button(&game_system->start_button, &game_system->config, game_system->font);
+    draw_button(&game_system->exit_button, &game_system->config, game_system->font);
 }
 
 // =================== Coordinate Conversion ===================
@@ -103,7 +103,7 @@ static void display_to_buffer_coords(int display_x, int display_y, int* buffer_x
 
 // =================== Game Initialization ===================
 
-void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* gs) {
+void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
     al_init_font_addon();
     al_init_primitives_addon();
     al_install_mouse();
@@ -113,181 +113,186 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_mouse_event_source());
     al_register_event_source(queue, al_get_keyboard_event_source());
 
-    gs->buffer = al_create_bitmap(gs->config.buffer_width, gs->config.buffer_height);
-    gs->font = al_create_builtin_font();
+    game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
+    game_system->font = al_create_builtin_font();
 
-    int bx = gs->config.buffer_width / 2 - gs->config.button_width / 2;
-    int sy = gs->config.buffer_height / 2 - gs->config.button_spacing / 2;
-    int ey = gs->config.buffer_height / 2 + gs->config.button_spacing / 2;
-    init_button(&gs->start_button, bx, sy, gs->config.button_width, gs->config.button_height, "Start Game");
-    init_button(&gs->exit_button, bx, ey, gs->config.button_width, gs->config.button_height, "Exit Game");
+    int bx = game_system->config.buffer_width / 2 - game_system->config.button_width / 2;
+    int sy = game_system->config.buffer_height / 2 - game_system->config.button_spacing / 2;
+    int ey = game_system->config.buffer_height / 2 + game_system->config.button_spacing / 2;
+    init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start Game");
+    init_button(&game_system->exit_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Exit Game");
 
-    gs->current_state = STATE_MENU;
-    gs->running = true;
+    game_system->current_state = STATE_MENU;
+    game_system->running = true;
 
-    input_system_init(&gs->input);
-    tank_init(&gs->player_tank, 50.0, 480.0);
+    input_system_init(&game_system->input);
+    tank_init(&game_system->player_tank, 50.0, 480.0);
 
-    gs->max_bullets = MAX_BULLETS;
-    bullets_init(gs->bullets, gs->max_bullets);
+    game_system->max_bullets = MAX_BULLETS;
+    bullets_init(game_system->bullets, game_system->max_bullets);
 
-    gs->camera_x = 0;
-    gs->camera_y = 0;
+    game_system->camera_x = 0;
+    game_system->camera_y = 0;
 
     head_up_display_init("config.ini");
 
-    gs->current_stage = 1;
+    game_system->current_stage = 1;
     char map_file[256];
-    snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", gs->current_stage);
-    if (!map_load(&gs->current_map, map_file))
-        map_init(&gs->current_map);
+    snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+    if (!map_load(&game_system->current_map, map_file))
+        map_init(&game_system->current_map);
 
-    gs->stage_clear = false;
-    gs->stage_clear_timer = 0.0;
-    gs->stage_clear_scale = 1.0;
-    gs->score = 0.0;  // 점수 초기화
+    game_system->stage_clear = false;
+    game_system->stage_clear_timer = 0.0;
+    game_system->stage_clear_scale = 1.0;
+    game_system->score = 0.0;  // 점수 초기화
 }
 
 // =================== Cleanup ===================
 
-void cleanup_game_system(GameSystem* gs, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
-    map_free(&gs->current_map);
-    al_destroy_bitmap(gs->buffer);
-    al_destroy_font(gs->font);
+void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
+    map_free(&game_system->current_map);
+    al_destroy_bitmap(game_system->buffer);
+    al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
     al_destroy_display(display);
 }
 
 // =================== Input Handling ===================
 
-static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* gs) {
+static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
     if (event->type != ALLEGRO_EVENT_KEY_DOWN) return;
 
     switch (event->keyboard.keycode) {
-        case ALLEGRO_KEY_ESCAPE:
-            if (gs->current_state == STATE_GAME) gs->current_state = STATE_MENU;
-            else gs->running = false;
-            break;
-        case ALLEGRO_KEY_U:
-            if (gs->current_state == STATE_GAME) {
-                gs->stage_clear = true;
-                gs->stage_clear_timer = 2.0;
-                gs->stage_clear_scale = 1.0;
-            }
-            break;
+    case ALLEGRO_KEY_ESCAPE:
+        if (game_system->current_state == STATE_GAME) game_system->current_state = STATE_MENU;
+        else game_system->running = false;
+        break;
+    case ALLEGRO_KEY_U:
+        if (game_system->current_state == STATE_GAME) {
+            game_system->stage_clear = true;
+            game_system->stage_clear_timer = 2.0;
+            game_system->stage_clear_scale = 1.0;
+        }
+        break;
     }
 }
 
-static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* gs) {
+static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
     int bx, by;
     switch (event->type) {
-        case ALLEGRO_EVENT_MOUSE_AXES:
-            display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &gs->config);
-            if (gs->current_state == STATE_MENU) {
-                gs->start_button.hovered = is_point_in_button(bx, by, &gs->start_button);
-                gs->exit_button.hovered = is_point_in_button(bx, by, &gs->exit_button);
-            } else if (gs->current_state == STATE_GAME) {
-                double cx = gs->player_tank.x - gs->camera_x + 16;
-                double cy = gs->player_tank.y - gs->camera_y + 10;
-                gs->player_tank.cannon_angle = atan2(by - cy, bx - cx);
-            }
-            break;
+    case ALLEGRO_EVENT_MOUSE_AXES:
+        display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &game_system->config);
+        if (game_system->current_state == STATE_MENU) {
+            game_system->start_button.hovered = is_point_in_button(bx, by, &game_system->start_button);
+            game_system->exit_button.hovered = is_point_in_button(bx, by, &game_system->exit_button);
+        }
+        else if (game_system->current_state == STATE_GAME) {
+            double cx = game_system->player_tank.x - game_system->camera_x + 16;
+            double cy = game_system->player_tank.y - game_system->camera_y + 10;
+            game_system->player_tank.cannon_angle = atan2(by - cy, bx - cx);
+        }
+        break;
 
-        case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
-            if (event->mouse.button != 1) break;
-            display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &gs->config);
-            if (gs->current_state == STATE_MENU) {
-                if (is_point_in_button(bx, by, &gs->start_button)) gs->current_state = STATE_GAME;
-                else if (is_point_in_button(bx, by, &gs->exit_button)) gs->running = false;
-            }
-            break;
+    case ALLEGRO_EVENT_MOUSE_BUTTON_DOWN:
+        if (event->mouse.button != 1) break;
+        display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &game_system->config);
+        if (game_system->current_state == STATE_MENU) {
+            if (is_point_in_button(bx, by, &game_system->start_button)) game_system->current_state = STATE_GAME;
+            else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
+        }
+        break;
 
-        case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
-            if (event->mouse.button == 1) {
-                gs->start_button.clicked = false;
-                gs->exit_button.clicked = false;
-            }
-            break;
+    case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
+        if (event->mouse.button == 1) {
+            game_system->start_button.clicked = false;
+            game_system->exit_button.clicked = false;
+        }
+        break;
     }
 }
 
 // =================== Game Update ===================
 
-void update_game_state(ALLEGRO_EVENT* event, GameSystem* gs) {
-    handle_keyboard_input(event, gs);
-    handle_mouse_input(event, gs);
-    input_system_update(&gs->input, event);
+void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
+    handle_keyboard_input(event, game_system);
+    handle_mouse_input(event, game_system);
+    input_system_update(&game_system->input, event);
 
-    if (gs->current_state != STATE_GAME) return;
+    if (game_system->current_state != STATE_GAME) return;
     if (event->type != ALLEGRO_EVENT_TIMER) return;
 
-    tank_update(&gs->player_tank, &gs->input, 1.0 / 60.0, gs->bullets, gs->max_bullets, &gs->current_map);
-    bullets_update(gs->bullets, gs->max_bullets, &gs->current_map);
+    // Stage Clear 중에는 점수 증가 멈춤
+    if (!game_system->stage_clear) {
+        game_system->score += 1.0 / 60.0;  // 1/10 단위보다 절반으로 줄임
+    }
 
-    // 점수: 1/10 단위로 증가
-    gs->score += 1.0 / 60.0;
+    tank_update(&game_system->player_tank, &game_system->input, 1.0 / 60.0, game_system->bullets, game_system->max_bullets, &game_system->current_map);
+    bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
 
     // HUD 업데이트 (정수)
-    gs->hud = head_up_display_update((int)(gs->score * 10), gs->player_tank.weapon, gs->current_stage);
+    game_system->hud = head_up_display_update((int)(game_system->score * 10), game_system->player_tank.weapon, game_system->current_stage);
 
     // 카메라
-    gs->camera_x = gs->player_tank.x - gs->config.buffer_width / 3.0;
-    gs->camera_y = gs->player_tank.y - gs->config.buffer_height / 2.0;
+    game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
+    game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
 
     // Stage Clear 처리
-    if (gs->stage_clear) {
-        gs->stage_clear_timer -= 1.0 / 60.0;
-        gs->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - gs->stage_clear_timer) * 3.14);
+    if (game_system->stage_clear) {
+        game_system->stage_clear_timer -= 1.0 / 60.0;
+        game_system->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - game_system->stage_clear_timer) * 3.14);
 
-        if (gs->stage_clear_timer <= 0) {
-            gs->stage_clear = false;
-            gs->current_stage++;
+        if (game_system->stage_clear_timer <= 0) {
+            game_system->stage_clear = false;
+            game_system->current_stage++;
             char map_file[256];
-            snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", gs->current_stage);
-            if (!map_load(&gs->current_map, map_file))
-                map_init(&gs->current_map);
-            tank_init(&gs->player_tank, 50.0, 480.0);
+            snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+            if (!map_load(&game_system->current_map, map_file))
+                map_init(&game_system->current_map);
+            tank_init(&game_system->player_tank, 50.0, 480.0);
         }
     }
 }
 
 // =================== Rendering ===================
 
-void disp_pre_draw(GameSystem* gs) {
-    al_set_target_bitmap(gs->buffer);
+void disp_pre_draw(GameSystem* game_system) {
+    al_set_target_bitmap(game_system->buffer);
 }
 
-void disp_post_draw(GameSystem* gs) {
+void disp_post_draw(GameSystem* game_system) {
     al_set_target_backbuffer(al_get_current_display());
-    double w = gs->config.buffer_width * gs->config.display_scale;
-    double h = gs->config.buffer_height * gs->config.display_scale;
-    al_draw_scaled_bitmap(gs->buffer, 0, 0, gs->config.buffer_width, gs->config.buffer_height, 0, 0, w, h, 0);
+    double w = game_system->config.buffer_width * game_system->config.display_scale;
+    double h = game_system->config.buffer_height * game_system->config.display_scale;
+    al_draw_scaled_bitmap(game_system->buffer, 0, 0, game_system->config.buffer_width, game_system->config.buffer_height, 0, 0, w, h, 0);
     al_flip_display();
 }
 
-static void draw_game(const GameSystem* gs) {
-    al_clear_to_color(al_map_rgb(gs->config.game_bg_r, gs->config.game_bg_g, gs->config.game_bg_b));
+static void draw_game(const GameSystem* game_system) {
+    al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
 
-    map_draw(&gs->current_map, gs->camera_x, gs->camera_y, gs->config.buffer_width, gs->config.buffer_height);
-    tank_draw(&gs->player_tank, gs->camera_x, gs->camera_y);
-    bullets_draw(gs->bullets, gs->max_bullets, gs->camera_x, gs->camera_y);
+    map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
+    tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
+    bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
 
-    if (!gs->stage_clear) {
-        head_up_display_draw(&gs->hud);
-    } else {
-        int cx = gs->config.buffer_width / 2;
-        int cy = gs->config.buffer_height / 2;
-        al_draw_text(gs->font, al_map_rgb(255, 255, 0), cx, cy, ALLEGRO_ALIGN_CENTER, "Stage Clear");
+    if (!game_system->stage_clear) {
+        head_up_display_draw(&game_system->hud);
+    }
+    else {
+        int cx = game_system->config.buffer_width / 2;
+        int cy = game_system->config.buffer_height / 2;
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy, ALLEGRO_ALIGN_CENTER, "Stage Clear");
 
+        // Stage Clear 시 HUD 점수와 동일하게 표시
         char score_text[64];
-        snprintf(score_text, sizeof(score_text), "Score: %d", (int)(gs->score * 10));
-        al_draw_text(gs->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
+        snprintf(score_text, sizeof(score_text), "Score: %d", game_system->hud.score);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
     }
 }
 
-void render_game(GameSystem* gs) {
-    disp_pre_draw(gs);
-    if (gs->current_state == STATE_MENU) draw_menu(gs);
-    else if (gs->current_state == STATE_GAME) draw_game(gs);
-    disp_post_draw(gs);
+void render_game(GameSystem* game_system) {
+    disp_pre_draw(game_system);
+    if (game_system->current_state == STATE_MENU) draw_menu(game_system);
+    else if (game_system->current_state == STATE_GAME) draw_game(game_system);
+    disp_post_draw(game_system);
 }

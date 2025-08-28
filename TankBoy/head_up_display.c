@@ -48,7 +48,12 @@ void head_up_display_init(const char* config_file) {
         hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
         
 
-    } 
+    } else {
+        // 기본 색상 사용
+        hud_text_color = al_map_rgb(255, 255, 255);
+        hud_hp_color = al_map_rgb(255, 0, 0);
+        hud_border_color = al_map_rgb(255, 255, 255);
+    }
    
     if (parser) {
         ini_parser_destroy(parser);
