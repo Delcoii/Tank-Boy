@@ -29,6 +29,7 @@ void enemies_init(void) {
         enemies[i].speed = 0.0;
         enemies[i].accel = 0.0;
         enemies[i].friction = 0.0;
+        enemies[i].jump_timer = 0.0;
     }
 }
 
@@ -125,6 +126,7 @@ void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
             enemies[enemy_index].speed = 1.2 + difficulty * 0.15;
             enemies[enemy_index].accel = 0.15;
             enemies[enemy_index].friction = 0.90;
+            enemies[enemy_index].jump_timer = (rand() % 30) / 10.0;  // Random initial timer
             
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
@@ -193,6 +195,7 @@ void spawn_enemies(int round_number) {
             enemies[i].speed = 1.2 + round_number * 0.15;
             enemies[i].accel = 0.15;
             enemies[i].friction = 0.90;
+            enemies[i].jump_timer = (rand() % 30) / 10.0;  // Random initial timer
 
             count--;
         }
@@ -262,12 +265,36 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
 
         e->vy += gravity;
 
+        // Random jump logic with timer
+        if (e->on_ground && e->vy >= 0) {  // On ground and not moving up
+            // Random jump every few seconds
+            if (e->jump_timer <= 0.0) {
+                // Random chance to jump (30% probability)
+                if ((rand() % 100) < 30) {
+                    e->vy = jump_power;
+                    e->on_ground = false;
+                }
+                // Reset timer with random interval (2-5 seconds)
+                e->jump_timer = 2.0 + (rand() % 30) / 10.0;
+            } else {
+                e->jump_timer -= dt;
+            }
+        }
+
         // Store old position for collision detection
         double old_x = e->x;
         double old_y = e->y;
 
         // Update position based on velocity (same as tank.c)
-        e->x += e->vx;
+        double new_x = e->x + e->vx;
+        
+        // Simple horizontal collision check (no auto step-up)
+        if (map && map_rect_collision(map, (int)new_x, (int)e->y, 32, 20)) {
+            // Just stop horizontal movement if collision
+            e->vx = 0;
+        } else {
+            e->x = new_x;
+        }
 
         // Check vertical collision before moving (like tank)
         double new_y = e->y + e->vy;
@@ -354,8 +381,32 @@ void enemies_update_with_map(double dt, const struct Map* map) {
 
         e->vy += gravity;
 
+        // Random jump logic with timer
+        if (e->on_ground && e->vy >= 0) {  // On ground and not moving up
+            // Random jump every few seconds
+            if (e->jump_timer <= 0.0) {
+                // Random chance to jump (30% probability)
+                if ((rand() % 100) < 30) {
+                    e->vy = jump_power;
+                    e->on_ground = false;
+                }
+                // Reset timer with random interval (2-5 seconds)
+                e->jump_timer = 2.0 + (rand() % 30) / 10.0;
+            } else {
+                e->jump_timer -= dt;
+            }
+        }
+
         // Update position based on velocity (same as tank.c)
-        e->x += e->vx;
+        double new_x = e->x + e->vx;
+        
+        // Simple horizontal collision check (no auto step-up)
+        if (map && map_rect_collision(map, (int)new_x, (int)e->y, 32, 20)) {
+            // Just stop horizontal movement if collision
+            e->vx = 0;
+        } else {
+            e->x = new_x;
+        }
 
         // Store old position for collision detection
         double old_x = e->x;

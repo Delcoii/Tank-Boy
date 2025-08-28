@@ -47,6 +47,7 @@ typedef struct {
     double speed;
     double accel;
     double friction;
+    double jump_timer;  // Timer for random jumping
 } Enemy;
 
 /* Flying enemy: sine flight, burst fire (10 shots in ~0.5s) then rest */
