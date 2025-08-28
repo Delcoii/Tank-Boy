@@ -6,11 +6,12 @@
 #include <math.h>
 
 /* ===== Collision Detection Utilities ===== */
-
+// Check if a point is inside a rectangle
 bool point_in_rect(double px, double py, double rx, double ry, double rw, double rh) {
     return (px >= rx && px <= rx + rw && py >= ry && py <= ry + rh);
 }
 
+// Check if two rectangles overlap/collide
 bool rect_rect_overlap(double x1, double y1, double w1, double h1, 
                       double x2, double y2, double w2, double h2) {
     return !(x1 > x2 + w2 || x1 + w1 < x2 || y1 > y2 + h2 || y1 + h1 < y2);

@@ -173,31 +173,7 @@ bool map_load(Map* map, const char* csv_path) {
     return true;
 }
 
-// Query blocks in ROI (Region of Interest)
-size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
-                     Block* out_blocks, size_t max_blocks) {
-    if (!map || !out_blocks || max_blocks == 0) return 0;
-    
-    int left = center_x - width / 2;
-    int right = center_x + width / 2;
-    int top = center_y - height / 2;
-    int bottom = center_y + height / 2;
-    
-    size_t found_count = 0;
-    
-    for (size_t i = 0; i < map->block_count && found_count < max_blocks; i++) {
-        const Block* block = &map->blocks[i];
-        
-        // Check if block intersects with ROI rectangle
-        if (block->x < right && block->x + block->width > left &&
-            block->y < bottom && block->y + block->height > top) {
-            out_blocks[found_count] = *block;
-            found_count++;
-        }
-    }
-    
-    return found_count;
-}
+
 
 // Check point collision with any block
 bool map_point_collision(const Map* map, int x, int y) {
@@ -286,7 +262,7 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
     }
 }
 
-// Configuration functions
+// Configuration functions, used in other files
 int map_get_block_size(void) {
     const MapConfig* config = map_get_config();
     return config->block_size;

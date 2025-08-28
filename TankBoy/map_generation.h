@@ -32,10 +32,6 @@ bool map_load(Map* map, const char* csv_path);
 void map_free(Map* map);
 bool map_init(Map* map);
 
-// ROI (Region of Interest) query for collision detection
-// Returns blocks within the specified rectangle
-size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
-                     Block* out_blocks, size_t max_blocks);
 
 // Check if a point collides with any block
 bool map_point_collision(const Map* map, int x, int y);

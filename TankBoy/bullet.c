@@ -3,8 +3,6 @@
 #include "ini_parser.h"
 #include <allegro5/allegro_primitives.h>
 
-#define BUFFER_H 720
-#define MAP_W 200
 
 void bullets_init(Bullet* bullets, int max_bullets) {
     for (int i = 0; i < max_bullets; i++) {
@@ -15,6 +13,7 @@ void bullets_init(Bullet* bullets, int max_bullets) {
 
 void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
     // Load bullet physics settings from config.ini
+    // TODO : remove reading ini online
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "config.ini");
     const double bullet_gravity = ini_parser_get_double(parser, "Bullets", "bullet_gravity", 0.3);
