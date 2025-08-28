@@ -169,7 +169,7 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     }
 
     // Machine gun firing
-    if (tank->weapon == 0) {
+            if (tank->weapon == 0) {
         if (tank->mg_shot_cooldown > 0) tank->mg_shot_cooldown -= dt;
 
         if (tank->mg_reloading) {
@@ -227,7 +227,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
 
     // Cannon charge gauge
-    if (tank->charging && tank->weapon == 1) {
+            if (tank->charging && tank->weapon == 1) {
         double gauge_w = tank->cannon_power * 10;
         al_draw_filled_rectangle(sx, sy - 20, sx + gauge_w, sy - 10, al_map_rgb(255, 0, 0));
         al_draw_rectangle(sx, sy - 20, sx + 150, sy - 10, al_map_rgb(255, 255, 255), 2);

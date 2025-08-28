@@ -4,17 +4,11 @@
 
 #include <allegro5/allegro5.h>
 
-/* Weapon type enum */
-typedef enum {
-    WEAPON_MACHINE_GUN = 0,
-    WEAPON_CANNON = 1
-} WeaponType;
-
 /* HUD data structure */
 typedef struct {
     int player_hp;      // Health (0~100)
     int score;          // Time-based score
-    WeaponType weapon;  // Current weapon
+    int weapon;         // Current weapon (0=MG, 1=Cannon)
     int stage;          // Current stage
 } Head_Up_Display_Data;
 
@@ -22,7 +16,7 @@ typedef struct {
 void head_up_display_init(const char* config_file);
 
 /* HUD update */
-Head_Up_Display_Data head_up_display_update(int damage, WeaponType weapon, int stage);
+Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage);
 
 /* HUD draw */
 void head_up_display_draw(const Head_Up_Display_Data* hud);

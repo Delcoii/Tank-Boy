@@ -143,11 +143,6 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     bullets_draw(game_system->bullets, game_system->max_bullets, 
                 game_system->camera_x, game_system->camera_y);
     
-    // Draw UI
-    al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
-                 10, 10, ALLEGRO_ALIGN_LEFT,
-                 "Use A/D to move, W to jump, R to change weapon, Mouse to aim and shoot");
-    
     // Draw Head_Up_Display
     head_up_display_draw(&game_system->hud);
 
@@ -277,7 +272,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->camera_y = 0;
 
     // Initialize head_up_display
-    head_up_display_init("config.ini");
+    char config_path[512];
+    snprintf(config_path, sizeof(config_path), "config.ini");
+    head_up_display_init(config_path);
     
     // Initialize and load map
     game_system->current_stage = 1;
@@ -315,17 +312,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update input system
     input_system_update(&game_system->input, event);
 
-    int temp_stage = 1;
-    int temp_damage = 0;
-    
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
                    game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
         bullets_update(game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
 
-        // Update Head_up_display
-        game_system->hud = head_up_display_update(temp_damage, game_system->player_tank.weapon, temp_stage);
+        // Update Head_up_display with actual game data
+        int current_damage = 0; // 실제 데미지 시스템에서 가져와야 함
+        game_system->hud = head_up_display_update(current_damage, game_system->player_tank.weapon, game_system->current_stage);
 
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
