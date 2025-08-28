@@ -17,6 +17,9 @@ typedef struct {
     double cannon_angle;
     bool on_ground;
     int weapon; // 0=MG, 1=Cannon
+    
+    // Tank dimensions (loaded from config)
+    int width, height;
 
     // HP & invincibility
     int hp;
