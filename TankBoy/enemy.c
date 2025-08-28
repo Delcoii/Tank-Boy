@@ -17,7 +17,7 @@ double enemy_jump_interval_min = 1.8;  // Default values
 double enemy_jump_interval_max = 2.2;
 
 /* Enemy physics parameters loaded from config.ini */
-double enemy_base_speed = 2.0;  // Default values
+double enemy_base_speed = 0.1;  // Default values
 double enemy_speed_per_difficulty = 0.5;
 
 /* ===== Enemy Initialization ===== */

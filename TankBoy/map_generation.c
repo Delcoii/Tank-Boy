@@ -14,6 +14,20 @@ static MapConfig g_map_config = {0};
 void map_config_init(void) {
     IniParser* parser = ini_parser_create();
     
+    // Load config.ini file (try multiple paths)
+    bool loaded = false;
+    if (ini_parser_load_file(parser, "config.ini")) {
+        loaded = true;
+    } else if (ini_parser_load_file(parser, "TankBoy/config.ini")) {
+        loaded = true;
+    }
+    
+    if (!loaded) {
+        printf("Warning: Could not load config.ini from any location, using default values\n");
+    } else {
+        printf("Successfully loaded config.ini\n");
+    }
+    
     // Load all configuration values (with fallbacks)
     g_map_config.buffer_width = ini_parser_get_int(parser, "Buffer", "buffer_width", 1280);
     g_map_config.buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 720);
@@ -26,7 +40,7 @@ void map_config_init(void) {
     g_map_config.enemy_jump_interval_max = ini_parser_get_double(parser, "Enemy", "enemy_jump_interval_max", 2.2);
     
     // Load enemy physics settings
-    g_map_config.enemy_base_speed = ini_parser_get_double(parser, "Enemy", "enemy_base_speed", 2.0);
+    g_map_config.enemy_base_speed = ini_parser_get_double(parser, "Enemy", "enemy_base_speed", 0.1);
     g_map_config.enemy_speed_per_difficulty = ini_parser_get_double(parser, "Enemy", "enemy_speed_per_difficulty", 0.5);
     
     ini_parser_destroy(parser);
