@@ -94,7 +94,7 @@ void flying_enemies_init(void) {
 
 // ===== Enemy Spawning =====
 
-void load_enemies_from_csv_with_map(int stage_number, const struct Map* map) {
+void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
     char csv_path[256];
     snprintf(csv_path, sizeof(csv_path), "TankBoy/resources/stages/enemies%d.csv", stage_number);
     
@@ -311,7 +311,7 @@ void spawn_flying_enemy(int round_number) {
 
 // ===== Enemy Updates =====
 
-void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height, const struct Map* map) {
+void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, int buffer_width, int buffer_height, const Map* map) {
     const double gravity = 0.5;
     const double jump_power = -8.5;
     const double stuck_threshold = 1.0;
@@ -431,7 +431,7 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
     }
 }
 
-void enemies_update_with_map(double dt, const struct Map* map) {
+void enemies_update_with_map(double dt, const Map* map) {
     const double gravity = 0.5;
     const double jump_power = -8.5;
     const double stuck_threshold = 1.0;

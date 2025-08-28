@@ -6,9 +6,9 @@
 #include <stdbool.h>
 #include "input_system.h"
 #include "bullet.h"
+#include "map_generation.h"
 
-// Forward declaration
-struct Map;
+
 
 // Tank structure
 typedef struct {
@@ -41,7 +41,7 @@ typedef struct {
 
 // Functions
 void tank_init(Tank* tank, double x, double y);
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map);
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const Map* map);
 void tank_draw(Tank* tank, double camera_x, double camera_y);
 
 // Getter functions for external access

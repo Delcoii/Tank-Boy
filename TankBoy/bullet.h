@@ -3,11 +3,11 @@
 
 #include <stdbool.h>
 #include <allegro5/allegro_primitives.h>
+#include "map_generation.h"
 
 #define MAX_BULLETS 100
 
-// Forward declaration to avoid circular includes
-struct Map;
+
 
 typedef struct {
     double x, y;
@@ -24,7 +24,7 @@ typedef struct {
 } Bullet;
 
 void bullets_init(Bullet* bullets, int max_bullets);
-void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map);
+void bullets_update(Bullet* bullets, int max_bullets, const Map* map);
 void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double camera_y);
 
 // Getter functions for external access

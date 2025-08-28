@@ -20,7 +20,7 @@ void bullets_init(Bullet* bullets, int max_bullets) {
     }
 }
 
-void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
+void bullets_update(Bullet* bullets, int max_bullets, const Map* map) {
     // Load bullet physics settings from config.ini
     // TODO: remove reading ini online
     IniParser* parser = ini_parser_create();

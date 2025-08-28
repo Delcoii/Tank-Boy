@@ -44,7 +44,7 @@ void tank_init(Tank* tank, double x, double y) {
 }
 
 // Update tank based on input
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map) {
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const Map* map) {
     // Update invincibility timer
     if (tank->invincible > 0.0) {
         tank->invincible -= dt;

@@ -167,7 +167,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
         map_init(&game_system->current_map);
 
     // Load enemies from CSV file after map is loaded
-    load_enemies_from_csv_with_map(1, &game_system->current_map); // Load stage 1 enemies
+    load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies
     
     // Initialize enemy system
     game_system->round_number = 1;
@@ -303,8 +303,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     }
 
     tank_update(&game_system->player_tank, &game_system->input, 1.0 / 60.0,
-        game_system->bullets, game_system->max_bullets, &game_system->current_map);
-    bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
+        game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
+    bullets_update(game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
 
     // Update camera to follow tank
     game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
@@ -322,7 +322,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Update enemy systems with map reference
     enemies_update_roi_with_map(1.0/60.0, game_system->camera_x, game_system->camera_y, 
-                      game_system->config.buffer_width, game_system->config.buffer_height, &game_system->current_map);
+                      game_system->config.buffer_width, game_system->config.buffer_height, (const Map*)&game_system->current_map);
     flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
                              game_system->config.buffer_width, game_system->config.buffer_height);
     
@@ -397,7 +397,7 @@ void disp_post_draw(GameSystem* game_system) {
 static void draw_game(const GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
 
-    map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
+    map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
     bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
     
