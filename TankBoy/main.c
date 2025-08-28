@@ -14,6 +14,7 @@
 // local library
 #include "game_system.h"
 
+
 void* must_init(void* test, const char* description) {
     if (test) return test;
 
@@ -62,7 +63,7 @@ int main(void) {
         
         // Handle all events (input, timer, etc.)
         update_game_state(&event, &game_system);
-        
+
         if (redraw && al_is_event_queue_empty(queue)) {
             redraw = false;
             render_game(&game_system);

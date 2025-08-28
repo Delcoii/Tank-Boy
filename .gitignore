@@ -1,3 +1,5 @@
+packages/
+
 # Visual Studio build files
 .vs/
 *.suo
