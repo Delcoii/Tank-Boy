@@ -148,6 +148,10 @@ void draw_game(ALLEGRO_FONT* font, GameConfig* config, GameSystem* game_system) 
     al_draw_text(font, al_map_rgb(config->text_r, config->text_g, config->text_b),
                  10, 10, ALLEGRO_ALIGN_LEFT,
                  "Use A/D to move, W to jump, R to change weapon, Mouse to aim and shoot");
+    
+    // Draw Head_Up_Display
+    head_up_display_draw(&game_system->hud);
+
 }
 
 // Handle keyboard input
@@ -298,13 +302,15 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Update input system
     input_system_update(&game_system->input, event);
+
     
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
                    game_system->bullets, game_system->max_bullets);
         bullets_update(game_system->bullets, game_system->max_bullets);
-        
+        game_system->hud = head_up_display_update(0, game_system->player_tank.weapon, 1);
+
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
         game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
@@ -335,6 +341,7 @@ void render_game(GameSystem* game_system) {
     } else if (game_system->current_state == STATE_GAME) {
         draw_game(game_system->font, &game_system->config, game_system);
     }
+    
     
     disp_post_draw(game_system);
 }

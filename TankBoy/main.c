@@ -13,7 +13,7 @@
 
 // local library
 #include "game_system.h"
-#include "head_up_display.h"
+
 
 void* must_init(void* test, const char* description) {
     if (test) return test;
@@ -63,10 +63,6 @@ int main(void) {
         
         // Handle all events (input, timer, etc.)
         update_game_state(&event, &game_system);
-
-        // Head_Up_Display draw
-        Head_Up_Display_Data hud = head_up_display_update(0, 1, 1);
-        head_up_display_draw(&hud);
 
         if (redraw && al_is_event_queue_empty(queue)) {
             redraw = false;

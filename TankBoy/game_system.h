@@ -14,9 +14,11 @@
 #include "tank.h"
 #include "bullet.h"
 
+
 // utils
 #include "ini_parser.h"
 #include "input_system.h"
+#include "head_up_display.h"
 
 // Display buffer settings are now loaded from config.ini
 // No more hardcoded defines!
@@ -85,6 +87,10 @@ typedef struct {
     
     // Camera
     double camera_x, camera_y;
+
+    // Head_Up_Display
+    Head_Up_Display_Data hud;
+
 } GameSystem;
 
 
