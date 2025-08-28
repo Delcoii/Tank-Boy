@@ -13,6 +13,7 @@
 
 // local library
 #include "game_system.h"
+#include "map_generation.h"
 
 
 void* must_init(void* test, const char* description) {
@@ -31,6 +32,9 @@ int main(void) {
     // Load configuration first
     GameSystem game_system;
     load_game_config(&game_system.config, "config.ini");
+    
+    // Initialize map configuration
+    map_config_init();
     
     // Create display with scaled buffer size
     int disp_w = (int)(game_system.config.buffer_width * game_system.config.display_scale);
@@ -74,5 +78,9 @@ int main(void) {
     
 
     cleanup_game_system(&game_system, queue, display);
+    
+    // Cleanup map configuration
+    map_config_cleanup();
+    
     return 0;
 }

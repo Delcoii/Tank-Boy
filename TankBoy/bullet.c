@@ -16,8 +16,8 @@ void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "config.ini");
     const double bullet_gravity = ini_parser_get_double(parser, "Bullets", "bullet_gravity", 0.3);
-    const int map_width = ini_parser_get_int(parser, "Map", "map_width", 12800);
-    const int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
+    const int map_width = map_get_map_width(); // Use function instead of hardcoded value
+    const int map_height = map_get_map_height(); // Use function instead of hardcoded value
     ini_parser_destroy(parser);
     
     for (int i = 0; i < max_bullets; i++) {

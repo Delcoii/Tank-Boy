@@ -44,7 +44,7 @@ bool map_point_collision(const Map* map, int x, int y);
 bool map_rect_collision(const Map* map, int x, int y, int width, int height);
 
 // Get ground level at specific x coordinate (for tank landing)
-int map_get_ground_level(const Map* map, int x);
+int map_get_ground_level(const Map* map, int x, int tank_width);
 
 // Rendering functions
 void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width, int buffer_height);
@@ -52,5 +52,24 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
 // Helper functions
 BlockType map_string_to_block_type(const char* type_str);
 ALLEGRO_COLOR map_get_block_color(BlockType type);
+
+// Configuration structure
+typedef struct {
+    int block_size;
+    int map_width;
+    int map_height;
+    int buffer_width;
+    int buffer_height;
+    int map_width_multiplier;
+    int map_height_multiplier;
+} MapConfig;
+
+// Configuration functions
+void map_config_init(void);
+void map_config_cleanup(void);
+const MapConfig* map_get_config(void);
+int map_get_block_size(void);
+int map_get_map_width(void);
+int map_get_map_height(void);
 
 #endif // MAP_GENERATION_H

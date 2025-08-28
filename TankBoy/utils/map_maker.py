@@ -3,14 +3,83 @@ import os
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 import math
+import configparser
 
 # ===== Configuration =====
-MAP_WIDTH = 1280*10
-MAP_HEIGHT = 720*3
-BLOCK_SIZE = 50  # Size of one block (pixels)
+# Load configuration from config.ini
+def load_config():
+    config = configparser.ConfigParser()
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config.ini")
+    
+    if not os.path.exists(config_path):
+        # Fallback values if config.ini doesn't exist
+        return {
+            'map_width_multiplier': 10,
+            'map_height_multiplier': 3,
+            'block_size': 50,
+            'buffer_width': 1280,
+            'buffer_height': 720
+        }
+    
+    config.read(config_path)
+    
+    # Get buffer dimensions for calculations
+    buffer_width = config.getint('Buffer', 'buffer_width', fallback=1280)
+    buffer_height = config.getint('Buffer', 'buffer_height', fallback=720)
+    
+    # Get map multipliers from config
+    map_width_multiplier = config.getint('Map', 'map_width_multiplier', fallback=10)
+    map_height_multiplier = config.getint('Map', 'map_height_multiplier', fallback=3)
+    block_size = config.getint('Map', 'block_size', fallback=50)
+    
+    # Calculate actual map dimensions
+    map_width = buffer_width * map_width_multiplier
+    map_height = buffer_height * map_height_multiplier
+    
+    return {
+        'map_width': map_width,
+        'map_height': map_height,
+        'map_width_multiplier': map_width_multiplier,
+        'map_height_multiplier': map_height_multiplier,
+        'block_size': block_size,
+        'buffer_width': buffer_width,
+        'buffer_height': buffer_height
+    }
 
-# GUI settings
-CANVAS_SCALE = 5  # Canvas display scale (1/10 of actual size)
+# Load map editor specific configuration
+def load_map_editor_config():
+    config = configparser.ConfigParser()
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config.ini")
+    
+    if not os.path.exists(config_path):
+        # Fallback values if config.ini doesn't exist
+        return {
+            'canvas_scale': 5,
+            'canvas_width': 1200,
+            'canvas_height': 600
+        }
+    
+    config.read(config_path)
+    
+    canvas_scale = config.getint('MapEditor', 'canvas_scale', fallback=5)
+    canvas_width = config.getint('MapEditor', 'canvas_width', fallback=1200)
+    canvas_height = config.getint('MapEditor', 'canvas_height', fallback=600)
+    
+    return {
+        'canvas_scale': canvas_scale,
+        'canvas_width': canvas_width,
+        'canvas_height': canvas_height
+    }
+
+# Load configuration
+CONFIG = load_config()
+MAP_WIDTH = CONFIG['map_width']
+MAP_HEIGHT = CONFIG['map_height']
+BLOCK_SIZE = CONFIG['block_size']
+
+# Load map editor configuration
+MAP_EDITOR_CONFIG = load_map_editor_config()
+CANVAS_SCALE = MAP_EDITOR_CONFIG['canvas_scale']
 CANVAS_WIDTH = MAP_WIDTH // CANVAS_SCALE
 CANVAS_HEIGHT = MAP_HEIGHT // CANVAS_SCALE
 GRID_SIZE = BLOCK_SIZE // CANVAS_SCALE  # Grid size
@@ -119,12 +188,15 @@ class MapEditor:
         brush_combo.pack(side=tk.LEFT, padx=5)
         
         # Information display
-        self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block Size: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE}")
+        self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE} | Buffer: {CONFIG['buffer_width']}x{CONFIG['buffer_height']}")
         self.info_label.pack(side=tk.RIGHT, padx=10)
         
         # Coordinate display
         self.coord_label = tk.Label(toolbar, text="Click to see coordinates", fg="blue")
         self.coord_label.pack(side=tk.RIGHT, padx=10)
+        
+        # Refresh config button
+        tk.Button(toolbar, text="🔄 Refresh Config", command=self.refresh_config, bg="lightblue").pack(side=tk.RIGHT, padx=5)
         
 
         
@@ -142,8 +214,8 @@ class MapEditor:
         map_canvas_height = MAP_HEIGHT // CANVAS_SCALE
         
         self.canvas = tk.Canvas(canvas_frame, 
-                               width=min(map_canvas_width, 1200), 
-                               height=min(map_canvas_height, 600),
+                               width=min(map_canvas_width, MAP_EDITOR_CONFIG['canvas_width']), 
+                               height=min(map_canvas_height, MAP_EDITOR_CONFIG['canvas_height']),
                                scrollregion=(0, 0, map_canvas_width, map_canvas_height),
                                xscrollcommand=h_scrollbar.set,
                                yscrollcommand=v_scrollbar.set,
@@ -406,6 +478,41 @@ class MapEditor:
         except Exception as e:
             messagebox.showerror("Error", f"Error saving file: {e}")
             
+    def refresh_config(self):
+        """Refresh configuration from config.ini and update UI"""
+        global CONFIG, MAP_EDITOR_CONFIG, MAP_WIDTH, MAP_HEIGHT, BLOCK_SIZE, CANVAS_SCALE, CANVAS_WIDTH, CANVAS_HEIGHT, GRID_SIZE
+        
+        # Reload configurations
+        CONFIG = load_config()
+        MAP_EDITOR_CONFIG = load_map_editor_config()
+        
+        # Update global variables
+        MAP_WIDTH = CONFIG['map_width']
+        MAP_HEIGHT = CONFIG['map_height']
+        BLOCK_SIZE = CONFIG['block_size']
+        CANVAS_SCALE = MAP_EDITOR_CONFIG['canvas_scale']
+        CANVAS_WIDTH = MAP_WIDTH // CANVAS_SCALE
+        CANVAS_HEIGHT = MAP_HEIGHT // CANVAS_SCALE
+        GRID_SIZE = BLOCK_SIZE // CANVAS_SCALE
+        
+        # Update info label
+        self.info_label.config(text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE} | Buffer: {CONFIG['buffer_width']}x{CONFIG['buffer_height']}")
+        
+        # Remove old canvas frame and recreate
+        for widget in self.root.winfo_children():
+            if isinstance(widget, tk.Frame) and widget != self.root.winfo_children()[0]:  # Keep toolbar
+                widget.destroy()
+        
+        # Recreate canvas with new dimensions
+        self.setup_canvas()
+        
+        # Recreate default ground
+        self.blocks = []
+        self.create_default_ground()
+        self.redraw_canvas()
+        
+        messagebox.showinfo("Config Refreshed", f"Configuration updated!\nMap: {MAP_WIDTH}x{MAP_HEIGHT}\nCanvas Scale: 1/{CANVAS_SCALE}")
+    
     def create_default_ground(self):
         """Create ground blocks at default ground level"""
         # Set ground level (2-3 rows from bottom of map)

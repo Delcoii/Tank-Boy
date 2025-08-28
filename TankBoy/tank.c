@@ -43,7 +43,7 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
     const int max_step_height = ini_parser_get_int(parser, "Tank", "max_step_height", 10);
     const int max_escape_height = ini_parser_get_int(parser, "Tank", "max_escape_height", 10);
     const double escape_velocity = ini_parser_get_double(parser, "Tank", "escape_velocity", 2.0);
-    const int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
+    const int map_height = map_get_map_height(); // Use function instead of hardcoded value
     ini_parser_destroy(parser);
 
     // Movement with collision detection
@@ -105,7 +105,7 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
             tank->vy = 0;
             tank->on_ground = true;
             // Improved ground alignment using tank's left edge for more stability
-            int ground_level = map_get_ground_level(map, (int)tank->x);
+            int ground_level = map_get_ground_level(map, (int)tank->x, tank_width);
             tank->y = ground_level - tank_height;  // Tank height from config
         } else {  // Moving up, hit ceiling
             tank->vy = 0;

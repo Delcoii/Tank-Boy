@@ -6,19 +6,54 @@
 #include <string.h>
 
 #define INITIAL_BLOCK_CAPACITY 1000
-#define BLOCK_SIZE 50
+
+// Global configuration cache
+static MapConfig g_map_config = {0};
+
+// Initialize configuration (load once)
+void map_config_init(void) {
+    IniParser* parser = ini_parser_create();
+    
+    // Load all configuration values (with fallbacks)
+    g_map_config.buffer_width = ini_parser_get_int(parser, "Buffer", "buffer_width", 1280);
+    g_map_config.buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 720);
+    g_map_config.block_size = ini_parser_get_int(parser, "Map", "block_size", 50);
+    g_map_config.map_width_multiplier = ini_parser_get_int(parser, "Map", "map_width_multiplier", 10);
+    g_map_config.map_height_multiplier = ini_parser_get_int(parser, "Map", "map_height_multiplier", 3);
+    
+    ini_parser_destroy(parser);
+    
+    // Calculate derived values
+    g_map_config.map_width = g_map_config.buffer_width * g_map_config.map_width_multiplier;
+    g_map_config.map_height = g_map_config.buffer_height * g_map_config.map_height_multiplier;
+}
+
+// Cleanup configuration (for future use if needed)
+void map_config_cleanup(void) {
+    // Nothing to cleanup for now
+}
+
+// Get configuration (read-only access)
+const MapConfig* map_get_config(void) {
+    return &g_map_config;
+}
 
 // Initialize empty map
 bool map_init(Map* map) {
     if (!map) return false;
+    
+    // Ensure configuration is loaded
+    const MapConfig* config = map_get_config();
+    
+    // Use cached configuration values
+    map->map_width = config->map_width;
+    map->map_height = config->map_height;
     
     map->blocks = malloc(INITIAL_BLOCK_CAPACITY * sizeof(Block));
     if (!map->blocks) return false;
     
     map->block_count = 0;
     map->block_capacity = INITIAL_BLOCK_CAPACITY;
-    map->map_width = 12800;
-    map->map_height = 2160;
     
     return true;
 }
@@ -195,13 +230,10 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height) {
 }
 
 // Get ground level at specific x coordinate (improved version)
-int map_get_ground_level(const Map* map, int x) {
-    // Load map-specific settings from config.ini
-    IniParser* parser = ini_parser_create();
-    ini_parser_load_file(parser, "config.ini");
-    int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
-    int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32); // Needed for collision calculation
-    ini_parser_destroy(parser);
+int map_get_ground_level(const Map* map, int x, int tank_width) {
+    // Get cached configuration
+    const MapConfig* config = map_get_config();
+    int map_height = config->map_height;
     
     if (!map) return map_height; // Return bottom if no map
     
@@ -252,4 +284,20 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
                                    color);
         }
     }
+}
+
+// Configuration functions
+int map_get_block_size(void) {
+    const MapConfig* config = map_get_config();
+    return config->block_size;
+}
+
+int map_get_map_width(void) {
+    const MapConfig* config = map_get_config();
+    return config->map_width;
+}
+
+int map_get_map_height(void) {
+    const MapConfig* config = map_get_config();
+    return config->map_height;
 }
