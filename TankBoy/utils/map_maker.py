@@ -61,11 +61,7 @@ class MapEditor:
         # Brush size (number of blocks to paint at once)
         self.brush_size = 1
         
-        # Zoom settings
-        self.zoom_level = 1.0
-        self.min_zoom = 0.2
-        self.max_zoom = 5.0
-        self.zoom_step = 0.1
+
         
         self.setup_ui()
         self.setup_canvas()
@@ -126,9 +122,7 @@ class MapEditor:
         self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block Size: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE}")
         self.info_label.pack(side=tk.RIGHT, padx=10)
         
-        # Zoom info
-        self.zoom_label = tk.Label(toolbar, text="Zoom: 100%")
-        self.zoom_label.pack(side=tk.RIGHT)
+
         
     def setup_canvas(self):
         # Canvas frame
@@ -139,11 +133,14 @@ class MapEditor:
         h_scrollbar = tk.Scrollbar(canvas_frame, orient=tk.HORIZONTAL)
         v_scrollbar = tk.Scrollbar(canvas_frame, orient=tk.VERTICAL)
         
-        # Canvas
+        # Canvas - use actual map dimensions for scroll region
+        map_canvas_width = MAP_WIDTH // CANVAS_SCALE
+        map_canvas_height = MAP_HEIGHT // CANVAS_SCALE
+        
         self.canvas = tk.Canvas(canvas_frame, 
-                               width=min(CANVAS_WIDTH, 1200), 
-                               height=min(CANVAS_HEIGHT, 600),
-                               scrollregion=(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT),
+                               width=min(map_canvas_width, 1200), 
+                               height=min(map_canvas_height, 600),
+                               scrollregion=(0, 0, map_canvas_width, map_canvas_height),
                                xscrollcommand=h_scrollbar.set,
                                yscrollcommand=v_scrollbar.set,
                                bg="lightblue")
@@ -173,26 +170,40 @@ class MapEditor:
         
     def draw_grid(self):
         """Draw grid"""
+        # Use actual map dimensions
+        map_canvas_width = MAP_WIDTH // CANVAS_SCALE
+        map_canvas_height = MAP_HEIGHT // CANVAS_SCALE
+        
         # Vertical lines
-        for x in range(0, CANVAS_WIDTH + 1, GRID_SIZE):
-            self.canvas.create_line(x, 0, x, CANVAS_HEIGHT, fill="gray", width=1, tags="grid")
+        for x in range(0, map_canvas_width + 1, GRID_SIZE):
+            self.canvas.create_line(x, 0, x, map_canvas_height, fill="gray", width=1, tags="grid")
         
         # Horizontal lines
-        for y in range(0, CANVAS_HEIGHT + 1, GRID_SIZE):
-            self.canvas.create_line(0, y, CANVAS_WIDTH, y, fill="gray", width=1, tags="grid")
+        for y in range(0, map_canvas_height + 1, GRID_SIZE):
+            self.canvas.create_line(0, y, map_canvas_width, y, fill="gray", width=1, tags="grid")
             
     def draw_boundaries(self):
         """Draw map boundaries"""
-        # Bottom map boundary (red solid line)
-        bottom_y = CANVAS_HEIGHT
-        self.canvas.create_line(0, bottom_y, CANVAS_WIDTH, bottom_y, fill="red", width=3, tags="boundary")
+        # Calculate actual map boundaries on canvas (considering zoom will be applied later)
+        map_bottom_canvas = MAP_HEIGHT // CANVAS_SCALE
+        map_right_canvas = MAP_WIDTH // CANVAS_SCALE
         
-        # Right map boundary (red solid line)
-        right_x = CANVAS_WIDTH
-        self.canvas.create_line(right_x, 0, right_x, CANVAS_HEIGHT, fill="red", width=3, tags="boundary")
+        # Bottom map boundary (red solid line)
+        self.canvas.create_line(0, map_bottom_canvas, map_right_canvas, map_bottom_canvas, 
+                              fill="red", width=3, tags="boundary")
+        
+        # Right map boundary (red solid line) 
+        self.canvas.create_line(map_right_canvas, 0, map_right_canvas, map_bottom_canvas, 
+                              fill="red", width=3, tags="boundary")
+        
+        # Top map boundary (red solid line)
+        self.canvas.create_line(0, 0, map_right_canvas, 0, fill="red", width=3, tags="boundary")
+        
+        # Left map boundary (red solid line)
+        self.canvas.create_line(0, 0, 0, map_bottom_canvas, fill="red", width=3, tags="boundary")
         
         # Boundary text
-        self.canvas.create_text(CANVAS_WIDTH - 50, CANVAS_HEIGHT - 10, text="Map Boundary", 
+        self.canvas.create_text(map_right_canvas - 50, map_bottom_canvas - 10, text="Map Boundary", 
                               fill="red", font=("Arial", 8), tags="boundary")
             
     def change_mode(self):
@@ -208,53 +219,20 @@ class MapEditor:
         self.brush_size = int(value)
         
     def on_mouse_wheel(self, event):
-        """Handle mouse wheel events for zoom and scroll"""
+        """Handle mouse wheel events for scroll"""
         # Check modifier keys
-        ctrl_pressed = event.state & 0x4  # Ctrl key
         shift_pressed = event.state & 0x1  # Shift key
         
-        if ctrl_pressed:
-            # Ctrl + Scroll: Zoom in/out
-            self.handle_zoom(event)
-        elif shift_pressed:
+        if shift_pressed:
             # Shift + Scroll: Horizontal scroll
             self.handle_horizontal_scroll(event)
         else:
             # Normal scroll: Vertical scroll
             self.handle_vertical_scroll(event)
             
-    def handle_zoom(self, event):
-        """Handle zoom with Ctrl+Scroll"""
-        # Get mouse position relative to canvas
-        mouse_x = self.canvas.canvasx(event.x)
-        mouse_y = self.canvas.canvasy(event.y)
-        
-        # Determine zoom direction
-        if event.delta > 0 or event.num == 4:  # Zoom in
-            zoom_factor = 1 + self.zoom_step
-        else:  # Zoom out
-            zoom_factor = 1 - self.zoom_step
+
             
-        # Calculate new zoom level
-        new_zoom = self.zoom_level * zoom_factor
-        new_zoom = max(self.min_zoom, min(self.max_zoom, new_zoom))
-        
-        if new_zoom != self.zoom_level:
-            # Apply zoom
-            scale_factor = new_zoom / self.zoom_level
-            self.zoom_level = new_zoom
-            
-            # Scale canvas
-            self.canvas.scale("all", mouse_x, mouse_y, scale_factor, scale_factor)
-            
-            # Update scroll region and zoom display
-            self.update_scroll_region()
-            self.update_zoom_display()
-            
-    def update_zoom_display(self):
-        """Update zoom percentage display"""
-        zoom_percent = int(self.zoom_level * 100)
-        self.zoom_label.config(text=f"Zoom: {zoom_percent}%")
+
             
     def handle_horizontal_scroll(self, event):
         """Handle horizontal scroll with Shift+Scroll"""
@@ -270,21 +248,13 @@ class MapEditor:
         else:
             self.canvas.yview_scroll(1, "units")
             
-    def update_scroll_region(self):
-        """Update canvas scroll region based on zoom"""
-        scaled_width = CANVAS_WIDTH * self.zoom_level
-        scaled_height = CANVAS_HEIGHT * self.zoom_level
-        self.canvas.configure(scrollregion=(0, 0, scaled_width, scaled_height))
+
         
     def canvas_to_map_coords(self, canvas_x, canvas_y):
         """Convert canvas coordinates to map coordinates"""
         # Consider scroll offset
         canvas_x = self.canvas.canvasx(canvas_x)
         canvas_y = self.canvas.canvasy(canvas_y)
-        
-        # Account for zoom level
-        canvas_x = canvas_x / self.zoom_level
-        canvas_y = canvas_y / self.zoom_level
         
         # Align to grid
         grid_x = int(canvas_x // GRID_SIZE) * GRID_SIZE
