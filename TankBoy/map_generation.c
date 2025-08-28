@@ -1,5 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "map_generation.h"
+#include "ini_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -205,16 +206,23 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height) {
 
 // Get ground level at specific x coordinate (improved version)
 int map_get_ground_level(const Map* map, int x) {
-    if (!map) return 2160; // Return bottom if no map (720*3)
+    // Get map height and tank width from config
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "config.ini");
+    int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
+    int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32);
+    ini_parser_destroy(parser);
     
-    int ground_level = 2160;
+    if (!map) return map_height; // Return bottom if no map
+    
+    int ground_level = map_height;
     
     // Check blocks within tank width for more accurate ground detection
     for (size_t i = 0; i < map->block_count; i++) {
         const Block* block = &map->blocks[i];
         
-        // Check if block overlaps with tank's x range (tank width = 32)
-        if (block->x < x + 32 && block->x + block->width > x) {
+        // Check if block overlaps with tank's x range
+        if (block->x < x + tank_width && block->x + block->width > x) {
             // Find the highest solid surface (top of block)
             if (block->y < ground_level) {
                 ground_level = block->y;

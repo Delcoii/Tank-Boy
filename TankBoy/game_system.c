@@ -264,7 +264,10 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     tank_init(&game_system->player_tank, 50.0, 480.0);
     
     // Initialize bullet system
-    game_system->max_bullets = MAX_BULLETS;
+    IniParser* bullets_parser = ini_parser_create();
+    ini_parser_load_file(bullets_parser, "config.ini");
+    game_system->max_bullets = ini_parser_get_int(bullets_parser, "Bullets", "max_bullets", MAX_BULLETS);
+    ini_parser_destroy(bullets_parser);
     bullets_init(game_system->bullets, game_system->max_bullets);
     
     // Initialize camera
@@ -310,8 +313,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Update game objects if in game state (only on timer events for consistent physics)
     if (game_system->current_state == STATE_GAME && event->type == ALLEGRO_EVENT_TIMER) {
         tank_update(&game_system->player_tank, &game_system->input, 1.0/60.0, 
-                   game_system->bullets, game_system->max_bullets, &game_system->current_map);
-        bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
+                   game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
+        bullets_update(game_system->bullets, game_system->max_bullets, (const struct Map*)&game_system->current_map);
         
         // Update camera to follow tank (like the working example)
         game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
