@@ -21,7 +21,15 @@ cd Tank-Boy
 # visual studio must be installed in
 # ("C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat")
 build.bat
+```
 
-# launch tutorial game
+### 게임 실행
+```sh
 run.bat
 ```
+* 맵 생성기 실행
+```sh
+python3  .\TankBoy\utils\map_maker.py
+```
+
+

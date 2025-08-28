@@ -5,7 +5,10 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdbool.h>
 #include "input_system.h"
-#include "bullet.h" 
+#include "bullet.h"
+
+// Forward declaration to avoid circular includes
+struct Map; 
 
 // Tank structure
 typedef struct {
@@ -30,7 +33,7 @@ typedef struct {
 
 // Function declarations
 void tank_init(Tank* tank, double x, double y);
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets);
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map);
 void tank_draw(Tank* tank, double camera_x, double camera_y);
 
 #endif // TANK_H

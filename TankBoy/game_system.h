@@ -14,6 +14,7 @@
 #include "tank.h"
 #include "bullet.h"
 #include "enemy.h"
+#include "map_generation.h"
 
 
 // utils
@@ -88,6 +89,10 @@ typedef struct {
     
     // Camera
     double camera_x, camera_y;
+    
+    // Map system
+    Map current_map;
+    int current_stage;
 
     // Head_Up_Display
     Head_Up_Display_Data hud;
