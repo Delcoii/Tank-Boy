@@ -3,14 +3,83 @@ import os
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 import math
+import configparser
 
 # ===== Configuration =====
-MAP_WIDTH = 12800
-MAP_HEIGHT = 720*3
-BLOCK_SIZE = 50  # Size of one block (pixels)
+# Load configuration from config.ini
+def load_config():
+    config = configparser.ConfigParser()
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config.ini")
+    
+    if not os.path.exists(config_path):
+        # Fallback values if config.ini doesn't exist
+        return {
+            'map_width_multiplier': 10,
+            'map_height_multiplier': 3,
+            'block_size': 50,
+            'buffer_width': 1280,
+            'buffer_height': 720
+        }
+    
+    config.read(config_path)
+    
+    # Get buffer dimensions for calculations
+    buffer_width = config.getint('Buffer', 'buffer_width', fallback=1280)
+    buffer_height = config.getint('Buffer', 'buffer_height', fallback=720)
+    
+    # Get map multipliers from config
+    map_width_multiplier = config.getint('Map', 'map_width_multiplier', fallback=10)
+    map_height_multiplier = config.getint('Map', 'map_height_multiplier', fallback=3)
+    block_size = config.getint('Map', 'block_size', fallback=50)
+    
+    # Calculate actual map dimensions
+    map_width = buffer_width * map_width_multiplier
+    map_height = buffer_height * map_height_multiplier
+    
+    return {
+        'map_width': map_width,
+        'map_height': map_height,
+        'map_width_multiplier': map_width_multiplier,
+        'map_height_multiplier': map_height_multiplier,
+        'block_size': block_size,
+        'buffer_width': buffer_width,
+        'buffer_height': buffer_height
+    }
 
-# GUI settings
-CANVAS_SCALE = 5  # Canvas display scale (1/10 of actual size)
+# Load map editor specific configuration
+def load_map_editor_config():
+    config = configparser.ConfigParser()
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config.ini")
+    
+    if not os.path.exists(config_path):
+        # Fallback values if config.ini doesn't exist
+        return {
+            'canvas_scale': 5,
+            'canvas_width': 1200,
+            'canvas_height': 600
+        }
+    
+    config.read(config_path)
+    
+    canvas_scale = config.getint('MapEditor', 'canvas_scale', fallback=5)
+    canvas_width = config.getint('MapEditor', 'canvas_width', fallback=1200)
+    canvas_height = config.getint('MapEditor', 'canvas_height', fallback=600)
+    
+    return {
+        'canvas_scale': canvas_scale,
+        'canvas_width': canvas_width,
+        'canvas_height': canvas_height
+    }
+
+# Load configuration
+CONFIG = load_config()
+MAP_WIDTH = CONFIG['map_width']
+MAP_HEIGHT = CONFIG['map_height']
+BLOCK_SIZE = CONFIG['block_size']
+
+# Load map editor configuration
+MAP_EDITOR_CONFIG = load_map_editor_config()
+CANVAS_SCALE = MAP_EDITOR_CONFIG['canvas_scale']
 CANVAS_WIDTH = MAP_WIDTH // CANVAS_SCALE
 CANVAS_HEIGHT = MAP_HEIGHT // CANVAS_SCALE
 GRID_SIZE = BLOCK_SIZE // CANVAS_SCALE  # Grid size
@@ -42,6 +111,30 @@ class Block:
         else:
             return "gray"  # Default color
 
+class Enemy:
+    def __init__(self, x, y, enemy_type="basic", difficulty=1):
+        self.x = x
+        self.y = y
+        self.enemy_type = enemy_type  # "basic", "fast", "tank"
+        self.difficulty = difficulty  # 1=easy, 2=normal, 3=hard
+    
+    def to_csv_row(self):
+        """Convert enemy to CSV row format"""
+        return (self.x, self.y, self.enemy_type, self.difficulty)
+    
+    def get_color(self):
+        """Return color according to enemy type and difficulty"""
+        if self.enemy_type == "tank":
+            return "purple" if self.difficulty == 1 else "darkviolet" if self.difficulty == 2 else "indigo"
+        elif self.enemy_type == "helicopter":
+            return "orange" if self.difficulty == 1 else "darkorange" if self.difficulty == 2 else "saddlebrown"
+        else:
+            return "gray"
+    
+    def get_display_text(self):
+        """Get text to display on enemy"""
+        return f"{self.enemy_type[0].upper()}{self.difficulty}"
+
 class MapEditor:
     def __init__(self, root):
         self.root = root
@@ -52,11 +145,18 @@ class MapEditor:
         self.blocks = []
         self.current_stage = 1
         
-        # Current drawing mode ('draw' or 'erase')
+        # Store enemy data
+        self.enemies = []
+        
+        # Current drawing mode ('draw', 'erase', or 'enemy')
         self.draw_mode = 'draw'
         
         # Current block type ('ground' or 'grass')
         self.current_block_type = 'ground'
+        
+        # Current enemy type and difficulty
+        self.current_enemy_type = 'tank'
+        self.current_enemy_difficulty = 1
         
         # Brush size (number of blocks to paint at once)
         self.brush_size = 1
@@ -96,6 +196,8 @@ class MapEditor:
                       command=self.change_mode).pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(toolbar, text="Erase", variable=self.mode_var, value="erase", 
                       command=self.change_mode).pack(side=tk.LEFT, padx=5)
+        tk.Radiobutton(toolbar, text="Enemy", variable=self.mode_var, value="enemy", 
+                      command=self.change_mode).pack(side=tk.LEFT, padx=5)
         
         # Separator
         tk.Frame(toolbar, width=2, bg="gray").pack(side=tk.LEFT, fill=tk.Y, padx=10)
@@ -111,6 +213,26 @@ class MapEditor:
         # Separator
         tk.Frame(toolbar, width=2, bg="gray").pack(side=tk.LEFT, fill=tk.Y, padx=10)
         
+        # Enemy type selection (only visible when enemy mode is selected)
+        self.enemy_frame = tk.Frame(self.root)
+        tk.Label(self.enemy_frame, text="Enemy Type:").pack(side=tk.LEFT)
+        self.enemy_type_var = tk.StringVar(value="tank")
+        enemy_types = ["tank", "helicopter"]
+        enemy_combo = tk.OptionMenu(self.enemy_frame, self.enemy_type_var, *enemy_types, command=self.change_enemy_type)
+        enemy_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Enemy difficulty selection
+        tk.Label(self.enemy_frame, text="Difficulty:").pack(side=tk.LEFT)
+        self.enemy_difficulty_var = tk.StringVar(value="1")
+        difficulty_combo = tk.OptionMenu(self.enemy_frame, self.enemy_difficulty_var, "1", "2", "3", command=self.change_enemy_difficulty)
+        difficulty_combo.pack(side=tk.LEFT, padx=5)
+        
+        # Initially hide enemy frame (it will be shown when enemy mode is selected)
+        self.enemy_frame.pack_forget()
+        
+        # Separator
+        tk.Frame(toolbar, width=2, bg="gray").pack(side=tk.LEFT, fill=tk.Y, padx=10)
+        
         # Brush size selection
         tk.Label(toolbar, text="Brush Size:").pack(side=tk.LEFT)
         self.brush_var = tk.StringVar(value="1")
@@ -119,8 +241,15 @@ class MapEditor:
         brush_combo.pack(side=tk.LEFT, padx=5)
         
         # Information display
-        self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block Size: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE}")
+        self.info_label = tk.Label(toolbar, text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE} | Buffer: {CONFIG['buffer_width']}x{CONFIG['buffer_height']}")
         self.info_label.pack(side=tk.RIGHT, padx=10)
+        
+        # Coordinate display
+        self.coord_label = tk.Label(toolbar, text="Click to see coordinates", fg="blue")
+        self.coord_label.pack(side=tk.RIGHT, padx=10)
+        
+        # Refresh config button
+        tk.Button(toolbar, text="🔄 Refresh Config", command=self.refresh_config, bg="lightblue").pack(side=tk.RIGHT, padx=5)
         
 
         
@@ -138,8 +267,8 @@ class MapEditor:
         map_canvas_height = MAP_HEIGHT // CANVAS_SCALE
         
         self.canvas = tk.Canvas(canvas_frame, 
-                               width=min(map_canvas_width, 1200), 
-                               height=min(map_canvas_height, 600),
+                               width=min(map_canvas_width, MAP_EDITOR_CONFIG['canvas_width']), 
+                               height=min(map_canvas_height, MAP_EDITOR_CONFIG['canvas_height']),
                                scrollregion=(0, 0, map_canvas_width, map_canvas_height),
                                xscrollcommand=h_scrollbar.set,
                                yscrollcommand=v_scrollbar.set,
@@ -210,6 +339,13 @@ class MapEditor:
         """Change drawing mode"""
         self.draw_mode = self.mode_var.get()
         
+        # Show/hide enemy settings based on mode
+        if self.draw_mode == 'enemy':
+            # Pack enemy frame below toolbar
+            self.enemy_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
+        else:
+            self.enemy_frame.pack_forget()
+        
     def change_block_type(self):
         """Change block type"""
         self.current_block_type = self.block_type_var.get()
@@ -217,6 +353,14 @@ class MapEditor:
     def change_brush_size(self, value):
         """Change brush size"""
         self.brush_size = int(value)
+        
+    def change_enemy_type(self, value):
+        """Change enemy type"""
+        self.current_enemy_type = value
+        
+    def change_enemy_difficulty(self, value):
+        """Change enemy difficulty"""
+        self.current_enemy_difficulty = int(value)
         
     def on_mouse_wheel(self, event):
         """Handle mouse wheel events for scroll"""
@@ -261,8 +405,13 @@ class MapEditor:
         actual_map_y = canvas_y * CANVAS_SCALE
         
         # Align to BLOCK_SIZE boundaries in map coordinates
-        map_x = int(actual_map_x // BLOCK_SIZE) * BLOCK_SIZE
-        map_y = int(actual_map_y // BLOCK_SIZE) * BLOCK_SIZE
+        # Use round() for more precise alignment
+        map_x = round(actual_map_x / BLOCK_SIZE) * BLOCK_SIZE
+        map_y = round(actual_map_y / BLOCK_SIZE) * BLOCK_SIZE
+        
+        # Ensure coordinates are within map bounds
+        map_x = max(0, min(map_x, MAP_WIDTH - BLOCK_SIZE))
+        map_y = max(0, min(map_y, MAP_HEIGHT - BLOCK_SIZE))
         
         # Convert back to grid coordinates for display
         grid_x = map_x // CANVAS_SCALE
@@ -282,9 +431,23 @@ class MapEditor:
         """Handle drawing/erasing action on canvas"""
         center_map_x, center_map_y, center_grid_x, center_grid_y = self.canvas_to_map_coords(canvas_x, canvas_y)
         
+        # Update coordinate display
+        self.coord_label.config(text=f"Map: ({center_map_x}, {center_map_y}) | Grid: ({center_grid_x}, {center_grid_y})")
+        
         # Process multiple blocks according to brush size
         brush_range = self.brush_size
         offset = (brush_range - 1) * BLOCK_SIZE // 2
+        
+        # Calculate brush boundaries
+        brush_left = center_map_x - offset
+        brush_right = brush_left + (brush_range * BLOCK_SIZE)
+        brush_top = center_map_y - offset
+        brush_bottom = brush_top + (brush_range * BLOCK_SIZE)
+        
+        # Check if entire brush area is within map boundaries
+        if (brush_left < 0 or brush_right > MAP_WIDTH or 
+            brush_top < 0 or brush_bottom > MAP_HEIGHT):
+            return  # Don't draw if brush goes outside map
         
         blocks_changed = False
         
@@ -294,7 +457,7 @@ class MapEditor:
                 map_x = center_map_x - offset + dx * BLOCK_SIZE
                 map_y = center_map_y - offset + dy * BLOCK_SIZE
                 
-                # Check map range
+                # Additional safety check (should not be needed with above check, but just in case)
                 if map_x < 0 or map_x >= MAP_WIDTH or map_y < 0 or map_y >= MAP_HEIGHT:
                     continue
                     
@@ -302,17 +465,39 @@ class MapEditor:
                     # Remove existing block (overwrite)
                     self.blocks = [b for b in self.blocks if not (b.x == map_x and b.y == map_y)]
                     
-                    # Add new block
-                    block = Block(map_x, map_y, self.current_block_type)
+                    # Ensure perfect alignment
+                    aligned_x = (map_x // BLOCK_SIZE) * BLOCK_SIZE
+                    aligned_y = (map_y // BLOCK_SIZE) * BLOCK_SIZE
+                    
+                    # Add new block with aligned coordinates
+                    block = Block(aligned_x, aligned_y, self.current_block_type)
                     self.blocks.append(block)
                     blocks_changed = True
                     
                 elif self.draw_mode == 'erase':
-                    # Remove block
-                    original_count = len(self.blocks)
+                    # Remove block and enemy at this position
+                    original_blocks_count = len(self.blocks)
+                    original_enemies_count = len(self.enemies)
+                    
+                    # Remove blocks
                     self.blocks = [b for b in self.blocks if not (b.x == map_x and b.y == map_y)]
-                    if len(self.blocks) != original_count:
+                    
+                    # Remove enemies
+                    self.enemies = [e for e in self.enemies if not (e.x == map_x and e.y == map_y)]
+                    
+                    # Check if anything was removed
+                    if (len(self.blocks) != original_blocks_count or 
+                        len(self.enemies) != original_enemies_count):
                         blocks_changed = True
+                        
+                elif self.draw_mode == 'enemy':
+                    # Remove existing enemy at this position
+                    self.enemies = [e for e in self.enemies if not (e.x == map_x and e.y == map_y)]
+                    
+                    # Add new enemy
+                    enemy = Enemy(map_x, map_y, self.current_enemy_type, self.current_enemy_difficulty)
+                    self.enemies.append(enemy)
+                    blocks_changed = True
         
         # Redraw canvas if there are changes
         if blocks_changed:
@@ -324,72 +509,166 @@ class MapEditor:
                                    grid_x + GRID_SIZE, grid_y + GRID_SIZE,
                                    fill=color, outline="black", tags="block")
                                    
+    def draw_enemy_on_canvas(self, grid_x, grid_y, enemy):
+        """Draw enemy on canvas"""
+        # Draw enemy circle
+        center_x = grid_x + GRID_SIZE // 2
+        center_y = grid_y + GRID_SIZE // 2
+        radius = GRID_SIZE // 3
+        
+        self.canvas.create_oval(center_x - radius, center_y - radius,
+                               center_x + radius, center_y + radius,
+                               fill=enemy.get_color(), outline="black", tags="enemy")
+        
+        # Draw enemy text
+        self.canvas.create_text(center_x, center_y, text=enemy.get_display_text(),
+                               fill="white", font=("Arial", 8, "bold"), tags="enemy")
+                                   
     def redraw_canvas(self):
         """Redraw entire canvas"""
-        # Clear only blocks, keep grid and boundaries
+        # Clear only blocks and enemies, keep grid and boundaries
         self.canvas.delete("block")
+        self.canvas.delete("enemy")
+        
+        # Draw blocks
         for block in self.blocks:
             grid_x = block.x // CANVAS_SCALE
             grid_y = block.y // CANVAS_SCALE
             self.draw_block_on_canvas(grid_x, grid_y, block.get_color())
+        
+        # Draw enemies
+        for enemy in self.enemies:
+            grid_x = enemy.x // CANVAS_SCALE
+            grid_y = enemy.y // CANVAS_SCALE
+            self.draw_enemy_on_canvas(grid_x, grid_y, enemy)
             
 
             
     def load_map(self):
-        """Load map"""
+        """Load map and enemies"""
         stage_num = self.stage_var.get()
-        filename = f"stage{stage_num}.csv"
-        filepath = os.path.join(OUTPUT_DIR, filename)
         
-        if not os.path.exists(filepath):
-            messagebox.showerror("Error", f"Stage {stage_num} file does not exist.")
-            return
-
+        # Load map blocks
+        map_filename = f"stage{stage_num}.csv"
+        map_filepath = os.path.join(OUTPUT_DIR, map_filename)
+        
+        # Load enemy data
+        enemy_filename = f"enemies{stage_num}.csv"
+        enemy_filepath = os.path.join(OUTPUT_DIR, enemy_filename)
+        
         try:
+            # Load blocks
             self.blocks = []
-            with open(filepath, 'r', newline='') as f:
-                reader = csv.reader(f)
-                header = next(reader)  # Skip header
-                
-                for row in reader:
-                    if len(row) >= 5:
-                        block_type, start_x, start_y, end_x, end_y = row
-                        start_x, start_y = int(float(start_x)), int(float(start_y))
-                        
-                        # Keep original block type (ground/grass)
-                        if block_type in ["ground", "grass"]:
-                            block = Block(start_x, start_y, block_type)
-                        else:
-                            # Treat other types as ground
-                            block = Block(start_x, start_y, "ground")
-                        self.blocks.append(block)
+            if os.path.exists(map_filepath):
+                with open(map_filepath, 'r', newline='') as f:
+                    reader = csv.reader(f)
+                    header = next(reader)  # Skip header
+                    
+                    for row in reader:
+                        if len(row) >= 5:
+                            block_type, start_x, start_y, end_x, end_y = row
+                            start_x, start_y = int(float(start_x)), int(float(start_y))
+                            
+                            # Keep original block type (ground/grass)
+                            if block_type in ["ground", "grass"]:
+                                block = Block(start_x, start_y, block_type)
+                            else:
+                                # Treat other types as ground
+                                block = Block(start_x, start_y, "ground")
+                            self.blocks.append(block)
+            
+            # Load enemies
+            self.enemies = []
+            if os.path.exists(enemy_filepath):
+                with open(enemy_filepath, 'r', newline='') as f:
+                    reader = csv.reader(f)
+                    header = next(reader)  # Skip header
+                    
+                    for row in reader:
+                        if len(row) >= 4:
+                            x, y, enemy_type, difficulty = row
+                            x, y = int(float(x)), int(float(y))
+                            difficulty = int(difficulty)
+                            
+                            enemy = Enemy(x, y, enemy_type, difficulty)
+                            self.enemies.append(enemy)
                             
             self.redraw_canvas()
-            messagebox.showinfo("Success", f"Stage {stage_num} loaded successfully!")
+            messagebox.showinfo("Success", f"Stage {stage_num} loaded successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Error loading file: {e}")
+            messagebox.showerror("Error", f"Error loading files: {e}")
             
     def save_map(self):
-        """Save map"""
+        """Save map and enemies"""
         stage_num = self.stage_var.get()
-        filename = f"stage{stage_num}.csv"
-        filepath = os.path.join(OUTPUT_DIR, filename)
         
         try:
-            with open(filepath, 'w', newline='') as f:
+            # Save map blocks
+            map_filename = f"stage{stage_num}.csv"
+            map_filepath = os.path.join(OUTPUT_DIR, map_filename)
+            
+            with open(map_filepath, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(["type", "start_x", "start_y", "end_x", "end_y"])
                 
                 # Save all blocks
                 for block in self.blocks:
                     writer.writerow(block.to_csv_row())
+            
+            # Save enemy data
+            enemy_filename = f"enemies{stage_num}.csv"
+            enemy_filepath = os.path.join(OUTPUT_DIR, enemy_filename)
+            
+            with open(enemy_filepath, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["x", "y", "enemy_type", "difficulty"])
+                
+                # Save all enemies
+                for enemy in self.enemies:
+                    writer.writerow(enemy.to_csv_row())
                     
-            messagebox.showinfo("Success", f"Stage {stage_num} saved successfully!\nLocation: {filepath}")
+            messagebox.showinfo("Success", f"Stage {stage_num} saved successfully!\nBlocks: {len(self.blocks)}, Enemies: {len(self.enemies)}\nLocation: {OUTPUT_DIR}")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Error saving file: {e}")
+            messagebox.showerror("Error", f"Error saving files: {e}")
             
+    def refresh_config(self):
+        """Refresh configuration from config.ini and update UI"""
+        global CONFIG, MAP_EDITOR_CONFIG, MAP_WIDTH, MAP_HEIGHT, BLOCK_SIZE, CANVAS_SCALE, CANVAS_WIDTH, CANVAS_HEIGHT, GRID_SIZE
+        
+        # Reload configurations
+        CONFIG = load_config()
+        MAP_EDITOR_CONFIG = load_map_editor_config()
+        
+        # Update global variables
+        MAP_WIDTH = CONFIG['map_width']
+        MAP_HEIGHT = CONFIG['map_height']
+        BLOCK_SIZE = CONFIG['block_size']
+        CANVAS_SCALE = MAP_EDITOR_CONFIG['canvas_scale']
+        CANVAS_WIDTH = MAP_WIDTH // CANVAS_SCALE
+        CANVAS_HEIGHT = MAP_HEIGHT // CANVAS_SCALE
+        GRID_SIZE = BLOCK_SIZE // CANVAS_SCALE
+        
+        # Update info label
+        self.info_label.config(text=f"Map: {MAP_WIDTH}x{MAP_HEIGHT} | Block: {BLOCK_SIZE}px | Scale: 1/{CANVAS_SCALE} | Buffer: {CONFIG['buffer_width']}x{CONFIG['buffer_height']}")
+        
+        # Remove old canvas frame and recreate
+        for widget in self.root.winfo_children():
+            if isinstance(widget, tk.Frame) and widget != self.root.winfo_children()[0]:  # Keep toolbar
+                widget.destroy()
+        
+        # Recreate canvas with new dimensions
+        self.setup_canvas()
+        
+        # Recreate default ground
+        self.blocks = []
+        self.enemies = []
+        self.create_default_ground()
+        self.redraw_canvas()
+        
+        messagebox.showinfo("Config Refreshed", f"Configuration updated!\nMap: {MAP_WIDTH}x{MAP_HEIGHT}\nCanvas Scale: 1/{CANVAS_SCALE}")
+    
     def create_default_ground(self):
         """Create ground blocks at default ground level"""
         # Set ground level (2-3 rows from bottom of map)
@@ -397,11 +676,16 @@ class MapEditor:
         ground_level_end = MAP_HEIGHT
         
         # Place ground blocks across entire map width
+        # Ensure perfect alignment with BLOCK_SIZE boundaries
         for y in range(ground_level_start, ground_level_end, BLOCK_SIZE):
             for x in range(0, MAP_WIDTH, BLOCK_SIZE):
+                # Ensure coordinates are perfectly aligned
+                aligned_x = (x // BLOCK_SIZE) * BLOCK_SIZE
+                aligned_y = (y // BLOCK_SIZE) * BLOCK_SIZE
+                
                 # Check if there's already a block at the same position
-                if not any(b.x == x and b.y == y for b in self.blocks):
-                    block = Block(x, y, "ground")
+                if not any(b.x == aligned_x and b.y == aligned_y for b in self.blocks):
+                    block = Block(aligned_x, aligned_y, "ground")
                     self.blocks.append(block)
 
 def main():

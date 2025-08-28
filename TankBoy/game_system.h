@@ -6,24 +6,28 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
 
-#include "tank.h"
-#include "bullet.h"
-#include "map_generation.h"
-#include "ini_parser.h"
-#include "input_system.h"
-#include "head_up_display.h"
+// Game system components
+#include "tank.h"           // Tank player character
+#include "bullet.h"         // Bullet system for shooting
+#include "map_generation.h" // Map and collision system
+#include "ini_parser.h"     // Configuration file parser
+#include "input_system.h"   // Keyboard and mouse input handling
+#include "head_up_display.h" // HUD and UI display system
 
-#define MAX_BULLETS 100
+// MAX_BULLETS is now loaded from config.ini
 
 typedef struct {
+    // Display buffer settings
     int buffer_width;
     int buffer_height;
     double display_scale;
 
+    // Button UI settings
     int button_width;
     int button_height;
     int button_spacing;
 
+    // Color settings
     int menu_bg_r, menu_bg_g, menu_bg_b;
     int game_bg_r, game_bg_g, game_bg_b;
     int button_normal_r, button_normal_g, button_normal_b;
@@ -31,70 +35,78 @@ typedef struct {
     int button_clicked_r, button_clicked_g, button_clicked_b;
     int text_r, text_g, text_b;
 
+    // Game settings
     int game_speed;
     int max_lives;
+    int max_bullets;
 } GameConfig;
 
 typedef struct {
+    // Button position and size
     int x, y;
     int width, height;
     char* text;
+    // Button state
     bool hovered;
     bool clicked;
 } Button;
 
 typedef enum {
-    STATE_MENU,
-    STATE_RANKING,
-    STATE_GAME,
-    STATE_EXIT
+    STATE_MENU,    // Main menu state
+    STATE_RANKING, // Ranking display state
+    STATE_GAME,    // Active gameplay state
+    STATE_EXIT     // Exit game state
 } GameState;
 
 typedef struct {
-    // UI
-    Button start_button;
-    Button exit_button;
-    ALLEGRO_FONT* font;
-    GameState current_state;
-    bool running;
-    GameConfig config;
-    ALLEGRO_BITMAP* buffer;
+    // UI Components
+    Button start_button;      // Start game button
+    Button exit_button;       // Exit game button
+    ALLEGRO_FONT* font;      // Font for text rendering
+    GameState current_state;  // Current game state
+    bool running;             // Game loop running flag
+    GameConfig config;        // Game configuration settings
+    ALLEGRO_BITMAP* buffer;  // Off-screen rendering buffer
 
     // Player & Input
-    Tank player_tank;
-    InputState input;
+    Tank player_tank;         // Player tank character
+    InputState input;         // Input system state
 
-    // Bullets
-    Bullet bullets[MAX_BULLETS];
-    int max_bullets;
+    // Bullet System
+    Bullet* bullets;          // Dynamic bullet array
+    int max_bullets;          // Maximum number of bullets
 
-    // Camera
-    double camera_x, camera_y;
+    // Camera System
+    double camera_x, camera_y; // Camera position for viewport
 
-    // Map & Stage
-    Map current_map;
-    int current_stage;
+    // Map & Stage System
+    Map current_map;          // Current stage map
+    int current_stage;        // Current stage number
 
-    // HUD
-    Head_Up_Display_Data hud;
+    // HUD System
+    Head_Up_Display_Data hud; // Heads-up display data
+    
+    // Enemy System
+    int round_number;         // Current round number
+    bool enemies_spawned;     // Enemy spawn flag
 
-    // Stage Clear & Score
-    bool stage_clear;
-    double stage_clear_timer;
-    double stage_clear_scale;
-    double score;            // 실제 점수
-    double displayed_score;   // HUD에 표시되는 점수
+    // Stage Clear & Score System
+    bool stage_clear;         // Stage clear flag
+    double stage_clear_timer; // Stage clear animation timer
+    double stage_clear_scale; // Stage clear animation scale
+    double score;             // Current score
+    double displayed_score;   // Score displayed in HUD
 } GameSystem;
 
 // ================= Core Functions =================
-void load_game_config(GameConfig* config, const char* config_file);
-void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system);
-void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display);
-void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system);
-void render_game(GameSystem* game_system);
+void load_game_config(GameConfig* config, const char* config_file);                    // Load game configuration from INI file
+void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system); // Initialize game system
+void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display); // Cleanup game system
+void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system);                // Update game state based on events
+void render_game(GameSystem* game_system);                                            // Render current game state
 
 // ================= Buffer Handling =================
-void disp_pre_draw(GameSystem* game_system);
-void disp_post_draw(GameSystem* game_system);
+void disp_pre_draw(GameSystem* game_system);                                          // Set up off-screen buffer for rendering
+void disp_post_draw(GameSystem* game_system);                                         // Display rendered buffer and flip screen
 
 #endif // GAME_SYSTEM_H

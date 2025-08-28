@@ -1,5 +1,7 @@
 #include "head_up_display.h"
 #include "ini_parser.h"
+#include "enemy.h"
+#include "tank.h"
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
@@ -133,9 +135,80 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     // Health text
     al_draw_textf(hud_font, hud_text_color,
         bar_x + bar_w + 10, bar_y, 0,
-        "%d / 100", hud->player_hp);
+        "%d / %d", hud->player_hp, hud->player_max_hp);
         
+    // Enemy count display
+    al_draw_textf(hud_font, hud_text_color, 10, 140, 0,
+        "Enemies: %d", hud->enemies_alive);
+    al_draw_textf(hud_font, hud_text_color, 10, 170, 0,
+        "Flying Enemies: %d", hud->flying_enemies_alive);
+    
+    // Round display
+    al_draw_textf(hud_font, hud_text_color, 10, 200, 0,
+        "Round: %d", hud->round);
 
+}
+
+/* ===== Enemy HP Display Functions ===== */
+
+void draw_enemy_hp_bars(void) {
+    Enemy* enemies = get_enemies();
+    
+    for (int i = 0; i < MAX_ENEMIES; i++) {
+        Enemy* e = &enemies[i];
+        if (!e->alive) continue;
+        
+        // Draw HP bar above enemy
+        draw_hp_bar_world(e->x, e->y + 20 + 4, e->hp, e->max_hp, 40.0);
+    }
+}
+
+void draw_flying_enemy_hp_bars(void) {
+    FlyingEnemy* f_enemies = get_flying_enemies();
+    
+    for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
+        FlyingEnemy* fe = &f_enemies[i];
+        if (!fe->alive) continue;
+        
+        // Draw HP bar above flying enemy
+        draw_hp_bar_world(fe->x, fe->y + 16 + 4, fe->hp, fe->max_hp, 36.0);
+    }
+}
+
+/* ===== World-space HP Bar Drawing ===== */
+
+void draw_hp_bar_world(double wx, double wy, int hp, int hp_max, double bar_w) {
+    if (hp_max <= 0) return;
+    if (hp < 0) hp = 0;
+    if (hp > hp_max) hp = hp_max;
+    double ratio = (double)hp / (double)hp_max;
+
+    // Get camera position for screen coordinates
+    double camera_x = get_camera_x();
+    double camera_y = get_camera_y();
+
+    double sx = wx - camera_x;
+    double sy = wy - camera_y;
+
+    // Background bar
+    al_draw_filled_rectangle(sx, sy, sx + bar_w, sy + 5, al_map_rgb(35, 35, 35));
+    
+    // HP bar
+    al_draw_filled_rectangle(sx, sy, sx + bar_w * ratio, sy + 5, al_map_rgb(220, 40, 40));
+    
+    // Border
+    al_draw_rectangle(sx, sy, sx + bar_w, sy + 5, al_map_rgb(255, 255, 255), 1);
+}
+
+/* ===== HUD Update Functions ===== */
+
+void update_tank_hp_display(int new_hp) {
+    current_hp = new_hp;
+}
+
+void update_enemy_count_display(int ground_count, int flying_count) {
+    // This function can be used to update enemy counts in real-time
+    // Currently the counts are updated in the main update loop
 }
 
 /* Usage:
@@ -147,5 +220,9 @@ head_up_display_init("config.ini");
 Head_Up_Display_Data hud = head_up_display_update(int damage, int(enum)tank.weapon, (int) stage);
 
 head_up_display_draw(&hud);
+
+// Draw enemy HP bars
+draw_enemy_hp_bars();
+draw_flying_enemy_hp_bars();
 
 */

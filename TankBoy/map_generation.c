@@ -6,19 +6,76 @@
 #include <string.h>
 
 #define INITIAL_BLOCK_CAPACITY 1000
-#define BLOCK_SIZE 50
+
+// Global configuration cache
+static MapConfig g_map_config = {0};
+
+// Initialize configuration (load once)
+void map_config_init(void) {
+    IniParser* parser = ini_parser_create();
+    
+    // Load config.ini file (try multiple paths)
+    bool loaded = false;
+    if (ini_parser_load_file(parser, "config.ini")) {
+        loaded = true;
+    } else if (ini_parser_load_file(parser, "TankBoy/config.ini")) {
+        loaded = true;
+    }
+    
+    if (!loaded) {
+        printf("Warning: Could not load config.ini from any location, using default values\n");
+    } else {
+        printf("Successfully loaded config.ini\n");
+    }
+    
+    // Load all configuration values (with fallbacks)
+    g_map_config.buffer_width = ini_parser_get_int(parser, "Buffer", "buffer_width", 1280);
+    g_map_config.buffer_height = ini_parser_get_int(parser, "Buffer", "buffer_height", 720);
+    g_map_config.block_size = ini_parser_get_int(parser, "Map", "block_size", 50);
+    g_map_config.map_width_multiplier = ini_parser_get_int(parser, "Map", "map_width_multiplier", 10);
+    g_map_config.map_height_multiplier = ini_parser_get_int(parser, "Map", "map_height_multiplier", 3);
+    
+    // Load enemy behavior settings
+    g_map_config.enemy_jump_interval_min = ini_parser_get_double(parser, "Enemy", "enemy_jump_interval_min", 1.8);
+    g_map_config.enemy_jump_interval_max = ini_parser_get_double(parser, "Enemy", "enemy_jump_interval_max", 2.2);
+    
+    // Load enemy physics settings
+    g_map_config.enemy_base_speed = ini_parser_get_double(parser, "Enemy", "enemy_base_speed", 0.1);
+    g_map_config.enemy_speed_per_difficulty = ini_parser_get_double(parser, "Enemy", "enemy_speed_per_difficulty", 0.5);
+    
+    ini_parser_destroy(parser);
+    
+    // Calculate derived values
+    g_map_config.map_width = g_map_config.buffer_width * g_map_config.map_width_multiplier;
+    g_map_config.map_height = g_map_config.buffer_height * g_map_config.map_height_multiplier;
+}
+
+// Cleanup configuration (for future use if needed)
+void map_config_cleanup(void) {
+    // Nothing to cleanup for now
+}
+
+// Get configuration (read-only access)
+const MapConfig* map_get_config(void) {
+    return &g_map_config;
+}
 
 // Initialize empty map
 bool map_init(Map* map) {
     if (!map) return false;
+    
+    // Ensure configuration is loaded
+    const MapConfig* config = map_get_config();
+    
+    // Use cached configuration values
+    map->map_width = config->map_width;
+    map->map_height = config->map_height;
     
     map->blocks = malloc(INITIAL_BLOCK_CAPACITY * sizeof(Block));
     if (!map->blocks) return false;
     
     map->block_count = 0;
     map->block_capacity = INITIAL_BLOCK_CAPACITY;
-    map->map_width = 12800;
-    map->map_height = 2160;
     
     return true;
 }
@@ -138,31 +195,7 @@ bool map_load(Map* map, const char* csv_path) {
     return true;
 }
 
-// Query blocks in ROI (Region of Interest)
-size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
-                     Block* out_blocks, size_t max_blocks) {
-    if (!map || !out_blocks || max_blocks == 0) return 0;
-    
-    int left = center_x - width / 2;
-    int right = center_x + width / 2;
-    int top = center_y - height / 2;
-    int bottom = center_y + height / 2;
-    
-    size_t found_count = 0;
-    
-    for (size_t i = 0; i < map->block_count && found_count < max_blocks; i++) {
-        const Block* block = &map->blocks[i];
-        
-        // Check if block intersects with ROI rectangle
-        if (block->x < right && block->x + block->width > left &&
-            block->y < bottom && block->y + block->height > top) {
-            out_blocks[found_count] = *block;
-            found_count++;
-        }
-    }
-    
-    return found_count;
-}
+
 
 // Check point collision with any block
 bool map_point_collision(const Map* map, int x, int y) {
@@ -195,13 +228,10 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height) {
 }
 
 // Get ground level at specific x coordinate (improved version)
-int map_get_ground_level(const Map* map, int x) {
-    // Load map-specific settings from config.ini
-    IniParser* parser = ini_parser_create();
-    ini_parser_load_file(parser, "config.ini");
-    int map_height = ini_parser_get_int(parser, "Map", "map_height", 2160);
-    int tank_width = ini_parser_get_int(parser, "Tank", "tank_width", 32); // Needed for collision calculation
-    ini_parser_destroy(parser);
+int map_get_ground_level(const Map* map, int x, int tank_width) {
+    // Get cached configuration
+    const MapConfig* config = map_get_config();
+    int map_height = config->map_height;
     
     if (!map) return map_height; // Return bottom if no map
     
@@ -252,4 +282,20 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
                                    color);
         }
     }
+}
+
+// Configuration functions, used in other files
+int map_get_block_size(void) {
+    const MapConfig* config = map_get_config();
+    return config->block_size;
+}
+
+int map_get_map_width(void) {
+    const MapConfig* config = map_get_config();
+    return config->map_width;
+}
+
+int map_get_map_height(void) {
+    const MapConfig* config = map_get_config();
+    return config->map_height;
 }

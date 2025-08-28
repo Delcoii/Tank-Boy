@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include "enemy.h"
+#include "collision.h"
 
 // =================== Config Loading ===================
 
@@ -53,6 +55,7 @@ void load_game_config(GameConfig* config, const char* config_file) {
     // Game
     config->game_speed = ini_parser_get_int(parser, "Game", "game_speed", 60);
     config->max_lives = ini_parser_get_int(parser, "Game", "max_lives", 3);
+    config->max_bullets = ini_parser_get_int(parser, "Game", "max_bullets", 100);
 
     ini_parser_destroy(parser);
 }
@@ -128,7 +131,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     input_system_init(&game_system->input);
     tank_init(&game_system->player_tank, 50.0, 480.0);
 
-    game_system->max_bullets = MAX_BULLETS;
+    game_system->max_bullets = game_system->config.max_bullets;
+    game_system->bullets = malloc(sizeof(Bullet) * game_system->max_bullets);
     bullets_init(game_system->bullets, game_system->max_bullets);
 
     game_system->camera_x = 0;
@@ -136,22 +140,35 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     head_up_display_init("config.ini");
 
+    // Initialize and load map
     game_system->current_stage = 1;
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
     if (!map_load(&game_system->current_map, map_file))
         map_init(&game_system->current_map);
 
+    // Load enemies from CSV file after map is loaded
+    load_enemies_from_csv_with_map(1, &game_system->current_map); // Load stage 1 enemies
+    
+    // Initialize enemy system
+    game_system->round_number = 1;
+    game_system->enemies_spawned = false;
+    
+    // Set global references for getter functions
+    set_global_tank_ref(&game_system->player_tank);
+    set_global_bullet_ref(game_system->bullets, game_system->max_bullets);
+
     game_system->stage_clear = false;
     game_system->stage_clear_timer = 0.0;
     game_system->stage_clear_scale = 1.0;
-    game_system->score = 0.0;  // 점수 초기화
+    game_system->score = 0.0;  // Initialize score
 }
 
 // =================== Cleanup ===================
 
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
     map_free(&game_system->current_map);
+    free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
@@ -171,12 +188,12 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
     case ALLEGRO_KEY_U:
         if (game_system->current_state == STATE_GAME) {
             game_system->stage_clear = true;
-            if (game_system->current_stage >= 3) {
-                game_system->stage_clear_timer = 4.0; // Game End는 더 오래
-            }
-            else {
-                game_system->stage_clear_timer = 2.0; // 일반 Stage Clear
-            }
+                    if (game_system->current_stage >= 3) {
+            game_system->stage_clear_timer = 4.0; // Game End takes longer
+        }
+        else {
+            game_system->stage_clear_timer = 2.0; // Normal Stage Clear
+        }
             game_system->stage_clear_scale = 1.0;
         }
         break;
@@ -204,7 +221,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
         display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &game_system->config);
         if (game_system->current_state == STATE_MENU) {
             if (is_point_in_button(bx, by, &game_system->start_button)) {
-                // 새 게임 시작 시 초기화
+                // Initialize for new game start
                 game_system->score = 0;
                 game_system->current_stage = 1;
                 char map_file[256];
@@ -238,7 +255,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     if (game_system->current_state != STATE_GAME) return;
     if (event->type != ALLEGRO_EVENT_TIMER) return;
 
-    // Stage Clear 중에는 점수 증가 멈춤
+    // Stop score increase during Stage Clear
     if (!game_system->stage_clear) {
         game_system->score += 1.0 / 60.0;
     }
@@ -247,18 +264,52 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->bullets, game_system->max_bullets, &game_system->current_map);
     bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
 
-    // HUD 업데이트는 Stage Clear 아닐 때만!
+    // Update camera to follow tank
+    game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
+    game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
+    
+    // Set camera position for HP bar drawing
+    set_camera_position(game_system->camera_x, game_system->camera_y);
+    
+    // Spawn enemies if not spawned yet
+    if (!game_system->enemies_spawned) {
+        spawn_enemies(game_system->round_number);
+        spawn_flying_enemy(game_system->round_number);
+        game_system->enemies_spawned = true;
+    }
+    
+    // Update enemy systems with map reference
+    enemies_update_roi_with_map(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+                      game_system->config.buffer_width, game_system->config.buffer_height, &game_system->current_map);
+    flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
+                             game_system->config.buffer_width, game_system->config.buffer_height);
+    
+    // Update collision detection
+    bullets_hit_enemies();
+    bullets_hit_tank();
+    tank_touch_ground_enemy();
+    
+    // Check if all enemies are cleared for next round
+    if (!any_ground_enemies_alive() && !any_flying_enemies_alive()) {
+        game_system->round_number++;
+        game_system->enemies_spawned = false;
+    }
+    
+    // HUD update only when not in Stage Clear!
     if (!game_system->stage_clear) {
         game_system->hud = head_up_display_update(
             (int)(game_system->score * 10),
             game_system->player_tank.weapon,
             game_system->current_stage
         );
+        
+        // Update HUD with enemy counts and round
+        game_system->hud.enemies_alive = get_alive_enemy_count();
+        game_system->hud.flying_enemies_alive = get_alive_flying_enemy_count();
+        game_system->hud.round = game_system->round_number;
+        game_system->hud.player_hp = get_tank_hp();
+        game_system->hud.player_max_hp = get_tank_max_hp();
     }
-
-    // 카메라
-    game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
-    game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
 
     // Stage Clear 처리
     if (game_system->stage_clear) {
@@ -266,16 +317,16 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - game_system->stage_clear_timer) * 3.14);
 
         if (game_system->stage_clear_timer <= 0) {
-            // Stage 3 클리어 -> Game End 처리
-            if (game_system->current_stage >= 3) {
-                game_system->current_state = STATE_MENU;
-                game_system->stage_clear = false;
-                return;
-            }
-
-            // 다음 스테이지로
+                    // Stage 3 clear -> Game End processing
+        if (game_system->current_stage >= 3) {
+            game_system->current_state = STATE_MENU;
             game_system->stage_clear = false;
-            game_system->current_stage++;
+            return;
+        }
+
+        // Move to next stage
+        game_system->stage_clear = false;
+        game_system->current_stage++;
 
             char map_file[256];
             snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -307,6 +358,14 @@ static void draw_game(const GameSystem* game_system) {
     map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
     bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
+    
+    // Draw enemies
+    enemies_draw(game_system->camera_x, game_system->camera_y);
+    flying_enemies_draw(game_system->camera_x, game_system->camera_y);
+    
+    // Draw enemy HP bars
+    draw_enemy_hp_bars();
+    draw_flying_enemy_hp_bars();
 
     if (!game_system->stage_clear) {
         head_up_display_draw(&game_system->hud);
@@ -315,7 +374,7 @@ static void draw_game(const GameSystem* game_system) {
         int cx = game_system->config.buffer_width / 2;
         int cy = game_system->config.buffer_height / 2;
 
-        if (game_system->current_stage >= 3) {  // Stage 3 클리어 시 엔딩
+        if (game_system->current_stage >= 3) {  // Ending when Stage 3 is cleared
             al_draw_text(game_system->font, al_map_rgb(255, 0, 0), cx, cy - 20, ALLEGRO_ALIGN_CENTER, "Congratulations! You won the game!");
             char score_text[64];
             snprintf(score_text, sizeof(score_text), "Final Score: %d", game_system->hud.score);
