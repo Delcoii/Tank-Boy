@@ -184,6 +184,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                     bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 0.7;
                     bullets[i].width = cannon_width;
                     bullets[i].height = cannon_height;
+                    bullets[i].angle = tank->cannon_angle;
+                    bullets[i].from_enemy = false;
+                    // Debug output removed
                     break;
                 }
             }
@@ -235,6 +238,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                             bullets[i].vy = sin(tank->cannon_angle) * 8.0 * 1.5;
                             bullets[i].width = mg_width;
                             bullets[i].height = mg_height;
+                            bullets[i].angle = tank->cannon_angle;
+                            bullets[i].from_enemy = false;
+                            // Debug output removed
                             tank->mg_shot_cooldown = 0.1;
                             break;
                         }

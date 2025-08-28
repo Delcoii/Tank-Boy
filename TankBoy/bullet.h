@@ -18,6 +18,9 @@ typedef struct {
     
     // Bullet dimensions (different for MG vs Cannon)
     int width, height;
+    
+    // Bullet rotation angle (in radians)
+    double angle;
 } Bullet;
 
 void bullets_init(Bullet* bullets, int max_bullets);
