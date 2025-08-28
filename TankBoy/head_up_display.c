@@ -123,7 +123,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
 
 #include "head_up_display.h"
 
-head_up_display_init();
+head_up_display_init("config.ini");
 
 Head_Up_Display_Data hud = head_up_display_update(int damage, int(enum)tank.weapon, (int) stage);
 

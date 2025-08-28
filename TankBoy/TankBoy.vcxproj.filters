@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="config.ini">
       <Filter>리소스 파일</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -36,6 +36,18 @@
     <ClCompile Include="tank.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="bullet.h">
+      <Filter>헤더 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="bullet.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="input_system.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="tank.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
     <ClCompile Include="head_up_display.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -45,6 +57,12 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ini_parser.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="input_system.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="tank.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="input_system.h">

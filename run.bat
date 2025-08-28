@@ -2,7 +2,7 @@
 echo Running Tank-Boy game...
 
 REM Check if executable exists
-if not exist "TankBoy\x64\Debug\TankBoy.exe" (
+if not exist "x64\Debug\TankBoy.exe" (
     echo Error: TankBoy.exe not found!
     echo Please build the project first using build.bat
     pause
@@ -11,7 +11,7 @@ if not exist "TankBoy\x64\Debug\TankBoy.exe" (
 
 REM Run the game
 echo Starting Tank-Boy...
-TankBoy\x64\Debug\TankBoy.exe
+x64\Debug\TankBoy.exe
 
 REM Game finished, stay in current directory
 echo Game finished.

@@ -1,6 +1,7 @@
 #ifndef GAME_SYSTEM_H
 #define GAME_SYSTEM_H
 
+
 // standard C lib
 #include <stdbool.h>
 
@@ -11,6 +12,7 @@
 
 // algorithm
 #include "tank.h"
+#include "bullet.h"
 
 // utils
 #include "ini_parser.h"
@@ -76,6 +78,13 @@ typedef struct {
     // Game objects
     Tank player_tank;
     InputState input;
+
+    // Bullet system
+    Bullet bullets[MAX_BULLETS];  
+    int max_bullets;
+    
+    // Camera
+    double camera_x, camera_y;
 } GameSystem;
 
 

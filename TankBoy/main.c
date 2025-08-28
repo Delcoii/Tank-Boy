@@ -11,7 +11,6 @@
 #include <allegro5/allegro_acodec.h>
 #include <allegro5/allegro_image.h>
 
-
 // local library
 #include "game_system.h"
 #include "head_up_display.h"
@@ -39,12 +38,17 @@ int main(void) {
     ALLEGRO_DISPLAY* display = must_init(al_create_display(disp_w, disp_h), "display");
     ALLEGRO_EVENT_QUEUE* queue = must_init(al_create_event_queue(), "event queue");
     
+    // Create timer for 60 FPS
+    ALLEGRO_TIMER* timer = must_init(al_create_timer(1.0 / 60.0), "timer");
+    al_register_event_source(queue, al_get_timer_event_source(timer));
+    
     // Initialize game system
     init_game_system(display, queue, &game_system);
-    // Initialize head_up_display
-    head_up_display_init("config.ini");
     
     ALLEGRO_EVENT event;
+    bool redraw = true;
+    
+    al_start_timer(timer);
     
     while (game_system.running) {
         al_wait_for_event(queue, &event);
@@ -52,17 +56,25 @@ int main(void) {
         if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
             game_system.running = false;
         }
+        // only update display on timer event
+        else if (event.type == ALLEGRO_EVENT_TIMER) {
+            redraw = true;
+        }
         
+        // Handle all events (input, timer, etc.)
         update_game_state(&event, &game_system);
-        
-        render_game(&game_system);
 
-        //head up display
-        Head_Up_Display_Data hud = head_up_display_update(1, 1, 1);// (damage, weapon, stage)
-        head_up_display_draw(&hud); 
+        // Head_Up_Display draw
+        Head_Up_Display_Data hud = head_up_display_update(0, 1, 1);
+        head_up_display_draw(&hud);
 
-        al_flip_display();
+        if (redraw && al_is_event_queue_empty(queue)) {
+            redraw = false;
+            render_game(&game_system);
+        }
     }
+    
+    al_destroy_timer(timer);
     
 
     cleanup_game_system(&game_system, queue, display);
