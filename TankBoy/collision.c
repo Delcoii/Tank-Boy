@@ -277,15 +277,15 @@ void handle_tank_flying_enemy_collision(int enemy_index) {
         apply_damage_to_tank(DMG_ENEMY_CONTACT);
     }
 
-    // symmetric knockback
+    // tank knockback only (flying enemy keeps its original behavior)
     double tank_cx = get_tank_x() + get_tank_width() * 0.5;
     double enemy_cx = fe->x + fe->width * 0.5;
     double dir = (tank_cx < enemy_cx) ? -1.0 : 1.0;
 
     apply_knockback_to_tank(dir * KNOCKBACK_TANK_VX, -KNOCKBACK_TANK_VY);
     
-    // flying enemy knockback (horizontal only, no vertical knockback)
-    fe->vx = -dir * KNOCKBACK_ENEMY_VX;
+    // flying enemy keeps its original velocity (no knockback)
+    // fe->vx remains unchanged
 
     // small separation to resolve overlap
     double tank_x = get_tank_x();
