@@ -35,7 +35,6 @@ double max_shooting_distance = 800.0;
 static int enemy_align_x = 20;
 static int flying_enemy_align_x = 10;
 
-
 // sprite
 typedef struct SPRITES
 {
