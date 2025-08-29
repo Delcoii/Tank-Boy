@@ -57,8 +57,8 @@ bool spawn_points_load(SpawnPoints* spawns, const char* csv_path);
 SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns);
 
 // Collision detection ROI
-size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
-                     Block* out_blocks, size_t max_blocks);
+//size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
+//                     Block* out_blocks, size_t max_blocks);
 
 // Check if a point collides with any block
 bool map_point_collision(const Map* map, int x, int y);
@@ -100,5 +100,10 @@ const MapConfig* map_get_config(void);
 int map_get_block_size(void);
 int map_get_map_width(void);
 int map_get_map_height(void);
+
+//sprite
+void map_sprites_init(const char* sprite_path);
+//void must_init(bool test, const char* description);
+void map_sprites_deinit();
 
 #endif // MAP_GENERATION_H

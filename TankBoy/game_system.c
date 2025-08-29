@@ -108,6 +108,7 @@ static void display_to_buffer_coords(int display_x, int display_y, int* buffer_x
 
 void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
     al_init_font_addon();
+    al_init_image_addon();
     al_init_primitives_addon();
     al_install_mouse();
     al_install_keyboard();
@@ -165,6 +166,14 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
     if (!map_load(&game_system->current_map, map_file))
         map_init(&game_system->current_map);
+    printf("location : %s\n", map_file);
+
+
+    char map_sprite_file[256];
+    snprintf(map_sprite_file, sizeof(map_sprite_file), "TankBoy/resources/sprites/stage1_ground.png");
+
+    printf("location : %s\n", map_sprite_file);
+    map_sprites_init(map_sprite_file);
 
     // Load enemies from CSV file after map is loaded
     load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies

@@ -4,12 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <allegro5/allegro5.h>
 
 #define INITIAL_BLOCK_CAPACITY 1000
 #define INITIAL_SPAWN_CAPACITY 10
 
 // Global configuration cache
 static MapConfig g_map_config = {0};
+
+typedef struct SPRITES
+{
+    ALLEGRO_BITMAP* _sheet;
+
+    ALLEGRO_BITMAP* grass;
+    ALLEGRO_BITMAP* ground;
+    
+} SPRITES;
+SPRITES map_sprites;
 
 // Initialize configuration (load once)
 void map_config_init(void) {
@@ -278,9 +289,11 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
             
             // Draw block
             ALLEGRO_COLOR color = map_get_block_color(block->type);
-            al_draw_filled_rectangle(screen_x, screen_y, 
-                                   screen_x + block->width, screen_y + block->height, 
-                                   color);
+
+            // al_draw_bitmap(map_sprites.grass, screen_x + block->width, screen_y + block->height, 0);
+            
+            al_draw_bitmap(map_sprites.grass, screen_x, screen_y, 0);
+
         }
     }
 }
@@ -422,4 +435,46 @@ SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns) {
         }
     }
     return NULL;
+}
+
+//sprite
+
+
+
+ALLEGRO_BITMAP* sprite_grab(int x, int y, int w, int h)
+{
+    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(map_sprites._sheet, x, y, w, h);
+    return sprite;
+}
+
+
+
+void map_sprites_init(const char* sprite_path)
+{
+    map_sprites._sheet = al_load_bitmap(sprite_path);
+    if (map_sprites._sheet == NULL) {
+        printf("NULLNULLNULLNULLNULLNULL\n");
+    }
+    
+    map_sprites.ground = sprite_grab(0, 0, 100, 50);
+    map_sprites.grass = sprite_grab(0, 0, 100, 50);
+    
+}
+
+
+//void must_init(bool test, const char* description)
+//{
+//    if (test) return;
+//
+//    printf("couldn't initialize %s\n", description);
+//    exit(1);
+//}
+
+
+void map_sprites_deinit()
+{
+    al_destroy_bitmap(map_sprites.ground);
+    al_destroy_bitmap(map_sprites.grass);
+
+    al_destroy_bitmap(map_sprites._sheet);
 }
