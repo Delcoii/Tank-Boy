@@ -124,6 +124,14 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int ey = game_system->config.buffer_height / 2 + game_system->config.button_spacing / 2;
     init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start Game");
     init_button(&game_system->exit_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Exit Game");
+    
+    // Initialize Next button for stage clear screen (position will be set when needed)
+    int next_y = game_system->config.buffer_height / 2 + 120;
+    init_button(&game_system->next_button, bx, next_y, game_system->config.button_width, game_system->config.button_height, "Next Stage");
+    
+    // Initialize Menu button for game end screen
+    init_button(&game_system->menu_button, bx, next_y, game_system->config.button_width, 
+        game_system->config.button_height, "Back to Menu");
 
     game_system->current_state = STATE_MENU;
     game_system->running = true;
@@ -269,48 +277,53 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
         }
         else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
-            // Click to continue from stage clear screen
+            // Handle button clicks on stage clear/end screen
             if (game_system->current_stage >= 3) {
-                // Stage 3 clear -> Game End processing
-                game_system->current_state = STATE_MENU;
-                game_system->stage_clear = false;
-            } else {
-                // Move to next stage
-                game_system->stage_clear = false;
-                game_system->current_stage++;
-
-                char map_file[256];
-                snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
-                if (!map_load(&game_system->current_map, map_file))
-                    map_init(&game_system->current_map);
-
-                // Load spawn points for the new stage
-                char spawn_file[256];
-                snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
-                
-                double tank_x = 100.0; // Default position
-                double tank_y = 2000.0; // Default position
-                
-                // Free previous spawn points
-                spawn_points_free(&game_system->spawn_points);
-                
-                if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
-                    SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
-                    if (tank_spawn) {
-                        tank_x = (double)tank_spawn->x;
-                        tank_y = (double)tank_spawn->y;
-                        printf("Tank spawn loaded for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
-                    }
-                } else {
-                    printf("Using default tank spawn position for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                // Game end screen - handle menu button
+                if (is_point_in_button(bx, by, &game_system->menu_button)) {
+                    game_system->current_state = STATE_MENU;
+                    game_system->stage_clear = false;
                 }
-                
-                tank_init(&game_system->player_tank, tank_x, tank_y);
-                
-                // Reset enemies for new stage
-                enemies_init();
-                flying_enemies_init();
-                game_system->enemies_spawned = false;
+            } else {
+                // Stage clear screen - handle next button
+                if (is_point_in_button(bx, by, &game_system->next_button)) {
+                    // Move to next stage
+                    game_system->stage_clear = false;
+                    game_system->current_stage++;
+
+                    char map_file[256];
+                    snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+                    if (!map_load(&game_system->current_map, map_file))
+                        map_init(&game_system->current_map);
+
+                    // Load spawn points for the new stage
+                    char spawn_file[256];
+                    snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+                    
+                    double tank_x = 100.0; // Default position
+                    double tank_y = 2000.0; // Default position
+                    
+                    // Free previous spawn points
+                    spawn_points_free(&game_system->spawn_points);
+                    
+                    if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+                        SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+                        if (tank_spawn) {
+                            tank_x = (double)tank_spawn->x;
+                            tank_y = (double)tank_spawn->y;
+                            printf("Tank spawn loaded for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                        }
+                    } else {
+                        printf("Using default tank spawn position for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                    }
+                    
+                    tank_init(&game_system->player_tank, tank_x, tank_y);
+                    
+                    // Reset enemies for new stage
+                    enemies_init();
+                    flying_enemies_init();
+                    game_system->enemies_spawned = false;
+                }
             }
         }
         break;
@@ -319,6 +332,8 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
         if (event->mouse.button == 1) {
             game_system->start_button.clicked = false;
             game_system->exit_button.clicked = false;
+            game_system->next_button.clicked = false;
+            game_system->menu_button.clicked = false;
         }
         break;
     }
@@ -479,6 +494,11 @@ static void draw_game(const GameSystem* game_system) {
             char score_text[64];
             snprintf(score_text, sizeof(score_text), "Final Score: %d", game_system->hud.score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 20, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show Back to Menu button for game end
+            if (game_system->stage_clear_timer < 0) {
+                draw_button(&game_system->menu_button, &game_system->config, game_system->font);
+            }
         }
         else {
             al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy, ALLEGRO_ALIGN_CENTER, "Stage Clear");
@@ -486,9 +506,9 @@ static void draw_game(const GameSystem* game_system) {
             snprintf(score_text, sizeof(score_text), "Score: %d", game_system->hud.score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
             
-            // Show click to continue message if waiting for click
+            // Show Next button if waiting for click
             if (game_system->stage_clear_timer < 0) {
-                al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 80, ALLEGRO_ALIGN_CENTER, "Click to Continue");
+                draw_button(&game_system->next_button, &game_system->config, game_system->font);
             }
         }
     }
