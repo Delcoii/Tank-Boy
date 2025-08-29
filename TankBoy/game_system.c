@@ -196,6 +196,11 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->stage_clear_timer = 0.0;
     game_system->stage_clear_scale = 1.0;
     game_system->score = 0.0;  // Initialize score
+    
+    // Initialize game over system
+    game_system->game_over = false;
+    game_system->game_over_timer = 0.0;
+    game_system->game_over_scale = 1.0;
 }
 
 // =================== Cleanup ===================
@@ -336,6 +341,13 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 }
             }
         }
+        else if (game_system->current_state == STATE_GAME_OVER) {
+            // Handle button clicks on game over screen
+            if (is_point_in_button(bx, by, &game_system->menu_button)) {
+                game_system->current_state = STATE_MENU;
+                game_system->game_over = false;
+            }
+        }
         break;
 
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
@@ -365,6 +377,14 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
     bullets_update(game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
 
+    // Check for game over condition
+    if (get_tank_hp() <= 0 && !game_system->game_over) {
+        game_system->game_over = true;
+        game_system->game_over_timer = 0.0;
+        game_system->game_over_scale = 1.0;
+        game_system->current_state = STATE_GAME_OVER;
+    }
+
     // Update camera to follow tank
     game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
     game_system->camera_y = game_system->player_tank.y - game_system->config.buffer_height / 2.0;
@@ -372,8 +392,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // Set camera position for HP bar drawing
     set_camera_position(game_system->camera_x, game_system->camera_y);
     
-    // Spawn enemies if not spawned yet
-    if (!game_system->enemies_spawned) {
+    // Spawn enemies if not spawned yet (but not during stage clear)
+    if (!game_system->enemies_spawned && !game_system->stage_clear) {
         load_enemies_from_csv_with_map(game_system->current_stage, (const Map*)&game_system->current_map);
         // spawn_flying_enemy(game_system->round_number); // Removed: CSV already contains all enemies
         game_system->enemies_spawned = true;
@@ -385,15 +405,17 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
                              game_system->config.buffer_width, game_system->config.buffer_height);
     
-    // Update collision detection
-    bullets_hit_enemies();
-    bullets_hit_tank();
-    tank_touch_ground_enemy();
-    tank_touch_flying_enemy();
+    // Update collision detection (only when not game over)
+    if (!game_system->game_over) {
+        bullets_hit_enemies();
+        bullets_hit_tank();
+        tank_touch_ground_enemy();
+        tank_touch_flying_enemy();
+    }
     
-    // Check if all enemies are cleared for next round
+    // Check if all enemies are cleared for next round (but not during stage clear)
     int total_alive_enemies = get_alive_enemy_count() + get_alive_flying_enemy_count();
-    if (total_alive_enemies == 0) {
+    if (total_alive_enemies == 0 && !game_system->stage_clear) {
         game_system->round_number++;
         game_system->enemies_spawned = false;
     }
@@ -416,6 +438,11 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         // Auto stage clear when all enemies are defeated
         int total_enemies = game_system->hud.enemies_alive + game_system->hud.flying_enemies_alive;
         if (total_enemies == 0) {
+            // Add health bonus when clearing stage
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            game_system->score += health_bonus;
+            
             game_system->stage_clear = true;
             if (game_system->current_stage >= 3) {
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
@@ -460,6 +487,16 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         }
         // For new auto-clear, wait for click (timer = -1.0)
     }
+
+    // Handle Game Over animation
+    if (game_system->game_over) {
+        game_system->game_over_timer += 1.0 / 60.0;
+        
+        // Animate scale for visual effect
+        static double game_over_animation_time = 0.0;
+        game_over_animation_time += 1.0 / 60.0;
+        game_system->game_over_scale = 1.0 + 0.3 * sin(game_over_animation_time * 4.0);
+    }
 }
 
 // =================== Rendering ===================
@@ -480,19 +517,50 @@ static void draw_game(const GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
 
     map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
-    tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
-    enemies_draw(game_system->camera_x, game_system->camera_y);
-    flying_enemies_draw(game_system->camera_x, game_system->camera_y);
-    bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
+    
+    // Only draw tank and game elements when not game over
+    if (!game_system->game_over) {
+        tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
+        enemies_draw(game_system->camera_x, game_system->camera_y);
+        flying_enemies_draw(game_system->camera_x, game_system->camera_y);
+        bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
+    }
     
     
     
     
-    // Draw enemy HP bars
-    draw_enemy_hp_bars();
-    draw_flying_enemy_hp_bars();
+    // Draw enemy HP bars (only when not game over)
+    if (!game_system->game_over) {
+        draw_enemy_hp_bars();
+        draw_flying_enemy_hp_bars();
+    }
 
-    if (!game_system->stage_clear) {
+    if (game_system->game_over) {
+        // Game Over screen - draw over everything
+        int cx = game_system->config.buffer_width / 2;
+        int cy = game_system->config.buffer_height / 2;
+        
+        // Semi-transparent overlay
+        al_draw_filled_rectangle(0, 0, game_system->config.buffer_width, game_system->config.buffer_height, 
+                                al_map_rgba(0, 0, 0, 128));
+        
+        // Game Over text with animation
+        al_draw_text(game_system->font, al_map_rgb(255, 0, 0), cx, cy - 60, ALLEGRO_ALIGN_CENTER, "GAME OVER");
+        
+        // Final score display
+        char score_text[64];
+        snprintf(score_text, sizeof(score_text), "Final Score: %d", (int)game_system->score);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy - 20, ALLEGRO_ALIGN_CENTER, score_text);
+        
+        // Stage reached
+        char stage_text[64];
+        snprintf(stage_text, sizeof(stage_text), "Stage Reached: %d", game_system->current_stage);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 20, ALLEGRO_ALIGN_CENTER, stage_text);
+        
+        // Back to Menu button
+        draw_button(&game_system->menu_button, &game_system->config, game_system->font);
+    }
+    else if (!game_system->stage_clear) {
         head_up_display_draw(&game_system->hud);
     }
     else {
@@ -501,20 +569,38 @@ static void draw_game(const GameSystem* game_system) {
 
         if (game_system->current_stage >= 3) {  // Ending when Stage 3 is cleared
             al_draw_text(game_system->font, al_map_rgb(255, 0, 0), cx, cy - 20, ALLEGRO_ALIGN_CENTER, "Congratulations! You won the game!");
+            
+            // Show final score
             char score_text[64];
-            snprintf(score_text, sizeof(score_text), "Final Score: %d", game_system->hud.score);
+            snprintf(score_text, sizeof(score_text), "Final Score: %d", (int)game_system->score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 20, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show health bonus info
+            char health_bonus_text[64];
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
+            al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 50, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
             // Show Back to Menu button for game end
             if (game_system->stage_clear_timer < 0) {
-                draw_button(&game_system->menu_button, &game_system->config, game_system->font);
+                draw_button(&game_system->next_button, &game_system->config, game_system->font);
             }
         }
         else {
             al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy, ALLEGRO_ALIGN_CENTER, "Stage Clear");
+            
+            // Show current score
             char score_text[64];
-            snprintf(score_text, sizeof(score_text), "Score: %d", game_system->hud.score);
+            snprintf(score_text, sizeof(score_text), "Score: %d", (int)game_system->score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show health bonus info
+            char health_bonus_text[64];
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
+            al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 70, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
             // Show Next button if waiting for click
             if (game_system->stage_clear_timer < 0) {
@@ -527,7 +613,7 @@ static void draw_game(const GameSystem* game_system) {
 void render_game(GameSystem* game_system) {
     disp_pre_draw(game_system);
     if (game_system->current_state == STATE_MENU) draw_menu(game_system);
-    else if (game_system->current_state == STATE_GAME) draw_game(game_system);
+    else if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_GAME_OVER) draw_game(game_system);
     disp_post_draw(game_system);
 }
 
