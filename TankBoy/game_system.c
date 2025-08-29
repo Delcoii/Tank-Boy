@@ -139,6 +139,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize Menu button for game end screen
     init_button(&game_system->menu_button, bx, next_y, game_system->config.button_width, 
         game_system->config.button_height, "Back to Menu");
+    
+    // Initialize name input
+    text_input_init(&game_system->name_input, 20);
 
     game_system->current_state = STATE_MENU;
     game_system->running = true;
@@ -250,9 +253,33 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
         if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_RANKING) {
             game_system->current_state = STATE_MENU;
         }
+        else if (game_system->current_state == STATE_NAME_INPUT) {
+            // Cancel name input and go back to menu
+            game_system->current_state = STATE_MENU;
+        }
         else game_system->running = false;
         break;
+    case ALLEGRO_KEY_ENTER:
+        if (game_system->current_state == STATE_NAME_INPUT) {
+            // Process name input and add score to ranking
+            if (strlen(game_system->name_input.buffer) > 0) {
+                ranking_add_score_with_name((int)game_system->score, game_system->current_stage, game_system->name_input.buffer);
+                printf("Score added with name: %s\n", game_system->name_input.buffer);
+            } else {
+                // Use default name if no input
+                ranking_add_score((int)game_system->score, game_system->current_stage);
+                printf("Score added with default name\n");
+            }
+            // Go to ranking page
+            game_system->current_state = STATE_RANKING;
+        }
+        break;
     // Removed U key force clear - now auto clears when all enemies defeated
+    }
+    
+    // Handle text input for name input state
+    if (game_system->current_state == STATE_NAME_INPUT) {
+        text_input_handle_key(&game_system->name_input, event->keyboard.keycode);
     }
 }
 
@@ -280,6 +307,9 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 // Initialize for new game start
                 game_system->score = 0;
                 game_system->current_stage = 1;
+                game_system->game_over = false;
+                game_system->stage_clear = false;
+                game_system->round_number = 1;
                 char map_file[256];
                 snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
                 if (!map_load(&game_system->current_map, map_file))
@@ -313,6 +343,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 flying_enemies_init();
                 game_system->enemies_spawned = false;
                 
+                // Reset game state flags
                 game_system->current_state = STATE_GAME;
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
@@ -411,11 +442,11 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->game_over = true;
         game_system->game_over_timer = 0.0;
         game_system->game_over_scale = 1.0;
-        game_system->current_state = STATE_GAME_OVER;
         
-        // Add current score to ranking on game over
-        ranking_add_score((int)game_system->score, game_system->current_stage);
-        printf("Game over! Score %d added to rankings\n", (int)game_system->score);
+        // Transition directly to name input state
+        game_system->current_state = STATE_NAME_INPUT;
+        text_input_reset(&game_system->name_input);
+        printf("Game over! Enter your name for score %d\n", (int)game_system->score);
     }
 
     // Update camera to follow tank
@@ -485,9 +516,10 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 int final_health_bonus = current_hp * 1000;
                 game_system->score += final_health_bonus;
                 
-                // Add final score to ranking
-                ranking_add_score((int)game_system->score, game_system->current_stage);
-                printf("Game completed! Final score %d added to rankings\n", (int)game_system->score);
+                // Transition to name input state instead of directly adding to ranking
+                game_system->current_state = STATE_NAME_INPUT;
+                text_input_reset(&game_system->name_input);
+                printf("Game completed! Enter your name for final score %d\n", (int)game_system->score);
                 
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
             } else {
@@ -661,6 +693,59 @@ void render_game(GameSystem* game_system) {
         // Draw ranking screen
         al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
         ranking_draw(game_system->camera_x, game_system->camera_y);
+    }
+    else if (game_system->current_state == STATE_NAME_INPUT) {
+        // Draw name input screen
+        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        
+        int cx = game_system->config.buffer_width / 2;
+        int cy = game_system->config.buffer_height / 2;
+        
+        // Title
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy - 100, ALLEGRO_ALIGN_CENTER, "Enter Your Name");
+        
+        // Score display
+        char score_text[64];
+        snprintf(score_text, sizeof(score_text), "Score: %d", (int)game_system->score);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy - 50, ALLEGRO_ALIGN_CENTER, score_text);
+        
+        // Stage display
+        char stage_text[64];
+        snprintf(stage_text, sizeof(stage_text), "Stage: %d", game_system->current_stage);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy - 20, ALLEGRO_ALIGN_CENTER, stage_text);
+        
+        // Name input box with better visual feedback
+        int input_x = cx - 150;
+        int input_y = cy + 20;
+        
+        // Draw input box background
+        al_draw_filled_rectangle(input_x - 5, input_y - 5, input_x + 305, input_y + 35, al_map_rgb(50, 50, 50));
+        al_draw_rectangle(input_x, input_y, input_x + 300, input_y + 30, al_map_rgb(255, 255, 255), 2);
+        
+        // Draw current text
+        if (strlen(game_system->name_input.buffer) > 0) {
+            al_draw_text(game_system->font, al_map_rgb(255, 255, 255), input_x + 5, input_y + 5, 0, game_system->name_input.buffer);
+        } else {
+            al_draw_text(game_system->font, al_map_rgb(128, 128, 128), input_x + 5, input_y + 5, 0, "Type your name here...");
+        }
+        
+        // Draw cursor (blinking)
+        static double cursor_timer = 0;
+        cursor_timer += 0.016; // Assuming 60 FPS
+        
+        if ((int)(cursor_timer * 2) % 2 == 0) {
+            int cursor_x = input_x + 5 + al_get_text_width(game_system->font, game_system->name_input.buffer);
+            al_draw_line(cursor_x, input_y + 5, cursor_x, input_y + 25, al_map_rgb(255, 255, 255), 2);
+        }
+        
+        // Instructions
+        al_draw_text(game_system->font, al_map_rgb(200, 200, 200), cx, cy + 80, ALLEGRO_ALIGN_CENTER, "Press ENTER to confirm");
+        al_draw_text(game_system->font, al_map_rgb(200, 200, 200), cx, cy + 110, ALLEGRO_ALIGN_CENTER, "Press ESC to cancel");
+        
+        // Show current input length
+        char length_text[64];
+        snprintf(length_text, sizeof(length_text), "Characters: %d/%d", (int)strlen(game_system->name_input.buffer), game_system->name_input.max_length);
+        al_draw_text(game_system->font, al_map_rgb(150, 150, 150), cx, cy + 140, ALLEGRO_ALIGN_CENTER, length_text);
     }
     else if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_GAME_OVER) draw_game(game_system);
     disp_post_draw(game_system);

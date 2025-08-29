@@ -58,3 +58,92 @@ bool input_is_key_pressed(InputState* input, int key) {
     default: return false;
     }
 }
+
+// ===== Text Input Functions =====
+
+void text_input_init(TextInput* text_input, int max_length) {
+    memset(text_input->buffer, 0, sizeof(text_input->buffer));
+    text_input->cursor_pos = 0;
+    text_input->max_length = max_length;
+    text_input->active = true;
+}
+
+void text_input_handle_key(TextInput* text_input, int key) {
+    if (!text_input->active) return;
+    
+    if (key == ALLEGRO_KEY_BACKSPACE) {
+        if (text_input->cursor_pos > 0) {
+            text_input->cursor_pos--;
+            text_input->buffer[text_input->cursor_pos] = '\0';
+        }
+    }
+    else if (key == ALLEGRO_KEY_ENTER) {
+        text_input->active = false;
+    }
+    else if (key >= ALLEGRO_KEY_A && key <= ALLEGRO_KEY_Z) {
+        if (text_input->cursor_pos < text_input->max_length - 1) {
+            text_input->buffer[text_input->cursor_pos] = 'A' + (key - ALLEGRO_KEY_A);
+            text_input->cursor_pos++;
+        }
+    }
+    else if (key >= ALLEGRO_KEY_0 && key <= ALLEGRO_KEY_9) {
+        if (text_input->cursor_pos < text_input->max_length - 1) {
+            text_input->buffer[text_input->cursor_pos] = '0' + (key - ALLEGRO_KEY_0);
+            text_input->cursor_pos++;
+        }
+    }
+}
+
+
+T// 새로운 함수: 문자 입력 처리
+void text_input_handle_char(TextInput* text_input, int unichar) {
+    if (!text_input->active) return;
+    
+    // 백스페이스 처리
+    if (unichar == '\b') {
+        if (text_input->cursor_pos > 0) {
+            text_input->cursor_pos--;
+            text_input->buffer[text_input->cursor_pos] = '\0';
+        }
+        return;
+    }
+    
+    // 엔터 처리
+    if (unichar == '\n' || unichar == '\r') {
+        text_input->active = false;
+        return;
+    }
+    
+    // 일반 문자 처리 (ASCII 범위)
+    if (unichar >= 32 && unichar <= 126) {
+        if (text_input->cursor_pos < text_input->max_length - 1) {
+            text_input->buffer[text_input->cursor_pos] = (char)unichar;
+            text_input->cursor_pos++;
+        }
+    }
+}
+
+void text_input_draw(TextInput* text_input, int x, int y, ALLEGRO_FONT* font) {
+    if (!font) return;
+    
+    // Draw text input box
+    al_draw_rectangle(x, y, x + 300, y + 30, al_map_rgb(255, 255, 255), 2);
+    
+    // Draw current text
+    al_draw_text(font, al_map_rgb(255, 255, 255), x + 5, y + 5, 0, text_input->buffer);
+    
+    // Draw cursor (blinking)
+    static double cursor_timer = 0;
+    cursor_timer += 0.016; // Assuming 60 FPS
+    
+    if ((int)(cursor_timer * 2) % 2 == 0) {
+        int cursor_x = x + 5 + al_get_text_width(font, text_input->buffer);
+        al_draw_line(cursor_x, y + 5, cursor_x, y + 25, al_map_rgb(255, 255, 255), 2);
+    }
+}
+
+void text_input_reset(TextInput* text_input) {
+    memset(text_input->buffer, 0, sizeof(text_input->buffer));
+    text_input->cursor_pos = 0;
+    text_input->active = true;
+}

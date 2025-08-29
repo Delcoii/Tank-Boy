@@ -30,6 +30,7 @@ void ranking_deinit(void);  // Alias for ranking_cleanup
 
 // Add new score to ranking
 void ranking_add_score(int score, int stage);
+void ranking_add_score_with_name(int score, int stage, const char* name);
 
 // Load/Save rankings from/to CSV
 bool ranking_load_from_csv(const char* filename);

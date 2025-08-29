@@ -100,6 +100,58 @@ void ranking_add_score(int score, int stage) {
     printf("Added score %d (stage %d) to rankings\n", score, stage);
 }
 
+void ranking_add_score_with_name(int score, int stage, const char* name) {
+    if (g_ranking_system.count >= MAX_RANKINGS) {
+        // Remove lowest score if at capacity
+        int lowest_index = 0;
+        for (int i = 1; i < g_ranking_system.count; i++) {
+            if (g_ranking_system.entries[i].score < g_ranking_system.entries[lowest_index].score) {
+                lowest_index = i;
+            }
+        }
+        
+        // Replace lowest score if new score is higher
+        if (score > g_ranking_system.entries[lowest_index].score) {
+            g_ranking_system.entries[lowest_index].score = score;
+            g_ranking_system.entries[lowest_index].stage = stage;
+            strncpy(g_ranking_system.entries[lowest_index].name, name, MAX_NAME_LENGTH - 1);
+            g_ranking_system.entries[lowest_index].name[MAX_NAME_LENGTH - 1] = '\0';
+            
+            // Get current date/time
+            time_t now = time(NULL);
+            struct tm* tm_info = localtime(&now);
+            strftime(g_ranking_system.entries[lowest_index].date, 20, "%Y-%m-%d %H:%M", tm_info);
+        }
+    } else {
+        // Add new entry
+        int index = g_ranking_system.count;
+        g_ranking_system.entries[index].score = score;
+        g_ranking_system.entries[index].stage = stage;
+        strncpy(g_ranking_system.entries[index].name, name, MAX_NAME_LENGTH - 1);
+        g_ranking_system.entries[index].name[MAX_NAME_LENGTH - 1] = '\0';
+        
+        // Get current date/time
+        time_t now = time(NULL);
+        struct tm* tm_info = localtime(&now);
+        strftime(g_ranking_system.entries[index].date, 20, "%Y-%m-%d %H:%M", tm_info);
+        
+        g_ranking_system.count++;
+    }
+    
+    // Sort rankings by score (highest first)
+    for (int i = 0; i < g_ranking_system.count - 1; i++) {
+        for (int j = 0; j < g_ranking_system.count - i - 1; j++) {
+            if (g_ranking_system.entries[j].score < g_ranking_system.entries[j + 1].score) {
+                RankingEntry temp = g_ranking_system.entries[j];
+                g_ranking_system.entries[j] = g_ranking_system.entries[j + 1];
+                g_ranking_system.entries[j + 1] = temp;
+            }
+        }
+    }
+    
+    printf("Added score %d (stage %d) with name '%s' to rankings\n", score, stage, name);
+}
+
 // ===== CSV File Operations =====
 
 bool ranking_load_from_csv(const char* filename) {
