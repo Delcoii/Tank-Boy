@@ -55,6 +55,7 @@ typedef enum {
     STATE_MENU,    // Main menu state
     STATE_RANKING, // Ranking display state
     STATE_GAME,    // Active gameplay state
+    STATE_GAME_OVER, // Game over state
     STATE_EXIT     // Exit game state
 } GameState;
 
@@ -99,6 +100,11 @@ typedef struct {
     double stage_clear_scale; // Stage clear animation scale
     double score;             // Current score
     double displayed_score;   // Score displayed in HUD
+    
+    // Game Over System
+    bool game_over;           // Game over flag
+    double game_over_timer;   // Game over animation timer
+    double game_over_scale;   // Game over animation scale
 } GameSystem;
 
 // ================= Core Functions =================
