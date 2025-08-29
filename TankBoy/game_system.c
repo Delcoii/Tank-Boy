@@ -205,18 +205,7 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
         if (game_system->current_state == STATE_GAME) game_system->current_state = STATE_MENU;
         else game_system->running = false;
         break;
-    case ALLEGRO_KEY_U:
-        if (game_system->current_state == STATE_GAME) {
-            game_system->stage_clear = true;
-                    if (game_system->current_stage >= 3) {
-            game_system->stage_clear_timer = 4.0; // Game End takes longer
-        }
-        else {
-            game_system->stage_clear_timer = 2.0; // Normal Stage Clear
-        }
-            game_system->stage_clear_scale = 1.0;
-        }
-        break;
+    // Removed U key force clear - now auto clears when all enemies defeated
     }
 }
 
@@ -276,6 +265,49 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
         }
+        else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
+            // Click to continue from stage clear screen
+            if (game_system->current_stage >= 3) {
+                // Stage 3 clear -> Game End processing
+                game_system->current_state = STATE_MENU;
+                game_system->stage_clear = false;
+            } else {
+                // Move to next stage
+                game_system->stage_clear = false;
+                game_system->current_stage++;
+
+                char map_file[256];
+                snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
+                if (!map_load(&game_system->current_map, map_file))
+                    map_init(&game_system->current_map);
+
+                // Load spawn points for the new stage
+                char spawn_file[256];
+                snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+                
+                double tank_x = 100.0; // Default position
+                double tank_y = 2000.0; // Default position
+                
+                // Free previous spawn points
+                spawn_points_free(&game_system->spawn_points);
+                
+                if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+                    SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+                    if (tank_spawn) {
+                        tank_x = (double)tank_spawn->x;
+                        tank_y = (double)tank_spawn->y;
+                        printf("Tank spawn loaded for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                    }
+                } else {
+                    printf("Using default tank spawn position for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                }
+                
+                tank_init(&game_system->player_tank, tank_x, tank_y);
+                
+                // Reset enemy spawning
+                game_system->enemies_spawned = false;
+            }
+        }
         break;
 
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
@@ -315,8 +347,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Spawn enemies if not spawned yet
     if (!game_system->enemies_spawned) {
-        spawn_enemies(game_system->round_number);
-        spawn_flying_enemy(game_system->round_number);
+        load_enemies_from_csv_with_map(game_system->current_stage, (const Map*)&game_system->current_map);
+        // spawn_flying_enemy(game_system->round_number); // Removed: CSV already contains all enemies
         game_system->enemies_spawned = true;
     }
     
@@ -333,7 +365,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     tank_touch_flying_enemy();
     
     // Check if all enemies are cleared for next round
-    if (!any_ground_enemies_alive() && !any_flying_enemies_alive()) {
+    int total_alive_enemies = get_alive_enemy_count() + get_alive_flying_enemy_count();
+    if (total_alive_enemies == 0) {
         game_system->round_number++;
         game_system->enemies_spawned = false;
     }
@@ -352,24 +385,44 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->hud.round = game_system->round_number;
         game_system->hud.player_hp = get_tank_hp();
         game_system->hud.player_max_hp = get_tank_max_hp();
+        
+        // Auto stage clear when all enemies are defeated
+        int total_enemies = game_system->hud.enemies_alive + game_system->hud.flying_enemies_alive;
+        if (total_enemies == 0) {
+            game_system->stage_clear = true;
+            if (game_system->current_stage >= 3) {
+                game_system->stage_clear_timer = -1.0; // Infinite wait for click
+            } else {
+                game_system->stage_clear_timer = -1.0; // Infinite wait for click
+            }
+            game_system->stage_clear_scale = 1.0;
+        }
     }
 
     // Handle Stage Clear
     if (game_system->stage_clear) {
-        game_system->stage_clear_timer -= 1.0 / 60.0;
-        game_system->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - game_system->stage_clear_timer) * 3.14);
-
-        if (game_system->stage_clear_timer <= 0) {
-                    // Stage 3 clear -> Game End processing
-        if (game_system->current_stage >= 3) {
-            game_system->current_state = STATE_MENU;
-            game_system->stage_clear = false;
-            return;
+        // Only update timer if it's not waiting for click (-1.0)
+        if (game_system->stage_clear_timer > 0) {
+            game_system->stage_clear_timer -= 1.0 / 60.0;
         }
+        
+        // Always animate scale for visual effect
+        static double animation_time = 0.0;
+        animation_time += 1.0 / 60.0;
+        game_system->stage_clear_scale = 1.0 + 0.2 * sin(animation_time * 3.14);
+        
+        // Auto advance only if timer runs out (for old U-key triggers)
+        if (game_system->stage_clear_timer > 0 && game_system->stage_clear_timer <= 0) {
+            // Stage 3 clear -> Game End processing
+            if (game_system->current_stage >= 3) {
+                game_system->current_state = STATE_MENU;
+                game_system->stage_clear = false;
+                return;
+            }
 
-        // Move to next stage
-        game_system->stage_clear = false;
-        game_system->current_stage++;
+            // Move to next stage
+            game_system->stage_clear = false;
+            game_system->current_stage++;
 
             char map_file[256];
             snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -378,6 +431,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
 
             tank_init(&game_system->player_tank, 50.0, 480.0);
         }
+        // For new auto-clear, wait for click (timer = -1.0)
     }
 }
 
@@ -429,6 +483,11 @@ static void draw_game(const GameSystem* game_system) {
             char score_text[64];
             snprintf(score_text, sizeof(score_text), "Score: %d", game_system->hud.score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show click to continue message if waiting for click
+            if (game_system->stage_clear_timer < 0) {
+                al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 80, ALLEGRO_ALIGN_CENTER, "Click to Continue");
+            }
         }
     }
 }
