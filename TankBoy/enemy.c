@@ -77,7 +77,9 @@ void flying_enemies_init(void) {
         f_enemies[i].y = 0.0;
         f_enemies[i].vx = 0.0;
         f_enemies[i].base_y = 0.0;
+        f_enemies[i].spawn_x = 0.0;
         f_enemies[i].angle = 0.0;
+        f_enemies[i].x_angle = 0.0;
         f_enemies[i].in_burst = false;
         f_enemies[i].burst_shots_left = 0;
         f_enemies[i].shot_interval = 0.05;
@@ -199,8 +201,10 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 f_enemies[fly_index].x = x;
                 f_enemies[fly_index].y = y;
                 f_enemies[fly_index].base_y = y;
+                f_enemies[fly_index].spawn_x = x;  // 스폰 위치 저장
                 f_enemies[fly_index].vx = (rand() % 2 ? 1.0 : -1.0) * (1.0 + difficulty * 0.2);
                 f_enemies[fly_index].angle = 0.0;
+                f_enemies[fly_index].x_angle = 0.0;
                 f_enemies[fly_index].in_burst = false;
                 f_enemies[fly_index].burst_shots_left = 0;
                 f_enemies[fly_index].shot_interval = 0.05;
@@ -288,8 +292,10 @@ void spawn_flying_enemy(int round_number) {
             f_enemies[i].x = rand() % map_width;
             f_enemies[i].base_y = 100 + rand() % 100;
             f_enemies[i].y = f_enemies[i].base_y;
+            f_enemies[i].spawn_x = f_enemies[i].x;  // 스폰 위치 저장
             f_enemies[i].vx = (rand() % 2 ? 1.0 : -1.0) * (1.0 + round_number * 0.2);
             f_enemies[i].angle = 0.0;
+            f_enemies[i].x_angle = 0.0;
 
             f_enemies[i].in_burst = false;
             f_enemies[i].burst_shots_left = 0;
@@ -563,21 +569,24 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             continue;
         }
 
+        // Y축: 기존 삼각함수 움직임 유지 (위아래 진동)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
-        fe->x += fe->vx;
+        
+        // X축: 스폰 위치를 중심으로 삼각함수 기반 좌우 움직임
+        fe->x_angle += dt * 1.5;  // x축 움직임 속도 (조정 가능)
+        double x_offset = sin(fe->x_angle) * 150.0;  // 스폰 위치에서 ±150픽셀 범위 (조정 가능)
+        fe->x = fe->spawn_x + x_offset;
 
-        // Horizontal boundary collision with bounce
+        // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
             fe->x = 0; 
-            fe->vx *= -1; 
         }
         if (fe->x > map_width - fe->width) {
             fe->x = map_width - fe->width; 
-            fe->vx *= -1; 
         }
 
-        // Vertical boundary check
+        // Vertical boundary check - 헬리콥터는 땅과 상호작용하지 않음
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }
@@ -619,21 +628,24 @@ void flying_enemies_update(double dt) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
 
+        // Y축: 기존 삼각함수 움직임 유지 (위아래 진동)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
-        fe->x += fe->vx;
+        
+        // X축: 스폰 위치를 중심으로 삼각함수 기반 좌우 움직임
+        fe->x_angle += dt * 1.5;  // x축 움직임 속도 (조정 가능)
+        double x_offset = sin(fe->x_angle) * 150.0;  // 스폰 위치에서 ±150픽셀 범위 (조정 가능)
+        fe->x = fe->spawn_x + x_offset;
 
-        // Horizontal boundary collision with bounce
+        // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
             fe->x = 0; 
-            fe->vx *= -1; 
         }
         if (fe->x > map_width - fe->width) {
             fe->x = map_width - fe->width; 
-            fe->vx *= -1; 
         }
 
-        // Vertical boundary check
+        // Vertical boundary check - 헬리콥터는 땅과 상호작용하지 않음
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }

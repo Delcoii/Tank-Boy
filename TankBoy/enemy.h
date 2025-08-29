@@ -66,7 +66,9 @@ typedef struct {
 typedef struct {
     double x, y, vx;
     double base_y;
+    double spawn_x;  // 스폰 위치 x좌표 저장
     double angle;
+    double x_angle;  // x축 움직임용 각도
     bool alive;
 
     bool in_burst;
