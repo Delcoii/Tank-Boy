@@ -137,14 +137,13 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
         bar_x + bar_w + 10, bar_y, 0,
         "%d / %d", hud->player_hp, hud->player_max_hp);
         
-    // Enemy count display
+    // Enemy count display - total enemies
+    int total_enemies = hud->enemies_alive + hud->flying_enemies_alive;
     al_draw_textf(hud_font, hud_text_color, 10, 140, 0,
-        "Enemies: %d", hud->enemies_alive);
-    al_draw_textf(hud_font, hud_text_color, 10, 170, 0,
-        "Flying Enemies: %d", hud->flying_enemies_alive);
+        "Enemies: %d", total_enemies);
     
     // Round display
-    al_draw_textf(hud_font, hud_text_color, 10, 200, 0,
+    al_draw_textf(hud_font, hud_text_color, 10, 170, 0,
         "Round: %d", hud->round);
 
 }
