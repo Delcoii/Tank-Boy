@@ -5,6 +5,7 @@
 #include <string.h>
 #include "enemy.h"
 #include "collision.h"
+#include "ranking.h"
 
 // =================== Config Loading ===================
 
@@ -95,6 +96,7 @@ static void draw_menu(const GameSystem* game_system) {
         game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "Tank-Boy Game");
     draw_button(&game_system->start_button, &game_system->config, game_system->font);
     draw_button(&game_system->exit_button, &game_system->config, game_system->font);
+    draw_button(&game_system->ranking_button, &game_system->config, game_system->font);
 }
 
 // =================== Coordinate Conversion ===================
@@ -125,6 +127,10 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int ey = game_system->config.buffer_height / 2 + game_system->config.button_spacing / 2;
     init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start Game");
     init_button(&game_system->exit_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Exit Game");
+    
+    // Initialize Ranking button
+    int ry = ey + game_system->config.button_spacing;
+    init_button(&game_system->ranking_button, bx, ry, game_system->config.button_width, game_system->config.button_height, "Rankings");
     
     // Initialize Next button for stage clear screen (position will be set when needed)
     int next_y = game_system->config.buffer_height / 2 + 120;
@@ -215,6 +221,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->game_over = false;
     game_system->game_over_timer = 0.0;
     game_system->game_over_scale = 1.0;
+
+    // Initialize ranking system
+    ranking_init();
 }
 
 // =================== Cleanup ===================
@@ -228,6 +237,7 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     al_destroy_event_queue(queue);
     al_destroy_display(display);
     map_sprites_deinit();
+    ranking_deinit();
 }
 
 // =================== Input Handling ===================
@@ -237,7 +247,9 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
 
     switch (event->keyboard.keycode) {
     case ALLEGRO_KEY_ESCAPE:
-        if (game_system->current_state == STATE_GAME) game_system->current_state = STATE_MENU;
+        if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_RANKING) {
+            game_system->current_state = STATE_MENU;
+        }
         else game_system->running = false;
         break;
     // Removed U key force clear - now auto clears when all enemies defeated
@@ -304,6 +316,9 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 game_system->current_state = STATE_GAME;
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
+            else if (is_point_in_button(bx, by, &game_system->ranking_button)) {
+                game_system->current_state = STATE_RANKING;
+            }
         }
         else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
             // Handle button clicks on stage clear/end screen
@@ -397,6 +412,10 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->game_over_timer = 0.0;
         game_system->game_over_scale = 1.0;
         game_system->current_state = STATE_GAME_OVER;
+        
+        // Add current score to ranking on game over
+        ranking_add_score((int)game_system->score, game_system->current_stage);
+        printf("Game over! Score %d added to rankings\n", (int)game_system->score);
     }
 
     // Update camera to follow tank
@@ -458,7 +477,18 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->score += health_bonus;
             
             game_system->stage_clear = true;
+            
+            // Add score to ranking when game is completed (stage 3)
             if (game_system->current_stage >= 3) {
+                // Final health bonus for game completion
+                int current_hp = get_tank_hp();
+                int final_health_bonus = current_hp * 1000;
+                game_system->score += final_health_bonus;
+                
+                // Add final score to ranking
+                ranking_add_score((int)game_system->score, game_system->current_stage);
+                printf("Game completed! Final score %d added to rankings\n", (int)game_system->score);
+                
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
             } else {
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
@@ -627,6 +657,11 @@ static void draw_game(const GameSystem* game_system) {
 void render_game(GameSystem* game_system) {
     disp_pre_draw(game_system);
     if (game_system->current_state == STATE_MENU) draw_menu(game_system);
+    else if (game_system->current_state == STATE_RANKING) {
+        // Draw ranking screen
+        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        ranking_draw(game_system->camera_x, game_system->camera_y);
+    }
     else if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_GAME_OVER) draw_game(game_system);
     disp_post_draw(game_system);
 }

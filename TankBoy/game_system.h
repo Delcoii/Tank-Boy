@@ -63,6 +63,7 @@ typedef struct {
     // UI Components
     Button start_button;      // Start game button
     Button exit_button;       // Exit game button
+    Button ranking_button;    // Ranking button
     Button next_button;       // Next stage button (for stage clear screen)
     Button menu_button;       // Back to menu button (for game end screen)
     ALLEGRO_FONT* font;      // Font for text rendering
