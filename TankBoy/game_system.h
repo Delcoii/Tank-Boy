@@ -110,4 +110,8 @@ void render_game(GameSystem* game_system);                                      
 void disp_pre_draw(GameSystem* game_system);                                          // Set up off-screen buffer for rendering
 void disp_post_draw(GameSystem* game_system);                                         // Display rendered buffer and flip screen
 
+// ================= Score System =================
+void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
+void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
+
 #endif // GAME_SYSTEM_H

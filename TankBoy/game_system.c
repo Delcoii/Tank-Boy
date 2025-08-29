@@ -173,6 +173,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Set global references for getter functions
     set_global_tank_ref(&game_system->player_tank);
     set_global_bullet_ref(game_system->bullets, game_system->max_bullets);
+    set_global_game_system(game_system);
 
     game_system->stage_clear = false;
     game_system->stage_clear_timer = 0.0;
@@ -333,10 +334,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     if (game_system->current_state != STATE_GAME) return;
     if (event->type != ALLEGRO_EVENT_TIMER) return;
 
-    // Stop score increase during Stage Clear
-    if (!game_system->stage_clear) {
-        game_system->score += 1.0 / 60.0;
-    }
+
 
     tank_update(&game_system->player_tank, &game_system->input, 1.0 / 60.0,
         game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
@@ -378,7 +376,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     // HUD update only when not in Stage Clear!
     if (!game_system->stage_clear) {
         game_system->hud = head_up_display_update(
-            (int)(game_system->score * 10),
+            (int)game_system->score,
             game_system->player_tank.weapon,
             game_system->current_stage
         );
@@ -501,4 +499,26 @@ void render_game(GameSystem* game_system) {
     if (game_system->current_state == STATE_MENU) draw_menu(game_system);
     else if (game_system->current_state == STATE_GAME) draw_game(game_system);
     disp_post_draw(game_system);
+}
+
+// ================= Score System =================
+
+static GameSystem* global_game_system = NULL; // For enemy kill scoring
+
+void set_global_game_system(GameSystem* gs) {
+    global_game_system = gs;
+}
+
+void add_score_for_enemy_kill(int difficulty) {
+    if (!global_game_system) return;
+    
+    int score_points = 0;
+    switch (difficulty) {
+        case 1: score_points = 500; break;
+        case 2: score_points = 1000; break;
+        case 3: score_points = 1500; break;
+        default: score_points = 500; break; // Default to level 1 score
+    }
+    
+    global_game_system->score += score_points;
 }

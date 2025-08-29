@@ -3,6 +3,7 @@
 #include "tank.h"
 #include "bullet.h"
 #include "ini_parser.h"
+#include "game_system.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -212,6 +213,9 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
             enemies[enemy_index].width = enemy_width;
             enemies[enemy_index].height = enemy_height;
             
+            // Store difficulty for scoring
+            enemies[enemy_index].difficulty = difficulty;
+            
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
         else if (strcmp(enemy_type, "helicopter") == 0) {
@@ -248,6 +252,9 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 // Set dimensions from config
                 f_enemies[fly_index].width = flying_enemy_width;
                 f_enemies[fly_index].height = flying_enemy_height;
+                
+                // Store difficulty for scoring
+                f_enemies[fly_index].difficulty = difficulty;
                 
                 printf("Spawned helicopter enemy at (%f, %f) with difficulty %d\n", x, y, difficulty);
             }
@@ -851,6 +858,8 @@ void damage_enemy(Enemy* enemy, int damage) {
     enemy->hp -= damage;
     if (enemy->hp <= 0) {
         enemy->alive = false;
+        // Add score based on difficulty when enemy is killed
+        add_score_for_enemy_kill(enemy->difficulty);
     }
 }
 
@@ -860,6 +869,8 @@ void damage_flying_enemy(FlyingEnemy* fe, int damage) {
     fe->hp -= damage;
     if (fe->hp <= 0) {
         fe->alive = false;
+        // Add score based on difficulty when flying enemy is killed
+        add_score_for_enemy_kill(fe->difficulty);
     }
 }
 

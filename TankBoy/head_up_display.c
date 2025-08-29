@@ -69,16 +69,8 @@ void head_up_display_init(const char* config_file) {
 }
 
 // HUD update
-Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage) {
-    current_hp -= damage;
-    if (current_hp < 0) current_hp = 0;
-
-    double now = al_get_time();
-    double elapsed = now - last_time;
-    if (elapsed >= 1.0) {
-        current_score += (int)elapsed;
-        last_time = now;
-    }
+Head_Up_Display_Data head_up_display_update(int score, int weapon, int stage) {
+    current_score = score; // Use the score passed from game system
 
     Head_Up_Display_Data hud;
     hud.player_hp = current_hp;

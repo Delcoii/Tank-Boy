@@ -21,7 +21,7 @@ typedef struct {
 void head_up_display_init(const char* config_file);
 
 // HUD update
-Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage);
+Head_Up_Display_Data head_up_display_update(int score, int weapon, int stage);
 
 // HUD draw
 void head_up_display_draw(const Head_Up_Display_Data* hud);

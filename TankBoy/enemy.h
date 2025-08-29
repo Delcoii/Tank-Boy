@@ -72,6 +72,9 @@ typedef struct {
     
     // Enemy dimensions (loaded from config)
     int width, height;
+    
+    // Difficulty for scoring
+    int difficulty;
 } Enemy;
 
 // Flying enemy: sine flight, burst fire (10 shots in ~0.5s) then rest
@@ -94,6 +97,9 @@ typedef struct {
     
     // Flying enemy dimensions (loaded from config)
     int width, height;
+    
+    // Difficulty for scoring
+    int difficulty;
 } FlyingEnemy;
 
 // ===== Function Declarations =====
@@ -138,5 +144,7 @@ void handle_enemy_stuck_jump(Enemy* enemy, double dt);
 // Getter functions for external access
 Enemy* get_enemies(void);
 FlyingEnemy* get_flying_enemies(void);
+
+
 
 #endif // ENEMY_H
