@@ -69,16 +69,8 @@ void head_up_display_init(const char* config_file) {
 }
 
 // HUD update
-Head_Up_Display_Data head_up_display_update(int damage, int weapon, int stage) {
-    current_hp -= damage;
-    if (current_hp < 0) current_hp = 0;
-
-    double now = al_get_time();
-    double elapsed = now - last_time;
-    if (elapsed >= 1.0) {
-        current_score += (int)elapsed;
-        last_time = now;
-    }
+Head_Up_Display_Data head_up_display_update(int score, int weapon, int stage) {
+    current_score = score; // Use the score passed from game system
 
     Head_Up_Display_Data hud;
     hud.player_hp = current_hp;
@@ -137,14 +129,13 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
         bar_x + bar_w + 10, bar_y, 0,
         "%d / %d", hud->player_hp, hud->player_max_hp);
         
-    // Enemy count display
+    // Enemy count display - total enemies
+    int total_enemies = hud->enemies_alive + hud->flying_enemies_alive;
     al_draw_textf(hud_font, hud_text_color, 10, 140, 0,
-        "Enemies: %d", hud->enemies_alive);
-    al_draw_textf(hud_font, hud_text_color, 10, 170, 0,
-        "Flying Enemies: %d", hud->flying_enemies_alive);
+        "Enemies: %d", total_enemies);
     
     // Round display
-    al_draw_textf(hud_font, hud_text_color, 10, 200, 0,
+    al_draw_textf(hud_font, hud_text_color, 10, 170, 0,
         "Round: %d", hud->round);
 
 }

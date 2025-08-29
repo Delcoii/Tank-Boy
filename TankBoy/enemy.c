@@ -3,6 +3,7 @@
 #include "tank.h"
 #include "bullet.h"
 #include "ini_parser.h"
+#include "game_system.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,6 +21,17 @@ double enemy_jump_interval_max = 2.2;
 double enemy_base_speed = 0.1;  // Default values
 double enemy_speed_per_difficulty = 0.5;
 
+// Flying enemy bullet parameters loaded from config.ini
+int flying_enemy_burst_count = 10;  // Default values
+double flying_enemy_shot_interval = 0.05;
+double flying_enemy_rest_time = 2.0;
+double flying_enemy_bullet_speed = 8.0;
+int flying_enemy_bullet_width = 6;
+int flying_enemy_bullet_height = 3;
+double roi_multiplier = 1.5;
+double max_shooting_distance = 800.0;
+
+
 // ===== Enemy Initialization =====
 
 void enemies_init(void) {
@@ -35,6 +47,25 @@ void enemies_init(void) {
         printf("  Jump timing: %.1f - %.1f seconds\n", enemy_jump_interval_min, enemy_jump_interval_max);
         printf("  Base speed: %.1f, Speed per difficulty: %.1f\n", enemy_base_speed, enemy_speed_per_difficulty);
     }
+    
+    // Load flying enemy bullet parameters from config.ini
+    IniParser* bullet_parser = ini_parser_create();
+    ini_parser_load_file(bullet_parser, "TankBoy/config.ini");
+    flying_enemy_burst_count = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_burst_count", 10);
+    flying_enemy_shot_interval = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_shot_interval", 0.05);
+    flying_enemy_rest_time = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_rest_time", 2.0);
+    flying_enemy_bullet_speed = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_bullet_speed", 8.0);
+    flying_enemy_bullet_width = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_width", 6);
+    flying_enemy_bullet_height = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_height", 3);
+    roi_multiplier = ini_parser_get_double(bullet_parser, "EnemyBullets", "roi_multiplier", 1.5);
+    max_shooting_distance = ini_parser_get_double(bullet_parser, "EnemyBullets", "max_shooting_distance", 800.0);
+    
+    ini_parser_destroy(bullet_parser);
+    
+    printf("Loaded flying enemy bullet parameters:\n");
+    printf("  Burst count: %d, Shot interval: %.3f seconds\n", flying_enemy_burst_count, flying_enemy_shot_interval);
+    printf("  Rest time: %.1f seconds, Bullet speed: %.1f\n", flying_enemy_rest_time, flying_enemy_bullet_speed);
+    printf("  Bullet size: %dx%d\n", flying_enemy_bullet_width, flying_enemy_bullet_height);
     
     // Load enemy dimensions from config
     IniParser* parser = ini_parser_create();
@@ -77,12 +108,14 @@ void flying_enemies_init(void) {
         f_enemies[i].y = 0.0;
         f_enemies[i].vx = 0.0;
         f_enemies[i].base_y = 0.0;
+        f_enemies[i].spawn_x = 0.0;
         f_enemies[i].angle = 0.0;
+        f_enemies[i].x_angle = 0.0;
         f_enemies[i].in_burst = false;
         f_enemies[i].burst_shots_left = 0;
-        f_enemies[i].shot_interval = 0.05;
+        f_enemies[i].shot_interval = flying_enemy_shot_interval;
         f_enemies[i].shot_timer = 0.0;
-        f_enemies[i].rest_timer = 2.0;
+        f_enemies[i].rest_timer = flying_enemy_rest_time;
         f_enemies[i].hp = 0;
         f_enemies[i].max_hp = 0;
         
@@ -91,6 +124,8 @@ void flying_enemies_init(void) {
         f_enemies[i].height = flying_enemy_height;
     }
 }
+
+
 
 // ===== Enemy Spawning =====
 
@@ -178,6 +213,9 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
             enemies[enemy_index].width = enemy_width;
             enemies[enemy_index].height = enemy_height;
             
+            // Store difficulty for scoring
+            enemies[enemy_index].difficulty = difficulty;
+            
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
         else if (strcmp(enemy_type, "helicopter") == 0) {
@@ -199,8 +237,10 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 f_enemies[fly_index].x = x;
                 f_enemies[fly_index].y = y;
                 f_enemies[fly_index].base_y = y;
+                f_enemies[fly_index].spawn_x = x;  // Store spawn position
                 f_enemies[fly_index].vx = (rand() % 2 ? 1.0 : -1.0) * (1.0 + difficulty * 0.2);
                 f_enemies[fly_index].angle = 0.0;
+                f_enemies[fly_index].x_angle = 0.0;
                 f_enemies[fly_index].in_burst = false;
                 f_enemies[fly_index].burst_shots_left = 0;
                 f_enemies[fly_index].shot_interval = 0.05;
@@ -212,6 +252,9 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 // Set dimensions from config
                 f_enemies[fly_index].width = flying_enemy_width;
                 f_enemies[fly_index].height = flying_enemy_height;
+                
+                // Store difficulty for scoring
+                f_enemies[fly_index].difficulty = difficulty;
                 
                 printf("Spawned helicopter enemy at (%f, %f) with difficulty %d\n", x, y, difficulty);
             }
@@ -288,8 +331,10 @@ void spawn_flying_enemy(int round_number) {
             f_enemies[i].x = rand() % map_width;
             f_enemies[i].base_y = 100 + rand() % 100;
             f_enemies[i].y = f_enemies[i].base_y;
+            f_enemies[i].spawn_x = f_enemies[i].x;  // 스폰 위치 저장
             f_enemies[i].vx = (rand() % 2 ? 1.0 : -1.0) * (1.0 + round_number * 0.2);
             f_enemies[i].angle = 0.0;
+            f_enemies[i].x_angle = 0.0;
 
             f_enemies[i].in_burst = false;
             f_enemies[i].burst_shots_left = 0;
@@ -548,11 +593,13 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
     int map_width = map_get_map_width();
     int map_height = map_get_map_height();
     
-    // Calculate ROI (Region of Interest) - 2x buffer size around camera
-    double roi_left = camera_x - buffer_width;
-    double roi_right = camera_x + buffer_width * 2;
-    double roi_top = camera_y - buffer_height;
-    double roi_bottom = camera_y + buffer_height * 2;
+    // Calculate ROI (Region of Interest) - symmetric around camera with configurable multiplier
+    double roi_half_width = buffer_width * roi_multiplier;
+    double roi_half_height = buffer_height * roi_multiplier;
+    double roi_left = camera_x - roi_half_width;
+    double roi_right = camera_x + roi_half_width;
+    double roi_top = camera_y - roi_half_height;
+    double roi_bottom = camera_y + roi_half_height;
 
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
@@ -563,21 +610,24 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             continue;
         }
 
+        // Y-axis: maintain existing trigonometric movement (up-down oscillation)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
-        fe->x += fe->vx;
+        
+        // X-axis: left-right movement based on trigonometry centered on spawn position
+        fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
+        double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
+        fe->x = fe->spawn_x + x_offset;
 
-        // Horizontal boundary collision with bounce
+        // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
             fe->x = 0; 
-            fe->vx *= -1; 
         }
         if (fe->x > map_width - fe->width) {
             fe->x = map_width - fe->width; 
-            fe->vx *= -1; 
         }
 
-        // Vertical boundary check
+        // Vertical boundary check - 헬리콥터는 땅과 상호작용하지 않음
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }
@@ -589,14 +639,47 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet (this would need bullet system integration)
-                // For now, just decrement shot counter
+                // Check distance to player before shooting
+                double tank_x = get_tank_x();
+                double tank_y = get_tank_y();
+                double dx = tank_x - fe->x;
+                double dy = tank_y - fe->y;
+                double distance_to_player = sqrt(dx * dx + dy * dy);
+                
+                // Only shoot if player is within shooting range
+                if (distance_to_player <= max_shooting_distance) {
+                    // Create enemy bullet - shoot towards player tank
+                    for (int j = 0; j < MAX_BULLETS; j++) {
+                        Bullet* bullets = get_bullets();
+                        if (bullets && !bullets[j].alive) {
+                            bullets[j].alive = true;
+                            bullets[j].x = fe->x + fe->width / 2.0;
+                            bullets[j].y = fe->y + fe->height / 2.0;
+                            bullets[j].weapon = 0;      // MG round
+                            bullets[j].from_enemy = true;
+                            bullets[j].width = flying_enemy_bullet_width;
+                            bullets[j].height = flying_enemy_bullet_height;
+                            
+                            // Calculate bullet direction towards player tank
+                            double ang = atan2(dy, dx);
+                            
+                            // Set bullet angle for visual orientation
+                            bullets[j].angle = ang;
+
+                            // Set bullet velocity
+                            bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                            bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
+                            break;
+                        }
+                    }
+                }
+
                 fe->burst_shots_left--;
-                fe->shot_timer += fe->shot_interval;
+                fe->shot_timer += flying_enemy_shot_interval;
 
                 if (fe->burst_shots_left <= 0) {
                     fe->in_burst = false;
-                    fe->rest_timer = 2.0;
+                    fe->rest_timer = flying_enemy_rest_time;
                 }
             }
         }
@@ -604,7 +687,7 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->rest_timer -= dt;
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
-                fe->burst_shots_left = 10;
+                fe->burst_shots_left = flying_enemy_burst_count;
                 fe->shot_timer = 0.0; // fire immediately
             }
         }
@@ -619,21 +702,24 @@ void flying_enemies_update(double dt) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
 
+        // Y-axis: maintain existing trigonometric movement (up-down oscillation)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
-        fe->x += fe->vx;
+        
+        // X-axis: left-right movement based on trigonometry centered on spawn position
+        fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
+        double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
+        fe->x = fe->spawn_x + x_offset;
 
-        // Horizontal boundary collision with bounce
+        // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
             fe->x = 0; 
-            fe->vx *= -1; 
         }
         if (fe->x > map_width - fe->width) {
             fe->x = map_width - fe->width; 
-            fe->vx *= -1; 
         }
 
-        // Vertical boundary check
+        // Vertical boundary check - 헬리콥터는 땅과 상호작용하지 않음
         if (fe->y < 50) { // Keep helicopters above ground
             fe->y = 50;
         }
@@ -645,14 +731,47 @@ void flying_enemies_update(double dt) {
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet (this would need bullet system integration)
-                // For now, just decrement shot counter
+                // Check distance to player before shooting
+                double tank_x = get_tank_x();
+                double tank_y = get_tank_y();
+                double dx = tank_x - fe->x;
+                double dy = tank_y - fe->y;
+                double distance_to_player = sqrt(dx * dx + dy * dy);
+                
+                // Only shoot if player is within shooting range
+                if (distance_to_player <= max_shooting_distance) {
+                    // Create enemy bullet - shoot towards player tank
+                    for (int j = 0; j < MAX_BULLETS; j++) {
+                        Bullet* bullets = get_bullets();
+                        if (bullets && !bullets[j].alive) {
+                            bullets[j].alive = true;
+                            bullets[j].x = fe->x + fe->width / 2.0;
+                            bullets[j].y = fe->y + fe->height / 2.0;
+                            bullets[j].weapon = 0;      // MG round
+                            bullets[j].from_enemy = true;
+                            bullets[j].width = flying_enemy_bullet_width;
+                            bullets[j].height = flying_enemy_bullet_height;
+                            
+                            // Calculate bullet direction towards player tank
+                            double ang = atan2(dy, dx);
+                            
+                            // Set bullet angle for visual orientation
+                            bullets[j].angle = ang;
+
+                            // Set bullet velocity
+                            bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                            bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
+                            break;
+                        }
+                    }
+                }
+
                 fe->burst_shots_left--;
-                fe->shot_timer += fe->shot_interval;
+                fe->shot_timer += flying_enemy_shot_interval;
 
                 if (fe->burst_shots_left <= 0) {
                     fe->in_burst = false;
-                    fe->rest_timer = 2.0;
+                    fe->rest_timer = flying_enemy_rest_time;
                 }
             }
         }
@@ -660,7 +779,7 @@ void flying_enemies_update(double dt) {
             fe->rest_timer -= dt;
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
-                fe->burst_shots_left = 10;
+                fe->burst_shots_left = flying_enemy_burst_count;
                 fe->shot_timer = 0.0; // fire immediately
             }
         }
@@ -739,6 +858,8 @@ void damage_enemy(Enemy* enemy, int damage) {
     enemy->hp -= damage;
     if (enemy->hp <= 0) {
         enemy->alive = false;
+        // Add score based on difficulty when enemy is killed
+        add_score_for_enemy_kill(enemy->difficulty);
     }
 }
 
@@ -748,6 +869,8 @@ void damage_flying_enemy(FlyingEnemy* fe, int damage) {
     fe->hp -= damage;
     if (fe->hp <= 0) {
         fe->alive = false;
+        // Add score based on difficulty when flying enemy is killed
+        add_score_for_enemy_kill(fe->difficulty);
     }
 }
 
