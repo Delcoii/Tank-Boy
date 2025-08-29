@@ -65,4 +65,8 @@ double get_camera_y(void);
 void set_global_tank_ref(Tank* tank);
 void set_camera_position(double x, double y);
 
+//
+void tank_sprites_init(const char* sprite_path);
+ALLEGRO_BITMAP* tank_sprite_grab(int x, int y, int w, int h);
+
 #endif // TANK_H

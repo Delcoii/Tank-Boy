@@ -8,6 +8,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+
+typedef struct SPRITES_TANK {
+    ALLEGRO_BITMAP* tank_base;
+    ALLEGRO_BITMAP* _sheet;
+    //ALLEGRO_BITMAP* tank_cannon;
+} SPRITES_TANK;
+SPRITES_TANK tank_sprites;
+   
 // Remove global tank size variables - now stored in Tank struct
 
 // Initialize tank
@@ -42,6 +50,7 @@ void tank_init(Tank* tank, double x, double y) {
     tank->mg_reloading = false;
     tank->mg_reload_time = 0;
 }
+
 
 // Update tank based on input
 void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const Map* map) {
@@ -267,10 +276,11 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sy = tank->y - camera_y;
 
     // Tank body (change color when invincible)
-    ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
-        ? al_map_rgb(160, 160, 160)  // Gray when invincible
-        : al_map_rgb(60, 120, 180);  // Normal blue color
-    al_draw_filled_rectangle(sx, sy, sx + tank->width, sy + tank->height, body_color);
+    // ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
+    //     ? al_map_rgb(160, 160, 160)  // Gray when invincible
+    //     : al_map_rgb(60, 120, 180);  // Normal blue color
+    // al_draw_filled_rectangle(sx, sy, sx + tank->width, sy + tank->height, body_color);
+    al_draw_bitmap(tank_sprites.tank_base, sx, sy, 0);
 
     // Cannon
     double cx = sx + tank->width / 2;
@@ -378,4 +388,21 @@ double get_camera_x(void) {
 
 double get_camera_y(void) {
     return g_camera_y;
+}
+
+ALLEGRO_BITMAP* tank_sprite_grab(int x, int y, int w, int h)
+{
+    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(tank_sprites._sheet, x, y, w, h);
+    return sprite;
+}
+
+//sprite tank init
+void tank_sprite_init(const char* sprite_path){
+    tank_sprites._sheet = al_load_bitmap(sprite_path);
+    if (!tank_sprites._sheet){
+    printf("Failed to load tank sprite sheet: %s\n", sprite_path);
+        return;
+    } 
+    tank_sprites.tank_base = tank_sprite_grab(0, 0, 50, 50);
+
 }

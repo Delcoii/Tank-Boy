@@ -171,10 +171,14 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     char map_sprite_file[256];
     snprintf(map_sprite_file, sizeof(map_sprite_file), "TankBoy/resources/sprites/stage1_ground.png");
-
     printf("location : %s\n", map_sprite_file);
     map_sprites_init(map_sprite_file);
 
+    char tank_sprite_file[256];
+    snprintf(tank_sprite_file, sizeof(tank_sprite_file), "TankBoy/resources/sprites/tank_sprite_sheet.png");
+    printf("location : %s\n", tank_sprite_file);
+    tank_sprite_init(tank_sprite_file);
+    
     // Load enemies from CSV file after map is loaded
     load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies
     
