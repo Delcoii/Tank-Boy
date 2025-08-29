@@ -3,6 +3,7 @@
 #include "tank.h"
 #include "bullet.h"
 #include "ini_parser.h"
+#include "sprite.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -621,16 +622,17 @@ void enemies_draw(double camera_x, double camera_y) {
 }
 
 void flying_enemies_draw(double camera_x, double camera_y) {
+    ALLEGRO_BITMAP* enemy_sprite = get_enemy_fly_sprite();
+
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
-        
-        // Convert world coordinates to screen coordinates
-        al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
-                                fe->x - camera_x + 28, fe->y - camera_y + 16, 
-                                al_map_rgb(180, 0, 180));
-        
-        // HP bar would be drawn by HUD system
+        if (!enemy_sprite) continue;
+
+        float draw_x = fe->x - camera_x;
+        float draw_y = fe->y - camera_y;
+
+        al_draw_bitmap(enemy_sprite, draw_x, draw_y, 0);
     }
 }
 
