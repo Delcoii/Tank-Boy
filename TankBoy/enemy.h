@@ -5,12 +5,14 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdbool.h>
 #include "map_generation.h"
+#include "bullet.h"
 
 
 
 // ===== Constants =====
 #define MAX_ENEMIES 20
 #define MAX_FLY_ENEMIES 10
+#define MAX_BULLETS 100
 
 // HP / Damage tuning
 #define ENEMY_BASE_HP 20

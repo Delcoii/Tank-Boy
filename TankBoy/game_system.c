@@ -400,11 +400,12 @@ static void draw_game(const GameSystem* game_system) {
 
     map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
-    bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
-    
-    // Draw enemies
     enemies_draw(game_system->camera_x, game_system->camera_y);
     flying_enemies_draw(game_system->camera_x, game_system->camera_y);
+    bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
+    
+    
+    
     
     // Draw enemy HP bars
     draw_enemy_hp_bars();

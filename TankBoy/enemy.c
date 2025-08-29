@@ -569,13 +569,13 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             continue;
         }
 
-        // Y축: 기존 삼각함수 움직임 유지 (위아래 진동)
+        // Y-axis: maintain existing trigonometric movement (up-down oscillation)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
         
-        // X축: 스폰 위치를 중심으로 삼각함수 기반 좌우 움직임
-        fe->x_angle += dt * 1.5;  // x축 움직임 속도 (조정 가능)
-        double x_offset = sin(fe->x_angle) * 150.0;  // 스폰 위치에서 ±150픽셀 범위 (조정 가능)
+        // X-axis: left-right movement based on trigonometry centered on spawn position
+        fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
+        double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
         fe->x = fe->spawn_x + x_offset;
 
         // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
@@ -598,8 +598,33 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet (this would need bullet system integration)
-                // For now, just decrement shot counter
+                // Create enemy bullet - 플레이어를 향해 총알 발사
+                for (int j = 0; j < MAX_BULLETS; j++) {
+                    Bullet* bullets = get_bullets();
+                    if (bullets && !bullets[j].alive) {
+                        bullets[j].alive = true;
+                        bullets[j].x = fe->x + fe->width / 2.0;
+                        bullets[j].y = fe->y + fe->height / 2.0;
+                        bullets[j].weapon = 0;      // MG round
+                        bullets[j].from_enemy = true;
+                        bullets[j].width = 4;       // 적 총알 크기
+                        bullets[j].height = 4;
+                        bullets[j].angle = 0.0;
+
+                        // 플레이어 탱크를 향해 총알 방향 계산
+                        double tank_x = get_tank_x();
+                        double tank_y = get_tank_y();
+                        double dx = tank_x - fe->x;
+                        double dy = tank_y - fe->y;
+                        double ang = atan2(dy, dx);
+
+                        // 총알 속도 설정
+                        bullets[j].vx = cos(ang) * 8.0;
+                        bullets[j].vy = sin(ang) * 8.0;
+                        break;
+                    }
+                }
+
                 fe->burst_shots_left--;
                 fe->shot_timer += fe->shot_interval;
 
@@ -657,8 +682,33 @@ void flying_enemies_update(double dt) {
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet (this would need bullet system integration)
-                // For now, just decrement shot counter
+                // Create enemy bullet - 플레이어를 향해 총알 발사
+                for (int j = 0; j < MAX_BULLETS; j++) {
+                    Bullet* bullets = get_bullets();
+                    if (bullets && !bullets[j].alive) {
+                        bullets[j].alive = true;
+                        bullets[j].x = fe->x + fe->width / 2.0;
+                        bullets[j].y = fe->y + fe->height / 2.0;
+                        bullets[j].weapon = 0;      // MG round
+                        bullets[j].from_enemy = true;
+                        bullets[j].width = 4;       // 적 총알 크기
+                        bullets[j].height = 4;
+                        bullets[j].angle = 0.0;
+
+                        // 플레이어 탱크를 향해 총알 방향 계산
+                        double tank_x = get_tank_x();
+                        double tank_y = get_tank_y();
+                        double dx = tank_x - fe->x;
+                        double dy = tank_y - fe->y;
+                        double ang = atan2(dy, dx);
+
+                        // 총알 속도 설정
+                        bullets[j].vx = cos(ang) * 8.0;
+                        bullets[j].vy = sin(ang) * 8.0;
+                        break;
+                    }
+                }
+
                 fe->burst_shots_left--;
                 fe->shot_timer += fe->shot_interval;
 
