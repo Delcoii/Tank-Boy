@@ -27,6 +27,8 @@ double flying_enemy_rest_time = 2.0;
 double flying_enemy_bullet_speed = 8.0;
 int flying_enemy_bullet_width = 6;
 int flying_enemy_bullet_height = 3;
+double roi_multiplier = 1.5;
+double max_shooting_distance = 800.0;
 
 // ===== Enemy Initialization =====
 
@@ -53,6 +55,8 @@ void enemies_init(void) {
     flying_enemy_bullet_speed = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_bullet_speed", 8.0);
     flying_enemy_bullet_width = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_width", 6);
     flying_enemy_bullet_height = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_height", 3);
+    roi_multiplier = ini_parser_get_double(bullet_parser, "EnemyBullets", "roi_multiplier", 1.5);
+    max_shooting_distance = ini_parser_get_double(bullet_parser, "EnemyBullets", "max_shooting_distance", 800.0);
     ini_parser_destroy(bullet_parser);
     
     printf("Loaded flying enemy bullet parameters:\n");
@@ -578,11 +582,13 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
     int map_width = map_get_map_width();
     int map_height = map_get_map_height();
     
-    // Calculate ROI (Region of Interest) - 2x buffer size around camera
-    double roi_left = camera_x - buffer_width;
-    double roi_right = camera_x + buffer_width * 2;
-    double roi_top = camera_y - buffer_height;
-    double roi_bottom = camera_y + buffer_height * 2;
+    // Calculate ROI (Region of Interest) - symmetric around camera with configurable multiplier
+    double roi_half_width = buffer_width * roi_multiplier;
+    double roi_half_height = buffer_height * roi_multiplier;
+    double roi_left = camera_x - roi_half_width;
+    double roi_right = camera_x + roi_half_width;
+    double roi_top = camera_y - roi_half_height;
+    double roi_bottom = camera_y + roi_half_height;
 
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
@@ -622,32 +628,38 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet - 플레이어를 향해 총알 발사
-                for (int j = 0; j < MAX_BULLETS; j++) {
-                    Bullet* bullets = get_bullets();
-                    if (bullets && !bullets[j].alive) {
-                        bullets[j].alive = true;
-                        bullets[j].x = fe->x + fe->width / 2.0;
-                        bullets[j].y = fe->y + fe->height / 2.0;
-                        bullets[j].weapon = 0;      // MG round
-                        bullets[j].from_enemy = true;
-                        bullets[j].width = flying_enemy_bullet_width;
-                        bullets[j].height = flying_enemy_bullet_height;
-                        
-                        // Calculate bullet direction towards player tank
-                        double tank_x = get_tank_x();
-                        double tank_y = get_tank_y();
-                        double dx = tank_x - fe->x;
-                        double dy = tank_y - fe->y;
-                        double ang = atan2(dy, dx);
-                        
-                        // Set bullet angle for visual orientation
-                        bullets[j].angle = ang;
+                // Check distance to player before shooting
+                double tank_x = get_tank_x();
+                double tank_y = get_tank_y();
+                double dx = tank_x - fe->x;
+                double dy = tank_y - fe->y;
+                double distance_to_player = sqrt(dx * dx + dy * dy);
+                
+                // Only shoot if player is within shooting range
+                if (distance_to_player <= max_shooting_distance) {
+                    // Create enemy bullet - shoot towards player tank
+                    for (int j = 0; j < MAX_BULLETS; j++) {
+                        Bullet* bullets = get_bullets();
+                        if (bullets && !bullets[j].alive) {
+                            bullets[j].alive = true;
+                            bullets[j].x = fe->x + fe->width / 2.0;
+                            bullets[j].y = fe->y + fe->height / 2.0;
+                            bullets[j].weapon = 0;      // MG round
+                            bullets[j].from_enemy = true;
+                            bullets[j].width = flying_enemy_bullet_width;
+                            bullets[j].height = flying_enemy_bullet_height;
+                            
+                            // Calculate bullet direction towards player tank
+                            double ang = atan2(dy, dx);
+                            
+                            // Set bullet angle for visual orientation
+                            bullets[j].angle = ang;
 
-                        // Set bullet velocity
-                        bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
-                        bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
-                        break;
+                            // Set bullet velocity
+                            bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                            bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
+                            break;
+                        }
                     }
                 }
 
@@ -708,32 +720,38 @@ void flying_enemies_update(double dt) {
             fe->shot_timer -= dt;
 
             while (fe->shot_timer <= 0.0 && fe->burst_shots_left > 0) {
-                // Create enemy bullet - 플레이어를 향해 총알 발사
-                for (int j = 0; j < MAX_BULLETS; j++) {
-                    Bullet* bullets = get_bullets();
-                    if (bullets && !bullets[j].alive) {
-                        bullets[j].alive = true;
-                        bullets[j].x = fe->x + fe->width / 2.0;
-                        bullets[j].y = fe->y + fe->height / 2.0;
-                        bullets[j].weapon = 0;      // MG round
-                        bullets[j].from_enemy = true;
-                        bullets[j].width = flying_enemy_bullet_width;
-                        bullets[j].height = flying_enemy_bullet_height;
-                        
-                        // Calculate bullet direction towards player tank
-                        double tank_x = get_tank_x();
-                        double tank_y = get_tank_y();
-                        double dx = tank_x - fe->x;
-                        double dy = tank_y - fe->y;
-                        double ang = atan2(dy, dx);
-                        
-                        // Set bullet angle for visual orientation
-                        bullets[j].angle = ang;
+                // Check distance to player before shooting
+                double tank_x = get_tank_x();
+                double tank_y = get_tank_y();
+                double dx = tank_x - fe->x;
+                double dy = tank_y - fe->y;
+                double distance_to_player = sqrt(dx * dx + dy * dy);
+                
+                // Only shoot if player is within shooting range
+                if (distance_to_player <= max_shooting_distance) {
+                    // Create enemy bullet - shoot towards player tank
+                    for (int j = 0; j < MAX_BULLETS; j++) {
+                        Bullet* bullets = get_bullets();
+                        if (bullets && !bullets[j].alive) {
+                            bullets[j].alive = true;
+                            bullets[j].x = fe->x + fe->width / 2.0;
+                            bullets[j].y = fe->y + fe->height / 2.0;
+                            bullets[j].weapon = 0;      // MG round
+                            bullets[j].from_enemy = true;
+                            bullets[j].width = flying_enemy_bullet_width;
+                            bullets[j].height = flying_enemy_bullet_height;
+                            
+                            // Calculate bullet direction towards player tank
+                            double ang = atan2(dy, dx);
+                            
+                            // Set bullet angle for visual orientation
+                            bullets[j].angle = ang;
 
-                        // Set bullet velocity
-                        bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
-                        bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
-                        break;
+                            // Set bullet velocity
+                            bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                            bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
+                            break;
+                        }
                     }
                 }
 
