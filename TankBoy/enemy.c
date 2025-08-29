@@ -46,7 +46,7 @@ void enemies_init(void) {
     
     // Load flying enemy bullet parameters from config.ini
     IniParser* bullet_parser = ini_parser_create();
-    ini_parser_load_file(bullet_parser, "config.ini");
+    ini_parser_load_file(bullet_parser, "TankBoy/config.ini");
     flying_enemy_burst_count = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_burst_count", 10);
     flying_enemy_shot_interval = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_shot_interval", 0.05);
     flying_enemy_rest_time = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_rest_time", 2.0);
@@ -631,30 +631,32 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
                         bullets[j].y = fe->y + fe->height / 2.0;
                         bullets[j].weapon = 0;      // MG round
                         bullets[j].from_enemy = true;
-                        bullets[j].width = 4;       // 적 총알 크기
-                        bullets[j].height = 4;
-                        bullets[j].angle = 0.0;
-
-                        // 플레이어 탱크를 향해 총알 방향 계산
+                        bullets[j].width = flying_enemy_bullet_width;
+                        bullets[j].height = flying_enemy_bullet_height;
+                        
+                        // Calculate bullet direction towards player tank
                         double tank_x = get_tank_x();
                         double tank_y = get_tank_y();
                         double dx = tank_x - fe->x;
                         double dy = tank_y - fe->y;
                         double ang = atan2(dy, dx);
+                        
+                        // Set bullet angle for visual orientation
+                        bullets[j].angle = ang;
 
-                        // 총알 속도 설정
-                        bullets[j].vx = cos(ang) * 8.0;
-                        bullets[j].vy = sin(ang) * 8.0;
+                        // Set bullet velocity
+                        bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                        bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
                         break;
                     }
                 }
 
                 fe->burst_shots_left--;
-                fe->shot_timer += fe->shot_interval;
+                fe->shot_timer += flying_enemy_shot_interval;
 
                 if (fe->burst_shots_left <= 0) {
                     fe->in_burst = false;
-                    fe->rest_timer = 2.0;
+                    fe->rest_timer = flying_enemy_rest_time;
                 }
             }
         }
@@ -662,7 +664,7 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
             fe->rest_timer -= dt;
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
-                fe->burst_shots_left = 10;
+                fe->burst_shots_left = flying_enemy_burst_count;
                 fe->shot_timer = 0.0; // fire immediately
             }
         }
@@ -715,30 +717,32 @@ void flying_enemies_update(double dt) {
                         bullets[j].y = fe->y + fe->height / 2.0;
                         bullets[j].weapon = 0;      // MG round
                         bullets[j].from_enemy = true;
-                        bullets[j].width = 4;       // 적 총알 크기
-                        bullets[j].height = 4;
-                        bullets[j].angle = 0.0;
-
-                        // 플레이어 탱크를 향해 총알 방향 계산
+                        bullets[j].width = flying_enemy_bullet_width;
+                        bullets[j].height = flying_enemy_bullet_height;
+                        
+                        // Calculate bullet direction towards player tank
                         double tank_x = get_tank_x();
                         double tank_y = get_tank_y();
                         double dx = tank_x - fe->x;
                         double dy = tank_y - fe->y;
                         double ang = atan2(dy, dx);
+                        
+                        // Set bullet angle for visual orientation
+                        bullets[j].angle = ang;
 
-                        // 총알 속도 설정
-                        bullets[j].vx = cos(ang) * 8.0;
-                        bullets[j].vy = sin(ang) * 8.0;
+                        // Set bullet velocity
+                        bullets[j].vx = cos(ang) * flying_enemy_bullet_speed;
+                        bullets[j].vy = sin(ang) * flying_enemy_bullet_speed;
                         break;
                     }
                 }
 
                 fe->burst_shots_left--;
-                fe->shot_timer += fe->shot_interval;
+                fe->shot_timer += flying_enemy_shot_interval;
 
                 if (fe->burst_shots_left <= 0) {
                     fe->in_burst = false;
-                    fe->rest_timer = 2.0;
+                    fe->rest_timer = flying_enemy_rest_time;
                 }
             }
         }
@@ -746,7 +750,7 @@ void flying_enemies_update(double dt) {
             fe->rest_timer -= dt;
             if (fe->rest_timer <= 0.0) {
                 fe->in_burst = true;
-                fe->burst_shots_left = 10;
+                fe->burst_shots_left = flying_enemy_burst_count;
                 fe->shot_timer = 0.0; // fire immediately
             }
         }

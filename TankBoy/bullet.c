@@ -8,7 +8,7 @@
 void bullets_init(Bullet* bullets, int max_bullets) {
     // Load bullet dimensions from config.ini
     IniParser* parser = ini_parser_create();
-    ini_parser_load_file(parser, "config.ini");
+    ini_parser_load_file(parser, "TankBoy/config.ini");
     int mg_width = ini_parser_get_int(parser, "Bullets", "mg_bullet_width", 40);
     int mg_height = ini_parser_get_int(parser, "Bullets", "mg_bullet_height", 10);
     int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 20);
@@ -34,7 +34,7 @@ void bullets_update(Bullet* bullets, int max_bullets, const Map* map) {
     // Load bullet physics settings from config.ini
     // TODO: remove reading ini online
     IniParser* parser = ini_parser_create();
-    ini_parser_load_file(parser, "config.ini");
+    ini_parser_load_file(parser, "TankBoy/config.ini");
     const double bullet_gravity = ini_parser_get_double(parser, "Bullets", "bullet_gravity", 0.3);
     const int map_width = map_get_map_width(); // Use function instead of hardcoded value
     const int map_height = map_get_map_height(); // Use function instead of hardcoded value
