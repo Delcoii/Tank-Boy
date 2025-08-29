@@ -275,12 +275,12 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
-    // Tank body (change color when invincible)
-    // ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
-    //     ? al_map_rgb(160, 160, 160)  // Gray when invincible
-    //     : al_map_rgb(60, 120, 180);  // Normal blue color
-    // al_draw_filled_rectangle(sx, sy, sx + tank->width, sy + tank->height, body_color);
-    al_draw_bitmap(tank_sprites.tank_base, sx, sy, 0);
+        ALLEGRO_COLOR body_color = (tank->invincible > 0.0) 
+        ? al_map_rgba(160, 160, 160,0)  // Gray when invincible
+        : al_map_rgba(60, 120, 180,0);  // Normal blue color
+    al_draw_filled_rectangle(sx, sy, sx + tank->width, sy + tank->height, body_color);
+    // al_draw_bitmap(tank_sprites.tank_base, sx, sy, 0);
+    al_draw_scaled_bitmap(tank_sprites.tank_base, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
 
     // Cannon
     double cx = sx + tank->width / 2;
@@ -403,6 +403,6 @@ void tank_sprite_init(const char* sprite_path){
     printf("Failed to load tank sprite sheet: %s\n", sprite_path);
         return;
     } 
-    tank_sprites.tank_base = tank_sprite_grab(0, 0, 50, 50);
+    tank_sprites.tank_base = tank_sprites._sheet;
 
 }

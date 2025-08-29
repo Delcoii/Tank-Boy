@@ -175,7 +175,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     map_sprites_init(map_sprite_file);
 
     char tank_sprite_file[256];
-    snprintf(tank_sprite_file, sizeof(tank_sprite_file), "TankBoy/resources/sprites/tank_sprite_sheet.png");
+   snprintf(tank_sprite_file, sizeof(tank_sprite_file), "TankBoy/resources/sprites/tank_sprite_sheet_croped.png");
     printf("location : %s\n", tank_sprite_file);
     tank_sprite_init(tank_sprite_file);
     
