@@ -454,7 +454,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         if (total_enemies == 0) {
             // Add health bonus when clearing stage
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 1000;
+            int health_bonus = current_hp * 100;
             game_system->score += health_bonus;
             
             game_system->stage_clear = true;
