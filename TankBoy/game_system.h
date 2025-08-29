@@ -62,6 +62,8 @@ typedef struct {
     // UI Components
     Button start_button;      // Start game button
     Button exit_button;       // Exit game button
+    Button next_button;       // Next stage button (for stage clear screen)
+    Button menu_button;       // Back to menu button (for game end screen)
     ALLEGRO_FONT* font;      // Font for text rendering
     GameState current_state;  // Current game state
     bool running;             // Game loop running flag
@@ -109,5 +111,9 @@ void render_game(GameSystem* game_system);                                      
 // ================= Buffer Handling =================
 void disp_pre_draw(GameSystem* game_system);                                          // Set up off-screen buffer for rendering
 void disp_post_draw(GameSystem* game_system);                                         // Display rendered buffer and flip screen
+
+// ================= Score System =================
+void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
+void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
 
 #endif // GAME_SYSTEM_H

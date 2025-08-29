@@ -5,12 +5,14 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdbool.h>
 #include "map_generation.h"
+#include "bullet.h"
 
 
 
 // ===== Constants =====
 #define MAX_ENEMIES 20
 #define MAX_FLY_ENEMIES 10
+#define MAX_BULLETS 100
 
 // HP / Damage tuning
 #define ENEMY_BASE_HP 20
@@ -23,6 +25,16 @@ extern double enemy_jump_interval_max;
 // Enemy physics - loaded from config.ini
 extern double enemy_base_speed;
 extern double enemy_speed_per_difficulty;
+
+// Flying enemy bullet settings - loaded from config.ini
+extern int flying_enemy_burst_count;
+extern double flying_enemy_shot_interval;
+extern double flying_enemy_rest_time;
+extern double flying_enemy_bullet_speed;
+extern int flying_enemy_bullet_width;
+extern int flying_enemy_bullet_height;
+extern double roi_multiplier;
+extern double max_shooting_distance;
 
 #define FLY_BASE_HP 12
 #define FLY_HP_PER_ROUND 3
@@ -60,13 +72,18 @@ typedef struct {
     
     // Enemy dimensions (loaded from config)
     int width, height;
+    
+    // Difficulty for scoring
+    int difficulty;
 } Enemy;
 
 // Flying enemy: sine flight, burst fire (10 shots in ~0.5s) then rest
 typedef struct {
     double x, y, vx;
     double base_y;
+    double spawn_x;  // 스폰 위치 x좌표 저장
     double angle;
+    double x_angle;  // x축 움직임용 각도
     bool alive;
 
     bool in_burst;
@@ -80,6 +97,9 @@ typedef struct {
     
     // Flying enemy dimensions (loaded from config)
     int width, height;
+    
+    // Difficulty for scoring
+    int difficulty;
 } FlyingEnemy;
 
 // ===== Function Declarations =====
