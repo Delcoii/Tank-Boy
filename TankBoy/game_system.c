@@ -127,9 +127,29 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     game_system->current_state = STATE_MENU;
     game_system->running = true;
+    game_system->current_stage = 1; // Initialize current stage first
 
     input_system_init(&game_system->input);
-    tank_init(&game_system->player_tank, 50.0, 480.0);
+    
+    // Load spawn points and initialize tank position
+    char spawn_file[256];
+    snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+    
+    double tank_x = 100.0; // Default position
+    double tank_y = 2000.0; // Default position
+    
+    if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+        SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+        if (tank_spawn) {
+            tank_x = (double)tank_spawn->x;
+            tank_y = (double)tank_spawn->y;
+            printf("Tank spawn loaded from file: (%.0f, %.0f)\n", tank_x, tank_y);
+        }
+    } else {
+        printf("Using default tank spawn position: (%.0f, %.0f)\n", tank_x, tank_y);
+    }
+    
+    tank_init(&game_system->player_tank, tank_x, tank_y);
 
     game_system->max_bullets = game_system->config.max_bullets;
     game_system->bullets = malloc(sizeof(Bullet) * game_system->max_bullets);
@@ -141,14 +161,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     head_up_display_init("config.ini");
 
     // Initialize and load map
-    game_system->current_stage = 1;
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
     if (!map_load(&game_system->current_map, map_file))
         map_init(&game_system->current_map);
 
     // Load enemies from CSV file after map is loaded
-    load_enemies_from_csv_with_map(1, &game_system->current_map); // Load stage 1 enemies
+    load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies
     
     // Initialize enemy system
     game_system->round_number = 1;
@@ -168,6 +187,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
 void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, ALLEGRO_DISPLAY* display) {
     map_free(&game_system->current_map);
+    spawn_points_free(&game_system->spawn_points);
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
@@ -210,8 +230,8 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->exit_button.hovered = is_point_in_button(bx, by, &game_system->exit_button);
         }
         else if (game_system->current_state == STATE_GAME) {
-            double cx = game_system->player_tank.x - game_system->camera_x + 16;
-            double cy = game_system->player_tank.y - game_system->camera_y + 10;
+            double cx = game_system->player_tank.x - game_system->camera_x + get_tank_width() / 2;
+            double cy = game_system->player_tank.y - game_system->camera_y + get_tank_height() / 2;
             game_system->player_tank.cannon_angle = atan2(by - cy, bx - cx);
         }
         break;
@@ -228,7 +248,29 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
                 if (!map_load(&game_system->current_map, map_file))
                     map_init(&game_system->current_map);
-                tank_init(&game_system->player_tank, 50.0, 480.0);
+                
+                // Load spawn points for the new stage
+                char spawn_file[256];
+                snprintf(spawn_file, sizeof(spawn_file), "TankBoy/resources/stages/spawns%d.csv", game_system->current_stage);
+                
+                double tank_x = 100.0; // Default position
+                double tank_y = 2000.0; // Default position
+                
+                // Free previous spawn points
+                spawn_points_free(&game_system->spawn_points);
+                
+                if (spawn_points_load(&game_system->spawn_points, spawn_file)) {
+                    SpawnPoint* tank_spawn = spawn_points_get_tank_spawn(&game_system->spawn_points);
+                    if (tank_spawn) {
+                        tank_x = (double)tank_spawn->x;
+                        tank_y = (double)tank_spawn->y;
+                        printf("Tank spawn loaded for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                    }
+                } else {
+                    printf("Using default tank spawn position for stage %d: (%.0f, %.0f)\n", game_system->current_stage, tank_x, tank_y);
+                }
+                
+                tank_init(&game_system->player_tank, tank_x, tank_y);
 
                 game_system->current_state = STATE_GAME;
             }
@@ -261,8 +303,8 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     }
 
     tank_update(&game_system->player_tank, &game_system->input, 1.0 / 60.0,
-        game_system->bullets, game_system->max_bullets, &game_system->current_map);
-    bullets_update(game_system->bullets, game_system->max_bullets, &game_system->current_map);
+        game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
+    bullets_update(game_system->bullets, game_system->max_bullets, (const Map*)&game_system->current_map);
 
     // Update camera to follow tank
     game_system->camera_x = game_system->player_tank.x - game_system->config.buffer_width / 3.0;
@@ -280,7 +322,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     
     // Update enemy systems with map reference
     enemies_update_roi_with_map(1.0/60.0, game_system->camera_x, game_system->camera_y, 
-                      game_system->config.buffer_width, game_system->config.buffer_height, &game_system->current_map);
+                      game_system->config.buffer_width, game_system->config.buffer_height, (const Map*)&game_system->current_map);
     flying_enemies_update_roi(1.0/60.0, game_system->camera_x, game_system->camera_y, 
                              game_system->config.buffer_width, game_system->config.buffer_height);
     
@@ -288,6 +330,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
     bullets_hit_enemies();
     bullets_hit_tank();
     tank_touch_ground_enemy();
+    tank_touch_flying_enemy();
     
     // Check if all enemies are cleared for next round
     if (!any_ground_enemies_alive() && !any_flying_enemies_alive()) {
@@ -311,7 +354,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         game_system->hud.player_max_hp = get_tank_max_hp();
     }
 
-    // Stage Clear 처리
+    // Handle Stage Clear
     if (game_system->stage_clear) {
         game_system->stage_clear_timer -= 1.0 / 60.0;
         game_system->stage_clear_scale = 1.0 + 0.5 * sin((2.0 - game_system->stage_clear_timer) * 3.14);
@@ -355,7 +398,7 @@ void disp_post_draw(GameSystem* game_system) {
 static void draw_game(const GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
 
-    map_draw(&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
+    map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     tank_draw(&game_system->player_tank, game_system->camera_x, game_system->camera_y);
     bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
     

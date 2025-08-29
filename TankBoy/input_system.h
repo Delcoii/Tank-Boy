@@ -4,14 +4,14 @@
 #include <allegro5/allegro5.h>
 #include <stdbool.h>
 
-// key states structure
+// Key states structure
 typedef struct {
-    bool left;        // A / ←
-    bool right;       // D / →
-    bool jump;        // W / ↑
+    bool left;        // A / Left arrow
+    bool right;       // D / Right arrow
+    bool jump;        // W / Up arrow
     bool change_weapon; // R
     bool esc;         // ESC
-    bool fire;        // mouse click
+    bool fire;        // Mouse click
 } InputState;
 
 // Function declarations

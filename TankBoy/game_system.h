@@ -81,6 +81,7 @@ typedef struct {
 
     // Map & Stage System
     Map current_map;          // Current stage map
+    SpawnPoints spawn_points; // Current stage spawn points
     int current_stage;        // Current stage number
 
     // HUD System

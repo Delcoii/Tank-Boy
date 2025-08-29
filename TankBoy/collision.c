@@ -5,7 +5,7 @@
 #include "head_up_display.h"
 #include <math.h>
 
-/* ===== Collision Detection Utilities ===== */
+// ===== Collision Detection Utilities =====
 // Check if a point is inside a rectangle
 bool point_in_rect(double px, double py, double rx, double ry, double rw, double rh) {
     return (px >= rx && px <= rx + rw && py >= ry && py <= ry + rh);
@@ -17,7 +17,7 @@ bool rect_rect_overlap(double x1, double y1, double w1, double h1,
     return !(x1 > x2 + w2 || x1 + w1 < x2 || y1 > y2 + h2 || y1 + h1 < y2);
 }
 
-/* ===== Bullet Collision Detection ===== */
+// ===== Bullet Collision Detection =====
 
 void bullets_hit_enemies(void) {
     Bullet* bullets = get_bullets();
@@ -29,15 +29,18 @@ void bullets_hit_enemies(void) {
 
         double bx = bullets[b].x;
         double by = bullets[b].y;
+        int bw = bullets[b].width;
+        int bh = bullets[b].height;
 
         bool hit = false;
 
-        /* ground enemies */
+        // ground enemies
         Enemy* enemies = get_enemies();
         for (int i = 0; i < MAX_ENEMIES; i++) {
             Enemy* e = &enemies[i];
             if (!e->alive) continue;
-            if (point_in_rect(bx, by, e->x, e->y, 32, 20)) { // ENEMY_W, ENEMY_H
+            // Use rectangle-to-rectangle collision instead of point-to-rectangle
+            if (rect_rect_overlap(bx - bw/2, by - bh/2, bw, bh, e->x, e->y, e->width, e->height)) {
                 if (bullets[b].weapon == 1) {
                     // Cannon explosion
                     apply_cannon_explosion(bx, by, CANNON_SPLASH_RADIUS);
@@ -54,12 +57,13 @@ void bullets_hit_enemies(void) {
         }
         if (hit) continue;
 
-        /* flying enemies */
+        // flying enemies
         FlyingEnemy* f_enemies = get_flying_enemies();
         for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
             FlyingEnemy* fe = &f_enemies[i];
             if (!fe->alive) continue;
-            if (point_in_rect(bx, by, fe->x, fe->y, 28, 16)) { // FLY_W, FLY_H
+            // Use rectangle-to-rectangle collision instead of point-to-rectangle
+            if (rect_rect_overlap(bx - bw/2, by - bh/2, bw, bh, fe->x, fe->y, fe->width, fe->height)) {
                 if (bullets[b].weapon == 1) {
                     // Cannon explosion
                     apply_cannon_explosion(bx, by, CANNON_SPLASH_RADIUS);
@@ -100,7 +104,7 @@ void bullets_hit_tank(void) {
     }
 }
 
-/* ===== Tank-Enemy Collision Detection ===== */
+// ===== Tank-Enemy Collision Detection =====
 
 void tank_touch_ground_enemy(void) {
     if (get_tank_hp() <= 0) return;
@@ -117,7 +121,7 @@ void tank_touch_ground_enemy(void) {
         if (!e->alive) continue;
 
         bool overlap = rect_rect_overlap(tank_x, tank_y, tank_w, tank_h,
-                                       e->x, e->y, 32, 20); // ENEMY_W, ENEMY_H
+                                       e->x, e->y, e->width, e->height);
 
         if (overlap) {
             handle_tank_enemy_collision(i);
@@ -125,7 +129,30 @@ void tank_touch_ground_enemy(void) {
     }
 }
 
-/* ===== Damage Application ===== */
+void tank_touch_flying_enemy(void) {
+    if (get_tank_hp() <= 0) return;
+    
+    double tank_x = get_tank_x();
+    double tank_y = get_tank_y();
+    int tank_w = get_tank_width();
+    int tank_h = get_tank_height();
+    
+    FlyingEnemy* f_enemies = get_flying_enemies();
+    
+    for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
+        FlyingEnemy* fe = &f_enemies[i];
+        if (!fe->alive) continue;
+
+        bool overlap = rect_rect_overlap(tank_x, tank_y, tank_w, tank_h,
+                                       fe->x, fe->y, fe->width, fe->height);
+
+        if (overlap) {
+            handle_tank_flying_enemy_collision(i);
+        }
+    }
+}
+
+// ===== Damage Application =====
 
 void apply_damage_to_tank(int damage) {
     if (get_tank_invincible() <= 0.0) {
@@ -166,7 +193,7 @@ void apply_damage_to_flying_enemy(int enemy_index, int damage) {
     }
 }
 
-/* ===== Knockback Effects ===== */
+// ===== Knockback Effects =====
 
 void apply_knockback_to_tank(double vx, double vy) {
     set_tank_velocity(vx, vy);
@@ -184,7 +211,7 @@ void apply_knockback_to_enemy(int enemy_index, double vx, double vy) {
     }
 }
 
-/* ===== Collision Response ===== */
+// ===== Collision Response =====
 
 void handle_tank_enemy_collision(int enemy_index) {
     if (enemy_index < 0 || enemy_index >= MAX_ENEMIES) return;
@@ -194,20 +221,20 @@ void handle_tank_enemy_collision(int enemy_index) {
     
     if (!e->alive) return;
     
-    /* contact damage (with invincibility window) */
+    // contact damage (with invincibility window)
     if (get_tank_invincible() <= 0.0) {
         apply_damage_to_tank(DMG_ENEMY_CONTACT);
     }
 
-    /* symmetric knockback */
+    // symmetric knockback
     double tank_cx = get_tank_x() + get_tank_width() * 0.5;
-    double enemy_cx = e->x + 32 * 0.5; // ENEMY_W * 0.5
+    double enemy_cx = e->x + e->width * 0.5;
     double dir = (tank_cx < enemy_cx) ? -1.0 : 1.0;
 
     apply_knockback_to_tank(dir * KNOCKBACK_TANK_VX, -KNOCKBACK_TANK_VY);
     apply_knockback_to_enemy(enemy_index, -dir * KNOCKBACK_ENEMY_VX, -KNOCKBACK_ENEMY_VY);
 
-    /* small separation to resolve overlap */
+    // small separation to resolve overlap
     double tank_x = get_tank_x();
     if (dir > 0) {
         set_tank_x(tank_x + 2.0);
@@ -234,5 +261,39 @@ void handle_bullet_enemy_collision(int bullet_index, int enemy_index, bool is_fl
         if (enemy_index >= 0 && enemy_index < MAX_ENEMIES) {
             apply_damage_to_enemy(enemy_index, DMG_MG);
         }
+    }
+}
+
+void handle_tank_flying_enemy_collision(int enemy_index) {
+    if (enemy_index < 0 || enemy_index >= MAX_FLY_ENEMIES) return;
+    
+    FlyingEnemy* f_enemies = get_flying_enemies();
+    FlyingEnemy* fe = &f_enemies[enemy_index];
+    
+    if (!fe->alive) return;
+    
+    // contact damage (with invincibility window)
+    if (get_tank_invincible() <= 0.0) {
+        apply_damage_to_tank(DMG_ENEMY_CONTACT);
+    }
+
+    // tank knockback only (flying enemy keeps its original behavior)
+    double tank_cx = get_tank_x() + get_tank_width() * 0.5;
+    double enemy_cx = fe->x + fe->width * 0.5;
+    double dir = (tank_cx < enemy_cx) ? -1.0 : 1.0;
+
+    apply_knockback_to_tank(dir * KNOCKBACK_TANK_VX, -KNOCKBACK_TANK_VY);
+    
+    // flying enemy keeps its original velocity (no knockback)
+    // fe->vx remains unchanged
+
+    // small separation to resolve overlap
+    double tank_x = get_tank_x();
+    if (dir > 0) {
+        set_tank_x(tank_x + 2.0);
+        fe->x -= 2.0;
+    } else {
+        set_tank_x(tank_x - 2.0);
+        fe->x += 2.0;
     }
 }

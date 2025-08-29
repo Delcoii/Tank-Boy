@@ -2,18 +2,27 @@
 #include "map_generation.h"
 #include "ini_parser.h"
 #include <allegro5/allegro_primitives.h>
+#include <math.h>
 
 
 void bullets_init(Bullet* bullets, int max_bullets) {
     for (int i = 0; i < max_bullets; i++) {
         bullets[i].alive = false;
         bullets[i].from_enemy = false;
+        bullets[i].x = 0.0;
+        bullets[i].y = 0.0;
+        bullets[i].vx = 0.0;
+        bullets[i].vy = 0.0;
+        bullets[i].weapon = 0;
+        bullets[i].width = 0;
+        bullets[i].height = 0;
+        bullets[i].angle = 0.0;
     }
 }
 
-void bullets_update(Bullet* bullets, int max_bullets, const struct Map* map) {
+void bullets_update(Bullet* bullets, int max_bullets, const Map* map) {
     // Load bullet physics settings from config.ini
-    // TODO : remove reading ini online
+    // TODO: remove reading ini online
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "config.ini");
     const double bullet_gravity = ini_parser_get_double(parser, "Bullets", "bullet_gravity", 0.3);
@@ -51,12 +60,36 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         if (!bullets[i].alive) continue;
         double sx = bullets[i].x - camera_x;
         double sy = bullets[i].y - camera_y;
+        
+        // Different colors for different weapons
         ALLEGRO_COLOR col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
-        al_draw_filled_circle(sx, sy, 4, col);
+        
+        // Rotate rectangle around center point (sx, sy)
+        double half_w = bullets[i].width / 2.0;
+        double half_h = bullets[i].height / 2.0;
+        double cos_a = cos(bullets[i].angle);
+        double sin_a = sin(bullets[i].angle);
+        
+        // Calculate four corners of rectangle (rotated around sx, sy)
+        float x1 = sx + (-half_w * cos_a - (-half_h) * sin_a);
+        float y1 = sy + (-half_w * sin_a + (-half_h) * cos_a);
+        
+        float x2 = sx + (half_w * cos_a - (-half_h) * sin_a);
+        float y2 = sy + (half_w * sin_a + (-half_h) * cos_a);
+        
+        float x3 = sx + (half_w * cos_a - half_h * sin_a);
+        float y3 = sy + (half_w * sin_a + half_h * cos_a);
+        
+        float x4 = sx + (-half_w * cos_a - half_h * sin_a);
+        float y4 = sy + (-half_w * sin_a + half_h * cos_a);
+        
+        // Draw rotated rectangle using two triangles
+        al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
+        al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
     }
 }
 
-/* ===== Getter Functions ===== */
+// ===== Getter Functions =====
 
 // Global bullet array (needed for getter functions)
 static Bullet* g_bullets = NULL;

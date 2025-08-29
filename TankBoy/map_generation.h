@@ -5,20 +5,38 @@
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_primitives.h>
 
-/* Block types */
+// Block types
 typedef enum {
     BLOCK_GROUND,
     BLOCK_GRASS
 } BlockType;
 
-/* Block structure */
+// Block structure
 typedef struct {
     int x, y;
     int width, height;
     BlockType type;
 } Block;
 
-/* Map structure */
+// Spawn point types
+typedef enum {
+    SPAWN_TANK
+} SpawnType;
+
+// Spawn point structure
+typedef struct {
+    int x, y;
+    SpawnType type;
+} SpawnPoint;
+
+// Spawn points collection
+typedef struct {
+    SpawnPoint* points;
+    size_t count;
+    size_t capacity;
+} SpawnPoints;
+
+// Map structure
 typedef struct {
     Block* blocks;
     size_t block_count;
@@ -27,12 +45,18 @@ typedef struct {
     int map_height;
 } Map;
 
-/* Map management */
+// Map management
 bool map_load(Map* map, const char* csv_path);
 bool map_init(Map* map);
 void map_free(Map* map);
 
-/* Collision detection ROI */
+// Spawn point management
+bool spawn_points_init(SpawnPoints* spawns);
+void spawn_points_free(SpawnPoints* spawns);
+bool spawn_points_load(SpawnPoints* spawns, const char* csv_path);
+SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns);
+
+// Collision detection ROI
 size_t map_query_roi(const Map* map, int center_x, int center_y, int width, int height, 
                      Block* out_blocks, size_t max_blocks);
 
@@ -43,10 +67,10 @@ bool map_rect_collision(const Map* map, int x, int y, int width, int height);
 // Get ground level at specific x coordinate (for tank landing)
 int map_get_ground_level(const Map* map, int x, int tank_width);
 
-/* Rendering */
+// Rendering
 void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width, int buffer_height);
 
-/* Utilities */
+// Utilities
 BlockType map_string_to_block_type(const char* type_str);
 ALLEGRO_COLOR map_get_block_color(BlockType type);
 

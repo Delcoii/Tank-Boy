@@ -6,17 +6,20 @@
 #include <stdbool.h>
 #include "input_system.h"
 #include "bullet.h"
+#include "map_generation.h"
 
-// Forward declaration
-struct Map;
 
-/* Tank ����ü */
+
+// Tank structure
 typedef struct {
     double x, y;
     double vx, vy;
     double cannon_angle;
     bool on_ground;
     int weapon; // 0=MG, 1=Cannon
+    
+    // Tank dimensions (loaded from config)
+    int width, height;
 
     // HP & invincibility
     int hp;
@@ -36,9 +39,9 @@ typedef struct {
 
 } Tank;
 
-/* Functions */
+// Functions
 void tank_init(Tank* tank, double x, double y);
-void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const struct Map* map);
+void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int max_bullets, const Map* map);
 void tank_draw(Tank* tank, double camera_x, double camera_y);
 
 // Getter functions for external access
