@@ -107,6 +107,9 @@ BlockType map_string_to_block_type(const char* type_str) {
     if (strcmp(type_str, "grass") == 0) {
         return BLOCK_GRASS;
     }
+    if (strcmp(type_str, "ground") == 0) {
+        return BLOCK_GROUND;
+    }
     return BLOCK_GROUND; // Default to ground
 }
 
@@ -288,12 +291,16 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
             float screen_y = block->y - camera_y;
             
             // Draw block
-            ALLEGRO_COLOR color = map_get_block_color(block->type);
+            switch (block->type) {
+            case BLOCK_GROUND:
+                al_draw_bitmap(map_sprites.ground, screen_x, screen_y, 0);
 
-            // al_draw_bitmap(map_sprites.grass, screen_x + block->width, screen_y + block->height, 0);
-            
-            al_draw_bitmap(map_sprites.grass, screen_x, screen_y, 0);
+                break;
 
+            case BLOCK_GRASS:
+                al_draw_bitmap(map_sprites.grass, screen_x, screen_y, 0);
+                break;
+            }
         }
     }
 }
@@ -456,9 +463,8 @@ void map_sprites_init(const char* sprite_path)
         printf("NULLNULLNULLNULLNULLNULL\n");
     }
     
-    map_sprites.ground = sprite_grab(0, 0, 100, 50);
-    map_sprites.grass = sprite_grab(0, 0, 100, 50);
-    
+    map_sprites.ground = sprite_grab(0, 0, 50, 50);
+    map_sprites.grass = sprite_grab(50, 0, 50, 50);
 }
 
 
