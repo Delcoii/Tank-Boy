@@ -437,6 +437,11 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         // Auto stage clear when all enemies are defeated
         int total_enemies = game_system->hud.enemies_alive + game_system->hud.flying_enemies_alive;
         if (total_enemies == 0) {
+            // Add health bonus when clearing stage
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            game_system->score += health_bonus;
+            
             game_system->stage_clear = true;
             if (game_system->current_stage >= 3) {
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
@@ -563,9 +568,18 @@ static void draw_game(const GameSystem* game_system) {
 
         if (game_system->current_stage >= 3) {  // Ending when Stage 3 is cleared
             al_draw_text(game_system->font, al_map_rgb(255, 0, 0), cx, cy - 20, ALLEGRO_ALIGN_CENTER, "Congratulations! You won the game!");
+            
+            // Show final score
             char score_text[64];
-            snprintf(score_text, sizeof(score_text), "Final Score: %d", game_system->hud.score);
+            snprintf(score_text, sizeof(score_text), "Final Score: %d", (int)game_system->score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 20, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show health bonus info
+            char health_bonus_text[64];
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
+            al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 50, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
             // Show Back to Menu button for game end
             if (game_system->stage_clear_timer < 0) {
@@ -574,9 +588,18 @@ static void draw_game(const GameSystem* game_system) {
         }
         else {
             al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy, ALLEGRO_ALIGN_CENTER, "Stage Clear");
+            
+            // Show current score
             char score_text[64];
-            snprintf(score_text, sizeof(score_text), "Score: %d", game_system->hud.score);
+            snprintf(score_text, sizeof(score_text), "Score: %d", (int)game_system->score);
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy + 40, ALLEGRO_ALIGN_CENTER, score_text);
+            
+            // Show health bonus info
+            char health_bonus_text[64];
+            int current_hp = get_tank_hp();
+            int health_bonus = current_hp * 1000;
+            snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
+            al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 70, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
             // Show Next button if waiting for click
             if (game_system->stage_clear_timer < 0) {
