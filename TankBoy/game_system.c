@@ -166,9 +166,6 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     if (!map_load(&game_system->current_map, map_file))
         map_init(&game_system->current_map);
 
-    // Load enemies from CSV file after map is loaded
-    load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies
-    
     // Initialize enemy system
     game_system->round_number = 1;
     game_system->enemies_spawned = false;
@@ -260,7 +257,12 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 }
                 
                 tank_init(&game_system->player_tank, tank_x, tank_y);
-
+                
+                // Reset enemies for new game
+                enemies_init();
+                flying_enemies_init();
+                game_system->enemies_spawned = false;
+                
                 game_system->current_state = STATE_GAME;
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
@@ -304,7 +306,9 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 
                 tank_init(&game_system->player_tank, tank_x, tank_y);
                 
-                // Reset enemy spawning
+                // Reset enemies for new stage
+                enemies_init();
+                flying_enemies_init();
                 game_system->enemies_spawned = false;
             }
         }

@@ -30,6 +30,7 @@ int flying_enemy_bullet_height = 3;
 double roi_multiplier = 1.5;
 double max_shooting_distance = 800.0;
 
+
 // ===== Enemy Initialization =====
 
 void enemies_init(void) {
@@ -57,6 +58,7 @@ void enemies_init(void) {
     flying_enemy_bullet_height = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_height", 3);
     roi_multiplier = ini_parser_get_double(bullet_parser, "EnemyBullets", "roi_multiplier", 1.5);
     max_shooting_distance = ini_parser_get_double(bullet_parser, "EnemyBullets", "max_shooting_distance", 800.0);
+    
     ini_parser_destroy(bullet_parser);
     
     printf("Loaded flying enemy bullet parameters:\n");
@@ -121,6 +123,8 @@ void flying_enemies_init(void) {
         f_enemies[i].height = flying_enemy_height;
     }
 }
+
+
 
 // ===== Enemy Spawning =====
 
@@ -229,7 +233,7 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 f_enemies[fly_index].x = x;
                 f_enemies[fly_index].y = y;
                 f_enemies[fly_index].base_y = y;
-                f_enemies[fly_index].spawn_x = x;  // 스폰 위치 저장
+                f_enemies[fly_index].spawn_x = x;  // Store spawn position
                 f_enemies[fly_index].vx = (rand() % 2 ? 1.0 : -1.0) * (1.0 + difficulty * 0.2);
                 f_enemies[fly_index].angle = 0.0;
                 f_enemies[fly_index].x_angle = 0.0;
