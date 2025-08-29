@@ -213,6 +213,7 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
     al_destroy_display(display);
+    map_sprites_deinit();
 }
 
 // =================== Input Handling ===================
