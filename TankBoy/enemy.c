@@ -31,6 +31,21 @@ int flying_enemy_bullet_height = 3;
 double roi_multiplier = 1.5;
 double max_shooting_distance = 800.0;
 
+//align enemies
+static int enemy_align_x = 20;
+static int flying_enemy_align_x = 10;
+
+// sprite
+typedef struct SPRITES
+{
+    ALLEGRO_BITMAP* _sheet;
+
+    ALLEGRO_BITMAP* enemy;
+    ALLEGRO_BITMAP* flying_enemy;
+    
+} SPRITES;
+SPRITES flying_enemy_sprites;
+
 
 // ===== Enemy Initialization =====
 
@@ -92,6 +107,33 @@ void enemies_init(void) {
         enemies[i].width = enemy_width;
         enemies[i].height = enemy_height;
     }
+}
+// init_sprites
+ALLEGRO_BITMAP* e_sprite_grab(int x, int y, int w, int h)
+{
+    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(flying_enemy_sprites._sheet, x, y, w, h);
+    return sprite;
+}
+
+void enemy_sprites_init(const char* sprite_path)
+{
+    flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
+    if (flying_enemy_sprites._sheet == NULL) {
+        printf("NULLNULLNULLNULLNULLNULL\n");
+    }
+    
+    flying_enemy_sprites.enemy = e_sprite_grab(0, 0, 100, 50);
+}
+
+void flying_enemy_sprites_init(const char* sprite_path)
+{
+    flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
+    if (flying_enemy_sprites._sheet == NULL) {
+        printf("NULLNULLNULLNULLNULLNULL\n");
+    }
+    
+    flying_enemy_sprites.flying_enemy = e_sprite_grab(0, 0, 100, 50);
+    
 }
 
 void flying_enemies_init(void) {
@@ -794,13 +836,13 @@ void enemies_draw(double camera_x, double camera_y) {
         if (!e->alive) continue;
         
         // Convert world coordinates to screen coordinates
-        double sx = e->x - camera_x;
+        double sx = e->x - camera_x - enemy_align_x;
         double sy = e->y - camera_y;
         
-
+        al_draw_bitmap(flying_enemy_sprites.enemy, sx, sy, 0);
         
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        //al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
         // HP bar would be drawn by HUD system
     }
@@ -811,11 +853,15 @@ void flying_enemies_draw(double camera_x, double camera_y) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
         
+        al_draw_bitmap(flying_enemy_sprites.flying_enemy, fe->x - camera_x - flying_enemy_align_x, fe->y - camera_y, 0);
+
+
         // Convert world coordinates to screen coordinates
+        /*
         al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
                                 fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
                                 al_map_rgb(180, 0, 180));
-        
+        */
         // HP bar would be drawn by HUD system
     }
 }
@@ -967,3 +1013,10 @@ FlyingEnemy* get_flying_enemies(void) {
     return f_enemies;
 }
 
+void flying_enemy_sprites_deinit()
+{
+    al_destroy_bitmap(flying_enemy_sprites.enemy);
+    al_destroy_bitmap(flying_enemy_sprites.flying_enemy);
+
+    al_destroy_bitmap(flying_enemy_sprites._sheet);
+}
