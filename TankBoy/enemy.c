@@ -81,7 +81,7 @@ ALLEGRO_BITMAP* e_sprite_grab(int x, int y, int w, int h)
     return sprite;
 }
 
-void flying_enemy_sprites_init(const char* sprite_path)
+void enemy_sprites_init(const char* sprite_path)
 {
     flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
     if (flying_enemy_sprites._sheet == NULL) {
@@ -89,6 +89,15 @@ void flying_enemy_sprites_init(const char* sprite_path)
     }
     
     flying_enemy_sprites.enemy = e_sprite_grab(0, 0, 100, 50);
+}
+
+void flying_enemy_sprites_init(const char* sprite_path)
+{
+    flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
+    if (flying_enemy_sprites._sheet == NULL) {
+        printf("NULLNULLNULLNULLNULLNULL\n");
+    }
+    
     flying_enemy_sprites.flying_enemy = e_sprite_grab(0, 0, 100, 50);
     
 }
@@ -708,10 +717,10 @@ void enemies_draw(double camera_x, double camera_y) {
         double sx = e->x - camera_x;
         double sy = e->y - camera_y;
         
-
+        al_draw_bitmap(flying_enemy_sprites.enemy, sx, sy, 0);
         
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        // al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
         // HP bar would be drawn by HUD system
     }

@@ -182,11 +182,19 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->round_number = 1;
     game_system->enemies_spawned = false;
 
+    // flying enemy sprite load
     char flying_enemy_sprite_file[256];
-    snprintf(flying_enemy_sprite_file, sizeof(flying_enemy_sprite_file), "TankBoy/resources/sprites/helicopter.png");
+    snprintf(flying_enemy_sprite_file, sizeof(flying_enemy_sprite_file), "TankBoy/resources/sprites/helicopter5_2.png");
 
     printf("location : %s\n", flying_enemy_sprite_file);
     flying_enemy_sprites_init(flying_enemy_sprite_file);
+
+    // enemy sprite load
+    char enemy_sprite_file[256];
+    snprintf(enemy_sprite_file, sizeof(enemy_sprite_file), "TankBoy/resources/sprites/enemy1.png");
+
+    printf("location : %s\n", enemy_sprite_file);
+    enemy_sprites_init(enemy_sprite_file);
     
     // Set global references for getter functions
     set_global_tank_ref(&game_system->player_tank);
