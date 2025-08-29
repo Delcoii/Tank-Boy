@@ -6,6 +6,15 @@
 
 
 void bullets_init(Bullet* bullets, int max_bullets) {
+    // Load bullet dimensions from config.ini
+    IniParser* parser = ini_parser_create();
+    ini_parser_load_file(parser, "config.ini");
+    int mg_width = ini_parser_get_int(parser, "Bullets", "mg_bullet_width", 40);
+    int mg_height = ini_parser_get_int(parser, "Bullets", "mg_bullet_height", 10);
+    int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 20);
+    int cannon_height = ini_parser_get_int(parser, "Bullets", "cannon_bullet_height", 20);
+    ini_parser_destroy(parser);
+    
     for (int i = 0; i < max_bullets; i++) {
         bullets[i].alive = false;
         bullets[i].from_enemy = false;
@@ -14,8 +23,9 @@ void bullets_init(Bullet* bullets, int max_bullets) {
         bullets[i].vx = 0.0;
         bullets[i].vy = 0.0;
         bullets[i].weapon = 0;
-        bullets[i].width = 0;
-        bullets[i].height = 0;
+        // Set default dimensions based on weapon type
+        bullets[i].width = mg_width;      // Default to MG dimensions
+        bullets[i].height = mg_height;
         bullets[i].angle = 0.0;
     }
 }
@@ -61,8 +71,15 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         double sx = bullets[i].x - camera_x;
         double sy = bullets[i].y - camera_y;
         
-        // Different colors for different weapons
-        ALLEGRO_COLOR col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
+        // Different colors for player vs enemy bullets
+        ALLEGRO_COLOR col;
+        if (bullets[i].from_enemy) {
+            // Enemy bullets: red color
+            col = (bullets[i].weapon == 0) ? al_map_rgb(255, 0, 0) : al_map_rgb(200, 0, 0);
+        } else {
+            // Player bullets: original colors
+            col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
+        }
         
         // Rotate rectangle around center point (sx, sy)
         double half_w = bullets[i].width / 2.0;

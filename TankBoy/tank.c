@@ -171,9 +171,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                 if (!bullets[i].alive) {
                     // Load cannon bullet size from config
                     IniParser* parser = ini_parser_create();
-                    ini_parser_load_file(parser, "TankBoy/config.ini");
-                    int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 6);
-                    int cannon_height = ini_parser_get_int(parser, "Bullets", "cannon_bullet_height", 6);
+                    ini_parser_load_file(parser, "config.ini");
+                    int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 20);
+                    int cannon_height = ini_parser_get_int(parser, "Bullets", "cannon_bullet_height", 20);
                     ini_parser_destroy(parser);
                     
                     bullets[i].alive = true;
@@ -225,9 +225,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                         if (!bullets[i].alive) {
                             // Load MG bullet size from config
                             IniParser* parser = ini_parser_create();
-                            ini_parser_load_file(parser, "TankBoy/config.ini");
-                            int mg_width = ini_parser_get_int(parser, "Bullets", "mg_bullet_width", 8);
-                            int mg_height = ini_parser_get_int(parser, "Bullets", "mg_bullet_height", 3);
+                            ini_parser_load_file(parser, "config.ini");
+                            int mg_width = ini_parser_get_int(parser, "Bullets", "mg_bullet_width", 40);
+                            int mg_height = ini_parser_get_int(parser, "Bullets", "mg_bullet_height", 10);
                             ini_parser_destroy(parser);
                             
                             bullets[i].alive = true;

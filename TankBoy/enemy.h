@@ -26,6 +26,14 @@ extern double enemy_jump_interval_max;
 extern double enemy_base_speed;
 extern double enemy_speed_per_difficulty;
 
+// Flying enemy bullet settings - loaded from config.ini
+extern int flying_enemy_burst_count;
+extern double flying_enemy_shot_interval;
+extern double flying_enemy_rest_time;
+extern double flying_enemy_bullet_speed;
+extern int flying_enemy_bullet_width;
+extern int flying_enemy_bullet_height;
+
 #define FLY_BASE_HP 12
 #define FLY_HP_PER_ROUND 3
 

@@ -20,6 +20,14 @@ double enemy_jump_interval_max = 2.2;
 double enemy_base_speed = 0.1;  // Default values
 double enemy_speed_per_difficulty = 0.5;
 
+// Flying enemy bullet parameters loaded from config.ini
+int flying_enemy_burst_count = 10;  // Default values
+double flying_enemy_shot_interval = 0.05;
+double flying_enemy_rest_time = 2.0;
+double flying_enemy_bullet_speed = 8.0;
+int flying_enemy_bullet_width = 6;
+int flying_enemy_bullet_height = 3;
+
 // ===== Enemy Initialization =====
 
 void enemies_init(void) {
@@ -35,6 +43,22 @@ void enemies_init(void) {
         printf("  Jump timing: %.1f - %.1f seconds\n", enemy_jump_interval_min, enemy_jump_interval_max);
         printf("  Base speed: %.1f, Speed per difficulty: %.1f\n", enemy_base_speed, enemy_speed_per_difficulty);
     }
+    
+    // Load flying enemy bullet parameters from config.ini
+    IniParser* bullet_parser = ini_parser_create();
+    ini_parser_load_file(bullet_parser, "config.ini");
+    flying_enemy_burst_count = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_burst_count", 10);
+    flying_enemy_shot_interval = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_shot_interval", 0.05);
+    flying_enemy_rest_time = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_rest_time", 2.0);
+    flying_enemy_bullet_speed = ini_parser_get_double(bullet_parser, "EnemyBullets", "flying_enemy_bullet_speed", 8.0);
+    flying_enemy_bullet_width = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_width", 6);
+    flying_enemy_bullet_height = ini_parser_get_int(bullet_parser, "EnemyBullets", "flying_enemy_bullet_height", 3);
+    ini_parser_destroy(bullet_parser);
+    
+    printf("Loaded flying enemy bullet parameters:\n");
+    printf("  Burst count: %d, Shot interval: %.3f seconds\n", flying_enemy_burst_count, flying_enemy_shot_interval);
+    printf("  Rest time: %.1f seconds, Bullet speed: %.1f\n", flying_enemy_rest_time, flying_enemy_bullet_speed);
+    printf("  Bullet size: %dx%d\n", flying_enemy_bullet_width, flying_enemy_bullet_height);
     
     // Load enemy dimensions from config
     IniParser* parser = ini_parser_create();
@@ -82,9 +106,9 @@ void flying_enemies_init(void) {
         f_enemies[i].x_angle = 0.0;
         f_enemies[i].in_burst = false;
         f_enemies[i].burst_shots_left = 0;
-        f_enemies[i].shot_interval = 0.05;
+        f_enemies[i].shot_interval = flying_enemy_shot_interval;
         f_enemies[i].shot_timer = 0.0;
-        f_enemies[i].rest_timer = 2.0;
+        f_enemies[i].rest_timer = flying_enemy_rest_time;
         f_enemies[i].hp = 0;
         f_enemies[i].max_hp = 0;
         
@@ -653,13 +677,13 @@ void flying_enemies_update(double dt) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
 
-        // Y축: 기존 삼각함수 움직임 유지 (위아래 진동)
+        // Y-axis: maintain existing trigonometric movement (up-down oscillation)
         fe->angle += dt * 2.0;
         fe->y = fe->base_y + sin(fe->angle) * 30.0;
         
-        // X축: 스폰 위치를 중심으로 삼각함수 기반 좌우 움직임
-        fe->x_angle += dt * 1.5;  // x축 움직임 속도 (조정 가능)
-        double x_offset = sin(fe->x_angle) * 150.0;  // 스폰 위치에서 ±150픽셀 범위 (조정 가능)
+        // X-axis: left-right movement based on trigonometry centered on spawn position
+        fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
+        double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
         fe->x = fe->spawn_x + x_offset;
 
         // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
