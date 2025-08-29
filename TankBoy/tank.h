@@ -17,6 +17,7 @@ typedef struct {
     double cannon_angle;
     bool on_ground;
     int weapon; // 0=MG, 1=Cannon
+    bool facing_right; // Direction the tank is facing
     
     // Tank dimensions (loaded from config)
     int width, height;

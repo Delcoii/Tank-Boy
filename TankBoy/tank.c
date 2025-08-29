@@ -3,6 +3,7 @@
 #include "ini_parser.h"
 #include <math.h>
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_image.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -12,6 +13,7 @@
 typedef struct SPRITES_TANK {
     ALLEGRO_BITMAP* tank_base;
     ALLEGRO_BITMAP* _sheet;
+     ALLEGRO_BITMAP* fliped_sheet;
     //ALLEGRO_BITMAP* tank_cannon;
 } SPRITES_TANK;
 SPRITES_TANK tank_sprites;
@@ -59,6 +61,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
         tank->invincible -= dt;
         if (tank->invincible < 0.0) tank->invincible = 0.0;
     }
+
+    if (tank->vx > 0) tank->facing_right = true;
+    else if (tank->vx < 0) tank->facing_right = false;
     
     // Load physics settings from config.ini
     IniParser* parser = ini_parser_create();
@@ -275,8 +280,9 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
-    
-    al_draw_scaled_bitmap(tank_sprites.tank_base, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
+    ALLEGRO_BITMAP* sprite = tank->facing_right ? tank_sprites.fliped_sheet : tank_sprites._sheet;
+    al_draw_scaled_bitmap(sprite, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
+   // al_draw_scaled_bitmap(tank_sprites.tank_base, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
 
     // Cannon
     double cx = sx + tank->width / 2;
@@ -392,6 +398,31 @@ ALLEGRO_BITMAP* tank_sprite_grab(int x, int y, int w, int h)
     return sprite;
 }
 
+//tank sprite flip horizontal
+ALLEGRO_BITMAP* flip_horizontal(ALLEGRO_BITMAP* bmp) {
+    int w = al_get_bitmap_width(bmp);
+    int h = al_get_bitmap_height(bmp);
+
+    ALLEGRO_BITMAP* flipped = al_create_bitmap(w, h);
+    if (!flipped) {
+        printf("Failed to create flipped bitmap\n");
+        return NULL;
+    }
+
+    ALLEGRO_BITMAP* old_target = al_get_target_bitmap(); // 현재 백버퍼 저장
+
+    al_set_target_bitmap(flipped);
+    al_clear_to_color(al_map_rgba(0, 0, 0, 0)); // 투명 배경
+
+    // ✅ 정중앙(0, 0)에 반전하여 그리기
+    al_draw_bitmap(bmp, 0, 0, ALLEGRO_FLIP_HORIZONTAL);
+
+    al_set_target_bitmap(old_target); // 원래 백버퍼로 복귀
+
+    return flipped;
+}
+
+
 //sprite tank init
 void tank_sprite_init(const char* sprite_path){
     tank_sprites._sheet = al_load_bitmap(sprite_path);
@@ -400,5 +431,6 @@ void tank_sprite_init(const char* sprite_path){
         return;
     } 
     tank_sprites.tank_base = tank_sprites._sheet;
-
+    tank_sprites.fliped_sheet = flip_horizontal(tank_sprites._sheet);
 }
+
