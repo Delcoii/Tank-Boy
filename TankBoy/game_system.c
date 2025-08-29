@@ -161,6 +161,20 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     head_up_display_init("config.ini");
 
+    // Initialize bgm system
+    al_install_audio();
+    al_init_acodec_addon();
+    al_reserve_samples(16); // 동시에 재생 가능한 사운드 수
+
+    game_system->bgm = al_load_audio_stream("TankBoy/resources/bgm/forest_map.mp3", 4, 2048);
+    if (game_system->bgm) {
+    al_set_audio_stream_playmode(game_system->bgm, ALLEGRO_PLAYMODE_LOOP);
+    al_attach_audio_stream_to_mixer(game_system->bgm, al_get_default_mixer());
+    } else {
+    printf("Failed to load BGM.\n");
+    
+    }
+
     // Initialize and load map
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -206,6 +220,9 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     al_destroy_font(game_system->font);
     al_destroy_event_queue(queue);
     al_destroy_display(display);
+    if (game_system->bgm) {
+    al_destroy_audio_stream(game_system->bgm);
+}
 }
 
 // =================== Input Handling ===================

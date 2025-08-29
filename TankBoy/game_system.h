@@ -13,6 +13,7 @@
 #include "ini_parser.h"     // Configuration file parser
 #include "input_system.h"   // Keyboard and mouse input handling
 #include "head_up_display.h" // HUD and UI display system
+#include <allegro5/allegro_audio.h> // Audio system
 
 // MAX_BULLETS is now loaded from config.ini
 
@@ -97,6 +98,9 @@ typedef struct {
     double stage_clear_scale; // Stage clear animation scale
     double score;             // Current score
     double displayed_score;   // Score displayed in HUD
+    // Audio System
+    ALLEGRO_AUDIO_STREAM* bgm;  // Background music stream
+
 } GameSystem;
 
 // ================= Core Functions =================
