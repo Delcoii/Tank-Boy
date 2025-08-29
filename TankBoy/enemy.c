@@ -31,6 +31,10 @@ int flying_enemy_bullet_height = 3;
 double roi_multiplier = 1.5;
 double max_shooting_distance = 800.0;
 
+//align enemies
+static int enemy_align_x = 20;
+static int flying_enemy_align_x = 10;
+
 
 // sprite
 typedef struct SPRITES
@@ -833,13 +837,13 @@ void enemies_draw(double camera_x, double camera_y) {
         if (!e->alive) continue;
         
         // Convert world coordinates to screen coordinates
-        double sx = e->x - camera_x;
+        double sx = e->x - camera_x - enemy_align_x;
         double sy = e->y - camera_y;
         
         al_draw_bitmap(flying_enemy_sprites.enemy, sx, sy, 0);
         
         // Draw enemy (basic rectangle for now)
-        // al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        //al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
         // HP bar would be drawn by HUD system
     }
@@ -850,7 +854,7 @@ void flying_enemies_draw(double camera_x, double camera_y) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
         
-        al_draw_bitmap(flying_enemy_sprites.flying_enemy, fe->x - camera_x, fe->y - camera_y, 0);
+        al_draw_bitmap(flying_enemy_sprites.flying_enemy, fe->x - camera_x - flying_enemy_align_x, fe->y - camera_y, 0);
 
 
         // Convert world coordinates to screen coordinates
