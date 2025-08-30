@@ -23,6 +23,12 @@ typedef struct {
     double angle;
 } Bullet;
 
+typedef struct _bullet_sprites {
+    ALLEGRO_BITMAP* mg_bullet_sheet;
+    ALLEGRO_BITMAP* cannon_bullet_sheet;
+    ALLEGRO_BITMAP* enemy_bullet_sheet;
+} bullet_sprites_t;
+
 void bullets_init(Bullet* bullets, int max_bullets);
 void bullets_update(Bullet* bullets, int max_bullets, const Map* map);
 void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double camera_y);
@@ -33,5 +39,8 @@ int get_max_bullets(void);
 
 // Global reference setter
 void set_global_bullet_ref(Bullet* bullets, int max_bullets);
+
+// sprite
+void bullet_sprites_init();
 
 #endif

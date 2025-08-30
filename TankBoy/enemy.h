@@ -39,8 +39,8 @@ extern double max_shooting_distance;
 #define FLY_BASE_HP 12
 #define FLY_HP_PER_ROUND 3
 
-#define DMG_MG 5
-#define DMG_CANNON 25
+#define DMG_MG 4
+#define DMG_CANNON 200
 #define DMG_ENEMY_CONTACT 10
 
 // Knockback tuning (contact / explosion)
@@ -102,6 +102,16 @@ typedef struct {
     int difficulty;
 } FlyingEnemy;
 
+
+typedef struct _enemy_sprites
+{
+    ALLEGRO_BITMAP* land_enemy_sheet;
+    ALLEGRO_BITMAP* flying_enemy_sheet;
+
+    ALLEGRO_BITMAP** land_enemy_sprites;
+    ALLEGRO_BITMAP** flying_enemy_sprites;
+} enemy_sprites_t;
+
 // ===== Function Declarations =====
 
 // Enemy initialization and management
@@ -146,8 +156,8 @@ Enemy* get_enemies(void);
 FlyingEnemy* get_flying_enemies(void);
 
 //sprite
-void flying_enemy_sprites_init(const char* sprite_path);
-void enemy_sprites_init(const char* sprite_path);
+void flying_enemy_sprites_init();
+void enemy_sprites_init();
 //void must_init(bool test, const char* description);
 void flying_enemy_sprites_deinit();
 

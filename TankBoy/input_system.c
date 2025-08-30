@@ -94,8 +94,7 @@ void text_input_handle_key(TextInput* text_input, int key) {
     }
 }
 
-
-T// 새로운 함수: 문자 입력 처리
+// 새로운 함수: 문자 입력 처리
 void text_input_handle_char(TextInput* text_input, int unichar) {
     if (!text_input->active) return;
     

@@ -57,6 +57,7 @@ typedef enum {
     STATE_GAME,    // Active gameplay state
     STATE_GAME_OVER, // Game over state
     STATE_NAME_INPUT, // Name input state for ranking
+    STATE_STAGE_COMPLETE, // Stage complete screen state
     STATE_EXIT     // Exit game state
 } GameState;
 
@@ -67,6 +68,7 @@ typedef struct {
     Button ranking_button;    // Ranking button
     Button next_button;       // Next stage button (for stage clear screen)
     Button menu_button;       // Back to menu button (for game end screen)
+    Button ranking_page_button; // Ranking page button (for stage complete screen)
     ALLEGRO_FONT* font;      // Font for text rendering
     GameState current_state;  // Current game state
     bool running;             // Game loop running flag

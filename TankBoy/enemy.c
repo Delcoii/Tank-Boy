@@ -36,15 +36,8 @@ static int enemy_align_x = 20;
 static int flying_enemy_align_x = 10;
 
 // sprite
-typedef struct SPRITES
-{
-    ALLEGRO_BITMAP* _sheet;
 
-    ALLEGRO_BITMAP* enemy;
-    ALLEGRO_BITMAP* flying_enemy;
-    
-} SPRITES;
-SPRITES flying_enemy_sprites;
+enemy_sprites_t enemy_sprites;
 
 
 // ===== Enemy Initialization =====
@@ -108,32 +101,38 @@ void enemies_init(void) {
         enemies[i].height = enemy_height;
     }
 }
-// init_sprites
-ALLEGRO_BITMAP* e_sprite_grab(int x, int y, int w, int h)
-{
-    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(flying_enemy_sprites._sheet, x, y, w, h);
-    return sprite;
+
+
+void enemy_sprites_init() {
+    
+    enemy_sprites.land_enemy_sheet = NULL; // not using total combined sheet
+    
+    enemy_sprites.land_enemy_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
+    for (int i = 0; i < 3; i++) {
+        char enemy_sprite_file_path[256];
+        snprintf(enemy_sprite_file_path, sizeof(enemy_sprite_file_path), "TankBoy/resources/sprites/enemy%d.png", i+1);
+        enemy_sprites.land_enemy_sprites[i] = al_load_bitmap(enemy_sprite_file_path);
+        if (enemy_sprites.land_enemy_sprites[i] == NULL) {
+            printf("wrong location of enemy sprite!!\n");
+        }
+    }
 }
 
-void enemy_sprites_init(const char* sprite_path)
-{
-    flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
-    if (flying_enemy_sprites._sheet == NULL) {
-        printf("NULLNULLNULLNULLNULLNULL\n");
-    }
-    
-    flying_enemy_sprites.enemy = e_sprite_grab(0, 0, 100, 50);
-}
 
-void flying_enemy_sprites_init(const char* sprite_path)
-{
-    flying_enemy_sprites._sheet = al_load_bitmap(sprite_path);
-    if (flying_enemy_sprites._sheet == NULL) {
-        printf("NULLNULLNULLNULLNULLNULL\n");
+void flying_enemy_sprites_init() {
+
+    char* flying_enemy_sprite_file = "TankBoy/resources/sprites/helicopters.png";
+    enemy_sprites.flying_enemy_sheet = al_load_bitmap(flying_enemy_sprite_file);
+    if (enemy_sprites.flying_enemy_sheet == NULL) {
+        printf("wrong location of flying enemy sprite!!\n");
     }
     
-    flying_enemy_sprites.flying_enemy = e_sprite_grab(0, 0, 100, 50);
-    
+    enemy_sprites.flying_enemy_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
+    int width = al_get_bitmap_width(enemy_sprites.flying_enemy_sheet) / 3;
+    int height = al_get_bitmap_height(enemy_sprites.flying_enemy_sheet);
+    for (int i = 0; i < 3; i++) {
+        enemy_sprites.flying_enemy_sprites[i] = al_create_sub_bitmap(enemy_sprites.flying_enemy_sheet, i*width, 0, width, height);
+    }
 }
 
 void flying_enemies_init(void) {
@@ -244,7 +243,7 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
             enemies[enemy_index].vx = 0.0;
             enemies[enemy_index].vy = 0.0;
             enemies[enemy_index].on_ground = true;
-            enemies[enemy_index].max_hp = ENEMY_BASE_HP + ENEMY_HP_PER_ROUND * difficulty;
+            enemies[enemy_index].max_hp = ENEMY_BASE_HP + difficulty * 40;
             enemies[enemy_index].hp = enemies[enemy_index].max_hp;
             enemies[enemy_index].last_x = x;
             enemies[enemy_index].stuck_time = 0.0;
@@ -836,14 +835,23 @@ void enemies_draw(double camera_x, double camera_y) {
         if (!e->alive) continue;
         
         // Convert world coordinates to screen coordinates
-        double sx = e->x - camera_x - enemy_align_x;
+        double sx = e->x - camera_x;
         double sy = e->y - camera_y;
         
-        al_draw_bitmap(flying_enemy_sprites.enemy, sx, sy, 0);
-        
         // Draw enemy (basic rectangle for now)
-        //al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
+        // draw enemy sprite
+        int width = al_get_bitmap_width(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
+        int height = al_get_bitmap_height(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
+        
+        al_draw_scaled_bitmap(enemy_sprites.land_enemy_sprites[e->difficulty-1],
+            0, 0,
+            width, height,
+            e->x - camera_x, e->y - camera_y,
+            e->width, e->height,
+            0);
+
         // HP bar would be drawn by HUD system
     }
 }
@@ -852,17 +860,22 @@ void flying_enemies_draw(double camera_x, double camera_y) {
     for (int i = 0; i < MAX_FLY_ENEMIES; i++) {
         FlyingEnemy* fe = &f_enemies[i];
         if (!fe->alive) continue;
-        
-        al_draw_bitmap(flying_enemy_sprites.flying_enemy, fe->x - camera_x - flying_enemy_align_x, fe->y - camera_y, 0);
 
 
         // Convert world coordinates to screen coordinates
-        /*
         al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
-                                fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
-                                al_map_rgb(180, 0, 180));
-        */
-        // HP bar would be drawn by HUD system
+            fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
+            al_map_rgb(180, 0, 180));
+
+        int width = al_get_bitmap_width(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
+        int height = al_get_bitmap_height(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
+        
+        al_draw_scaled_bitmap(enemy_sprites.flying_enemy_sprites[fe->difficulty-1],
+            0, 0,
+            width, height,
+            fe->x - camera_x, fe->y - camera_y,
+            fe->width, fe->height,
+            0);
     }
 }
 
@@ -1015,8 +1028,15 @@ FlyingEnemy* get_flying_enemies(void) {
 
 void flying_enemy_sprites_deinit()
 {
-    al_destroy_bitmap(flying_enemy_sprites.enemy);
-    al_destroy_bitmap(flying_enemy_sprites.flying_enemy);
+    al_destroy_bitmap(enemy_sprites.land_enemy_sheet);
+    al_destroy_bitmap(enemy_sprites.flying_enemy_sheet);
 
-    al_destroy_bitmap(flying_enemy_sprites._sheet);
+    al_destroy_bitmap(enemy_sprites.land_enemy_sprites[0]);
+    al_destroy_bitmap(enemy_sprites.land_enemy_sprites[1]);
+    al_destroy_bitmap(enemy_sprites.land_enemy_sprites[2]);
+
+    al_destroy_bitmap(enemy_sprites.flying_enemy_sprites[0]);
+    al_destroy_bitmap(enemy_sprites.flying_enemy_sprites[1]);
+    al_destroy_bitmap(enemy_sprites.flying_enemy_sprites[2]);
+
 }

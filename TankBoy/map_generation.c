@@ -12,15 +12,7 @@
 // Global configuration cache
 static MapConfig g_map_config = {0};
 
-typedef struct SPRITES
-{
-    ALLEGRO_BITMAP* _sheet;
-
-    ALLEGRO_BITMAP* grass;
-    ALLEGRO_BITMAP* ground;
-    
-} SPRITES;
-SPRITES map_sprites;
+map_sprites_t map_sprites;
 
 // Initialize configuration (load once)
 void map_config_init(void) {
@@ -158,6 +150,20 @@ bool map_load(Map* map, const char* csv_path) {
         return false;
     }
 
+    // Extract stage number from filename (e.g., "stage1.csv" -> stage = 1)
+    const char* filename = strrchr(csv_path, '/');
+    if (!filename) filename = strrchr(csv_path, '\\');
+    if (!filename) filename = csv_path;
+    else filename++; // Skip the slash
+
+    if (strncmp(filename, "stage", 5) == 0) {
+        map->stage = atoi(filename + 5); // Skip "stage" and convert number
+        printf("Loading stage %d map from %s\n", map->stage, csv_path);
+    } else {
+        map->stage = 1; // Default to stage 1 if filename doesn't match pattern
+        printf("Could not determine stage from filename, defaulting to stage 1\n");
+    }
+
     char line[256];
     bool first_line = true;
 
@@ -292,16 +298,29 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
             float screen_x = block->x - camera_x;
             float screen_y = block->y - camera_y;
 
-            // Draw block
-            switch (block->type) {
-            case BLOCK_GROUND:
-                al_draw_bitmap(map_sprites.ground, screen_x, screen_y, 0);
+            // Draw block based on stage and block type
+            int sprite_index = map->stage - 1; // Convert stage 1,2,3 to index 0,1,2
+            
+            if (sprite_index < 0 || sprite_index > 2) {
+                sprite_index = 0; // Default to stage 1 sprites if out of range
+            }
+            
+            if (block->type == BLOCK_GROUND) {
+                int bitmap_width = al_get_bitmap_width(map_sprites.ground_sprites[sprite_index]);
+                int bitmap_height = al_get_bitmap_height(map_sprites.ground_sprites[sprite_index]);
+                // al_draw_bitmap(map_sprites.ground_sprites[sprite_index], screen_x, screen_y, 0);
+                al_draw_scaled_bitmap(map_sprites.ground_sprites[sprite_index],
+                                    0, 0,
+                                    bitmap_width, bitmap_height,
+                                    screen_x, screen_y, block->width, block->height, 0);
 
-                break;
-
-            case BLOCK_GRASS:
-                al_draw_bitmap(map_sprites.grass, screen_x, screen_y, 0);
-                break;
+            } else if (block->type == BLOCK_GRASS) {
+                int bitmap_width = al_get_bitmap_width(map_sprites.grass_sprites[sprite_index]);
+                int bitmap_height = al_get_bitmap_height(map_sprites.grass_sprites[sprite_index]);
+                al_draw_scaled_bitmap(map_sprites.grass_sprites[sprite_index],
+                                    0, 0,
+                                    bitmap_width, bitmap_height,
+                                    screen_x, screen_y, block->width, block->height, 0);
             }
         }
     }
@@ -450,23 +469,30 @@ SpawnPoint* spawn_points_get_tank_spawn(const SpawnPoints* spawns) {
 
 
 
-ALLEGRO_BITMAP* sprite_grab(int x, int y, int w, int h)
-{
-    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(map_sprites._sheet, x, y, w, h);
-    return sprite;
-}
-
 
 
 void map_sprites_init(const char* sprite_path)
 {
     map_sprites._sheet = al_load_bitmap(sprite_path);
     if (map_sprites._sheet == NULL) {
-        printf("NULLNULLNULLNULLNULLNULL\n");
+        printf("wrong location of map sprite!!\n");
     }
     
-    map_sprites.ground = sprite_grab(0, 0, 50, 50);
-    map_sprites.grass = sprite_grab(50, 0, 50, 50);
+    map_sprites.ground_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
+    map_sprites.grass_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
+
+    int sheet_width = 1912;
+    int block_width = 1912 / 4;
+    int sheet_height = 957;
+    int block_height = 957 / 2;
+    
+    // sprites idx 0 == stage 1
+    map_sprites.ground_sprites[0] = al_create_sub_bitmap(map_sprites._sheet, 0, 0, block_width, block_height);
+    map_sprites.grass_sprites[0] = al_create_sub_bitmap(map_sprites._sheet, block_width, 0, block_width, block_height);
+    map_sprites.grass_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, block_width * 2, 0, block_width, block_height);
+    map_sprites.ground_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, block_width * 3, 0, block_width, block_height);
+    map_sprites.ground_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, 0, block_height, block_width, block_height);
+    map_sprites.grass_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, block_width, block_height, block_width, block_height);
 }
 
 
@@ -481,8 +507,26 @@ void map_sprites_init(const char* sprite_path)
 
 void map_sprites_deinit()
 {
-    al_destroy_bitmap(map_sprites.ground);
-    al_destroy_bitmap(map_sprites.grass);
+    // Free individual sprites
+    for (int i = 0; i < 3; i++) {
+        if (map_sprites.ground_sprites[i]) {
+            al_destroy_bitmap(map_sprites.ground_sprites[i]);
+        }
+        if (map_sprites.grass_sprites[i]) {
+            al_destroy_bitmap(map_sprites.grass_sprites[i]);
+        }
+    }
+    
+    // Free sprite arrays
+    if (map_sprites.ground_sprites) {
+        free(map_sprites.ground_sprites);
+    }
+    if (map_sprites.grass_sprites) {
+        free(map_sprites.grass_sprites);
+    }
 
-    al_destroy_bitmap(map_sprites._sheet);
+    // Free sprite sheet
+    if (map_sprites._sheet) {
+        al_destroy_bitmap(map_sprites._sheet);
+    }
 }

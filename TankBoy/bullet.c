@@ -5,6 +5,8 @@
 #include <math.h>
 
 
+bullet_sprites_t bullet_sprites;
+
 void bullets_init(Bullet* bullets, int max_bullets) {
     // Load bullet dimensions from config.ini
     IniParser* parser = ini_parser_create();
@@ -78,7 +80,7 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
             col = (bullets[i].weapon == 0) ? al_map_rgb(255, 0, 0) : al_map_rgb(200, 0, 0);
         } else {
             // Player bullets: original colors
-            col = (bullets[i].weapon == 0) ? al_map_rgb(255, 255, 0) : al_map_rgb(255, 128, 0);
+            col = (bullets[i].weapon == 0) ? al_map_rgb(255, 0, 0) : al_map_rgb(255, 128, 0);
         }
         
         // Rotate rectangle around center point (sx, sy)
@@ -103,6 +105,51 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         // Draw rotated rectangle using two triangles
         al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
         al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
+
+        
+        if (bullets[i].weapon != 0) {
+            int bullet_sprite_width = al_get_bitmap_width(bullet_sprites.cannon_bullet_sheet);
+            int bullet_sprite_height = al_get_bitmap_height(bullet_sprites.cannon_bullet_sheet);
+
+            double rotation_angle_rad = bullets[i].angle;
+            double scale_x = (double)(bullets[i].width) / (double)(bullet_sprite_width);
+            double scale_y = (double)(bullets[i].height) / (double)(bullet_sprite_height);
+            printf("tank cannon bullet width: %d, bullet height: %d\n", bullets[i].width, bullets[i].height);
+            printf("scale_x: %f, scale_y: %f\n", scale_x, scale_y);
+
+            al_draw_scaled_rotated_bitmap(bullet_sprites.cannon_bullet_sheet,
+                                            bullet_sprite_width / 2.0, bullet_sprite_height / 2.0,  // rotation center
+                                            sx, sy,                                                 // position to draw in display
+                                            scale_x, scale_y,                                       // scale
+                                            rotation_angle_rad,                                     // rotation angle
+                                            0);
+            continue;
+        }
+
+
+        int bullet_sprite_width = al_get_bitmap_width(bullet_sprites.mg_bullet_sheet);
+        int bullet_sprite_height = al_get_bitmap_height(bullet_sprites.mg_bullet_sheet);
+        
+        // double rotation_angle_rad = bullets[i].angle * ALLEGRO_PI / 180.0;
+        double rotation_angle_rad = bullets[i].angle;
+        double scale_x = (double)(bullets[i].width) / (double)(bullet_sprite_width);
+        double scale_y = (double)(bullets[i].height) / (double)(bullet_sprite_height);
+        
+        if (bullets[i].from_enemy) {
+            al_draw_scaled_rotated_bitmap(bullet_sprites.enemy_bullet_sheet,
+                                            bullet_sprite_width / 2.0, bullet_sprite_height / 2.0,  // rotation center
+                                            sx, sy,                                                 // position to draw in display
+                                            scale_x, scale_y,                                       // scale
+                                            rotation_angle_rad,                                     // rotation angle
+                                            0);
+        } else {
+            al_draw_scaled_rotated_bitmap(bullet_sprites.mg_bullet_sheet,
+                                            bullet_sprite_width / 2.0, bullet_sprite_height / 2.0,  // rotation center
+                                            sx, sy,                                                 // position to draw in display
+                                            scale_x, scale_y,                                       // scale
+                                            rotation_angle_rad,                                     // rotation angle
+                                            0);
+        }
     }
 }
 
@@ -124,4 +171,13 @@ Bullet* get_bullets(void) {
 
 int get_max_bullets(void) {
     return g_max_bullets;
+}
+
+void bullet_sprites_init() {
+    bullet_sprites.mg_bullet_sheet = al_load_bitmap("TankBoy/resources/sprites/tank_bullet.png");
+    bullet_sprites.cannon_bullet_sheet = al_load_bitmap("TankBoy/resources/sprites/cannon_bullet.png");
+    bullet_sprites.enemy_bullet_sheet = al_load_bitmap("TankBoy/resources/sprites/enemy_bullet.png");
+    if (bullet_sprites.mg_bullet_sheet == NULL || bullet_sprites.cannon_bullet_sheet == NULL || bullet_sprites.enemy_bullet_sheet == NULL) {
+        printf("wrong location of bullet sprite!!\n");
+    }
 }
