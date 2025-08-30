@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <allegro5/allegro_ttf.h>
 #include "enemy.h"
 #include "collision.h"
 #include "ranking.h"
@@ -116,6 +117,7 @@ static void display_to_buffer_coords(int display_x, int display_y, int* buffer_x
 
 void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
     al_init_font_addon();
+    al_init_ttf_addon();
     al_init_image_addon();
     al_init_primitives_addon();
     al_install_mouse();
@@ -126,7 +128,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_keyboard_event_source());
 
     game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
-    game_system->font = al_create_builtin_font();
+    // Try to load TTF font with larger size
+    game_system->font = al_load_ttf_font("TankBoy/resources/fonts/ARCADECLASSIC.ttf", 15, 0);
+    if (!game_system->font) {
+        // Fallback to builtin font if TTF fails
+        game_system->font = al_create_builtin_font();
+        printf("Using builtin font (TTF font not found)\n");
+    } else {
+        printf("Loaded TTF font with size 24\n");
+    }
 
     int bx = game_system->config.buffer_width / 2 - game_system->config.button_width / 2;
     int sy = game_system->config.buffer_height / 2 - game_system->config.button_spacing / 2;
