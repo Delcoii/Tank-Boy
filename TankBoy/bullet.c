@@ -106,7 +106,25 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
         al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
 
-        // draw sprite
+        
+        if (bullets[i].weapon != 0) {
+            int bullet_sprite_width = al_get_bitmap_width(bullet_sprites.cannon_bullet_sheet);
+            int bullet_sprite_height = al_get_bitmap_height(bullet_sprites.cannon_bullet_sheet);
+
+            double rotation_angle_rad = bullets[i].angle;
+            double scale_x = (double)(bullets[i].width) / (double)(bullet_sprite_width);
+            double scale_y = (double)(bullets[i].height) / (double)(bullet_sprite_height);
+
+            al_draw_scaled_rotated_bitmap(bullet_sprites.cannon_bullet_sheet,
+                                            bullet_sprite_width / 2.0, bullet_sprite_height / 2.0,  // rotation center
+                                            sx, sy,                                                 // position to draw in display
+                                            scale_x, scale_y,                                       // scale
+                                            rotation_angle_rad,                                     // rotation angle
+                                            0);
+            continue;
+        }
+
+
         int bullet_sprite_width = al_get_bitmap_width(bullet_sprites.mg_bullet_sheet);
         int bullet_sprite_height = al_get_bitmap_height(bullet_sprites.mg_bullet_sheet);
         
@@ -114,7 +132,6 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         double rotation_angle_rad = bullets[i].angle;
         double scale_x = (double)(bullets[i].width) / (double)(bullet_sprite_width);
         double scale_y = (double)(bullets[i].height) / (double)(bullet_sprite_height);
-        
         
         if (bullets[i].from_enemy) {
             al_draw_scaled_rotated_bitmap(bullet_sprites.enemy_bullet_sheet,
