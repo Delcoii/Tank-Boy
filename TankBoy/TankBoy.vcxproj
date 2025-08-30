@@ -151,6 +151,7 @@
     <ClCompile Include="map_generation.c" />
     <ClCompile Include="enemy.c" />
     <ClCompile Include="collision.c" />
+    <ClCompile Include="ranking.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bullet.h" />
@@ -162,6 +163,7 @@
     <ClInclude Include="map_generation.h" />
     <ClInclude Include="enemy.h" />
     <ClInclude Include="collision.h" />
+    <ClInclude Include="ranking.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

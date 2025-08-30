@@ -56,6 +56,7 @@ typedef enum {
     STATE_RANKING, // Ranking display state
     STATE_GAME,    // Active gameplay state
     STATE_GAME_OVER, // Game over state
+    STATE_NAME_INPUT, // Name input state for ranking
     STATE_EXIT     // Exit game state
 } GameState;
 
@@ -63,6 +64,7 @@ typedef struct {
     // UI Components
     Button start_button;      // Start game button
     Button exit_button;       // Exit game button
+    Button ranking_button;    // Ranking button
     Button next_button;       // Next stage button (for stage clear screen)
     Button menu_button;       // Back to menu button (for game end screen)
     ALLEGRO_FONT* font;      // Font for text rendering
@@ -74,6 +76,7 @@ typedef struct {
     // Player & Input
     Tank player_tank;         // Player tank character
     InputState input;         // Input system state
+    TextInput name_input;     // Text input for player name
 
     // Bullet System
     Bullet* bullets;          // Dynamic bullet array
