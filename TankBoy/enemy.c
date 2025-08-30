@@ -841,14 +841,13 @@ void enemies_draw(double camera_x, double camera_y) {
         if (!e->alive) continue;
         
         // Convert world coordinates to screen coordinates
-        double sx = e->x - camera_x - enemy_align_x;
+        double sx = e->x - camera_x;
         double sy = e->y - camera_y;
-        
-        // al_draw_bitmap(enemy_sprites.land_enemy_sprites[e->difficulty], sx, sy, 0);
         
         // Draw enemy (basic rectangle for now)
         al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
+
         // HP bar would be drawn by HUD system
     }
 }
@@ -870,7 +869,7 @@ void flying_enemies_draw(double camera_x, double camera_y) {
         al_draw_scaled_bitmap(enemy_sprites.flying_enemy_sprites[fe->difficulty-1],
             0, 0,
             width, height,
-            fe->x - camera_x - flying_enemy_align_x, fe->y - camera_y,
+            fe->x - camera_x, fe->y - camera_y,
             fe->width, fe->height,
             0);
     }
