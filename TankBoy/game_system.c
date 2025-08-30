@@ -571,9 +571,9 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         if (total_enemies == 0) {
             // Add health bonus when clearing stage
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 100;
+            int health_bonus = current_hp * 10;  // HP * 10 = 보너스 점수
             game_system->score += health_bonus;
-            
+                       
             game_system->stage_clear = true;
             
             // Add score to ranking when game is completed (stage 3)
@@ -711,7 +711,7 @@ static void draw_game(const GameSystem* game_system) {
             // Show health bonus info
             char health_bonus_text[64];
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 1000;
+            int health_bonus = current_hp * 10;            
             snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
             al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 50, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
@@ -731,7 +731,8 @@ static void draw_game(const GameSystem* game_system) {
             // Show health bonus info
             char health_bonus_text[64];
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 1000;
+            int health_bonus = current_hp * 10;
+            
             snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
             al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 70, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
@@ -812,7 +813,7 @@ void render_game(GameSystem* game_system) {
         if (strlen(game_system->name_input.buffer) > 0) {
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), input_x + 5, input_y + 5, 0, game_system->name_input.buffer);
         } else {
-            al_draw_text(game_system->font, al_map_rgb(128, 128, 128), input_x + 5, input_y + 5, 0, "Type your name here...");
+            al_draw_text(game_system->font, al_map_rgb(128, 128, 128), input_x + 5, input_y + 5, 0, "Type your name : ");
         }
         
         // Draw cursor (blinking)
