@@ -203,11 +203,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->enemies_spawned = false;
 
     // flying enemy sprite load
-    char flying_enemy_sprite_file[256];
-    snprintf(flying_enemy_sprite_file, sizeof(flying_enemy_sprite_file), "TankBoy/resources/sprites/helicopter.png");
-
-    printf("location : %s\n", flying_enemy_sprite_file);
-    flying_enemy_sprites_init(flying_enemy_sprite_file);
+    flying_enemy_sprites_init();
 
     // enemy sprite load
     char enemy_sprite_file[256];
