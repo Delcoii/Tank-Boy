@@ -157,7 +157,7 @@ FlyingEnemy* get_flying_enemies(void);
 
 //sprite
 void flying_enemy_sprites_init();
-void enemy_sprites_init(const char* sprite_path);
+void enemy_sprites_init();
 //void must_init(bool test, const char* description);
 void flying_enemy_sprites_deinit();
 

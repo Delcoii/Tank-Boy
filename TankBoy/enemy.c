@@ -101,32 +101,26 @@ void enemies_init(void) {
         enemies[i].height = enemy_height;
     }
 }
-// init_sprites
-ALLEGRO_BITMAP* e_sprite_grab(int x, int y, int w, int h)
-{
-    ALLEGRO_BITMAP* sprite = al_create_sub_bitmap(enemy_sprites.land_enemy_sheet, x, y, w, h);
-    return sprite;
-}
 
-void enemy_sprites_init(const char* sprite_path) {
-    // enemy_sprites.land_enemy_sheet = al_load_bitmap(sprite_path);
-    // if (enemy_sprites.land_enemy_sheet == NULL) {
-    //     printf("wrong location of enemy sprite!!\n");
-    // }
+
+void enemy_sprites_init() {
     
-    // enemy_sprites.land_enemy_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
-    // // int width = al_get_bitmap_width(enemy_sprites.land_enemy_sheet);
-    // // int height = al_get_bitmap_height(enemy_sprites.land_enemy_sheet);
-    // // for (int i = 0; i < 3; i++) {
-    // //     enemy_sprites.land_enemy_sprites[i] = al_create_sub_bitmap(enemy_sprites.land_enemy_sheet, i*width, 0, width, height);
-    // // }
-    // enemy_sprites.land_enemy_sprites[0] = al_create_sub_bitmap(enemy_sprites.land_enemy_sheet, 0, 0, 100, 50);
+    enemy_sprites.land_enemy_sheet = NULL; // not using total combined sheet
+    
+    enemy_sprites.land_enemy_sprites = malloc(3 * sizeof(ALLEGRO_BITMAP*));
+    for (int i = 0; i < 3; i++) {
+        char enemy_sprite_file_path[256];
+        snprintf(enemy_sprite_file_path, sizeof(enemy_sprite_file_path), "TankBoy/resources/sprites/enemy%d.png", i+1);
+        enemy_sprites.land_enemy_sprites[i] = al_load_bitmap(enemy_sprite_file_path);
+        if (enemy_sprites.land_enemy_sprites[i] == NULL) {
+            printf("wrong location of enemy sprite!!\n");
+        }
+    }
 }
 
 
 void flying_enemy_sprites_init() {
-    // char flying_enemy_sprite_file[256];
-    // snprintf(flying_enemy_sprite_file, sizeof(flying_enemy_sprite_file), "TankBoy/resources/sprites/helicopters.png");
+
     char* flying_enemy_sprite_file = "TankBoy/resources/sprites/helicopters.png";
     enemy_sprites.flying_enemy_sheet = al_load_bitmap(flying_enemy_sprite_file);
     if (enemy_sprites.flying_enemy_sheet == NULL) {
@@ -847,6 +841,16 @@ void enemies_draw(double camera_x, double camera_y) {
         // Draw enemy (basic rectangle for now)
         al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
+        // draw enemy sprite
+        int width = al_get_bitmap_width(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
+        int height = al_get_bitmap_height(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
+        
+        al_draw_scaled_bitmap(enemy_sprites.land_enemy_sprites[e->difficulty-1],
+            0, 0,
+            width, height,
+            e->x - camera_x, e->y - camera_y,
+            e->width, e->height,
+            0);
 
         // HP bar would be drawn by HUD system
     }
