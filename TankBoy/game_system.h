@@ -49,6 +49,8 @@ typedef struct {
     // Button state
     bool hovered;
     bool clicked;
+    // Button sprites
+    ALLEGRO_BITMAP* button_sprite;
 } Button;
 
 typedef enum {
@@ -126,5 +128,6 @@ void disp_post_draw(GameSystem* game_system);                                   
 // ================= Score System =================
 void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
 void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
+
 
 #endif // GAME_SYSTEM_H

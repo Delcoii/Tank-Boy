@@ -66,6 +66,10 @@ void load_game_config(GameConfig* config, const char* config_file) {
 static void init_button(Button* btn, int x, int y, int w, int h, char* text) {
     btn->x = x; btn->y = y; btn->width = w; btn->height = h;
     btn->text = text; btn->hovered = false; btn->clicked = false;
+    btn->button_sprite = al_load_bitmap("TankBoy/resources/sprites/button.png");
+    if (btn->button_sprite == NULL) {
+        printf("wrong location of button sprite!!\n");
+    }
 }
 
 static bool is_point_in_button(int x, int y, const Button* btn) {
@@ -74,6 +78,10 @@ static bool is_point_in_button(int x, int y, const Button* btn) {
 }
 
 static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* font) {
+    al_draw_scaled_bitmap(btn->button_sprite, 0, 0, 
+                        al_get_bitmap_width(btn->button_sprite), al_get_bitmap_height(btn->button_sprite),
+                        btn->x, btn->y, btn->width, btn->height, 0);
+
     ALLEGRO_COLOR bg, fg;
     if (btn->clicked)
         bg = al_map_rgb(cfg->button_clicked_r, cfg->button_clicked_g, cfg->button_clicked_b),
@@ -85,8 +93,6 @@ static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* 
         bg = al_map_rgb(cfg->button_normal_r, cfg->button_normal_g, cfg->button_normal_b),
         fg = al_map_rgb(0, 0, 0);
 
-    al_draw_filled_rectangle(btn->x, btn->y, btn->x + btn->width, btn->y + btn->height, bg);
-    al_draw_rectangle(btn->x, btn->y, btn->x + btn->width, btn->y + btn->height, al_map_rgb(0, 0, 0), 2);
     al_draw_text(font, fg, btn->x + btn->width / 2, btn->y + btn->height / 2 - 8, ALLEGRO_ALIGN_CENTER, btn->text);
 }
 
@@ -134,6 +140,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int exit_y = ey + game_system->config.button_spacing;
     init_button(&game_system->exit_button, bx, exit_y, game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
+
+    
     // Initialize Next button for stage clear screen (position will be set when needed)
     int next_y = game_system->config.buffer_height / 2 + 120;
     init_button(&game_system->next_button, bx, next_y, game_system->config.button_width, game_system->config.button_height, "Next Stage");
@@ -145,6 +153,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize Ranking Page button for stage complete screen
     init_button(&game_system->ranking_page_button, bx, next_y, game_system->config.button_width, 
         game_system->config.button_height, "View Rankings");
+    
+
     
     // Initialize name input
     text_input_init(&game_system->name_input, 20);
