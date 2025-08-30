@@ -204,8 +204,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     enemy_sprites_init();
     flying_enemy_sprites_init();
-
-    // enemy sprite load
+    bullet_sprites_init();
     
     
     // Set global references for getter functions
