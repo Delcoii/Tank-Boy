@@ -306,9 +306,21 @@ void map_draw(const Map* map, double camera_x, double camera_y, int buffer_width
             }
             
             if (block->type == BLOCK_GROUND) {
-                al_draw_bitmap(map_sprites.ground_sprites[sprite_index], screen_x, screen_y, 0);
+                int bitmap_width = al_get_bitmap_width(map_sprites.ground_sprites[sprite_index]);
+                int bitmap_height = al_get_bitmap_height(map_sprites.ground_sprites[sprite_index]);
+                // al_draw_bitmap(map_sprites.ground_sprites[sprite_index], screen_x, screen_y, 0);
+                al_draw_scaled_bitmap(map_sprites.ground_sprites[sprite_index],
+                                    0, 0,
+                                    bitmap_width, bitmap_height,
+                                    screen_x, screen_y, block->width, block->height, 0);
+
             } else if (block->type == BLOCK_GRASS) {
-                al_draw_bitmap(map_sprites.grass_sprites[sprite_index], screen_x, screen_y, 0);
+                int bitmap_width = al_get_bitmap_width(map_sprites.grass_sprites[sprite_index]);
+                int bitmap_height = al_get_bitmap_height(map_sprites.grass_sprites[sprite_index]);
+                al_draw_scaled_bitmap(map_sprites.grass_sprites[sprite_index],
+                                    0, 0,
+                                    bitmap_width, bitmap_height,
+                                    screen_x, screen_y, block->width, block->height, 0);
             }
         }
     }
@@ -476,11 +488,11 @@ void map_sprites_init(const char* sprite_path)
     
     // sprites idx 0 == stage 1
     map_sprites.ground_sprites[0] = al_create_sub_bitmap(map_sprites._sheet, 0, 0, block_width, block_height);
-    map_sprites.grass_sprites[0] = al_create_sub_bitmap(map_sprites._sheet, 0, block_width, block_width, block_height);
-    map_sprites.grass_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, 0, block_width * 2, block_width, block_height);
-    map_sprites.ground_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, 0, block_width * 3, block_width, block_height);
-    map_sprites.ground_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, block_height, 0, block_width, block_height);
-    map_sprites.grass_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, block_height, block_width, block_width, block_height);
+    map_sprites.grass_sprites[0] = al_create_sub_bitmap(map_sprites._sheet, block_width, 0, block_width, block_height);
+    map_sprites.grass_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, block_width * 2, 0, block_width, block_height);
+    map_sprites.ground_sprites[1] = al_create_sub_bitmap(map_sprites._sheet, block_width * 3, 0, block_width, block_height);
+    map_sprites.ground_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, 0, block_height, block_width, block_height);
+    map_sprites.grass_sprites[2] = al_create_sub_bitmap(map_sprites._sheet, block_width, block_height, block_width, block_height);
 }
 
 
