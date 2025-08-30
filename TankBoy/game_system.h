@@ -39,6 +39,11 @@ typedef struct {
     int game_speed;
     int max_lives;
     int max_bullets;
+    
+    // Font settings
+    char font_file[256];
+    int font_size;
+    bool fallback_to_builtin;
 } GameConfig;
 
 typedef struct {

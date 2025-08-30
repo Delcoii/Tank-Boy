@@ -59,6 +59,13 @@ void load_game_config(GameConfig* config, const char* config_file) {
     config->max_lives = ini_parser_get_int(parser, "Game", "max_lives", 3);
     config->max_bullets = ini_parser_get_int(parser, "Game", "max_bullets", 100);
 
+    // Font
+    const char* font_file = ini_parser_get_string(parser, "Font", "font_file", "TankBoy/resources/fonts/ARCADECLASSIC.ttf");
+    strncpy(config->font_file, font_file, sizeof(config->font_file) - 1);
+    config->font_file[sizeof(config->font_file) - 1] = '\0';
+    config->font_size = ini_parser_get_int(parser, "Font", "font_size", 15);
+    config->fallback_to_builtin = ini_parser_get_bool(parser, "Font", "fallback_to_builtin", true);
+
     ini_parser_destroy(parser);
 }
 
@@ -128,14 +135,19 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_keyboard_event_source());
 
     game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
-    // Try to load TTF font with larger size
-    game_system->font = al_load_ttf_font("TankBoy/resources/fonts/ARCADECLASSIC.ttf", 15, 0);
+    
+    // Load font from config
+    game_system->font = al_load_ttf_font(game_system->config.font_file, game_system->config.font_size, 0);
     if (!game_system->font) {
-        // Fallback to builtin font if TTF fails
-        game_system->font = al_create_builtin_font();
-        printf("Using builtin font (TTF font not found)\n");
+        if (game_system->config.fallback_to_builtin) {
+            // Fallback to builtin font if TTF fails
+            game_system->font = al_create_builtin_font();
+            printf("Using builtin font (TTF font not found: %s)\n", game_system->config.font_file);
+        } else {
+            printf("Failed to load font: %s\n", game_system->config.font_file);
+        }
     } else {
-        printf("Loaded TTF font with size 24\n");
+        printf("Loaded TTF font: %s with size %d\n", game_system->config.font_file, game_system->config.font_size);
     }
 
     int bx = game_system->config.buffer_width / 2 - game_system->config.button_width / 2;
