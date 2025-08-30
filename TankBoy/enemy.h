@@ -39,7 +39,7 @@ extern double max_shooting_distance;
 #define FLY_BASE_HP 12
 #define FLY_HP_PER_ROUND 3
 
-#define DMG_MG 2
+#define DMG_MG 4
 #define DMG_CANNON 200
 #define DMG_ENEMY_CONTACT 10
 
