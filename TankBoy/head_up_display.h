@@ -29,6 +29,14 @@ typedef struct {
     int hud_weapon_y;
     int hud_weapon_width;
     int hud_weapon_height;
+    int hud_text_r, hud_text_g, hud_text_b;
+    int hud_hp_r, hud_hp_g, hud_hp_b;
+    int hud_border_r, hud_border_g, hud_border_b;
+    int hud_score_x, hud_score_y;
+    int hud_stage_x, hud_stage_y;
+    int hud_hp_x, hud_hp_y;
+    int hud_enemies_x, hud_enemies_y;
+    int hud_round_x, hud_round_y;
 } hud_settings_t;
 
 // HUD initialization

@@ -35,31 +35,52 @@ void head_up_display_init(const char* config_file) {
     }
 
     // Load HUD from config.ini
-
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "TankBoy/config.ini");
 
+    // Load HUD colors
     int head_up_display_text_r = ini_parser_get_int(parser, "HUD", "hud_text_r", 255);
-        int head_up_display_text_g = ini_parser_get_int(parser, "HUD", "hud_text_g", 255);
-        int head_up_display_text_b = ini_parser_get_int(parser, "HUD", "hud_text_b", 255);
-        hud_text_color = al_map_rgb(head_up_display_text_r, head_up_display_text_g, head_up_display_text_b);
+    int head_up_display_text_g = ini_parser_get_int(parser, "HUD", "hud_text_g", 255);
+    int head_up_display_text_b = ini_parser_get_int(parser, "HUD", "hud_text_b", 255);
+    hud_text_color = al_map_rgb(head_up_display_text_r, head_up_display_text_g, head_up_display_text_b);
 
-        int head_up_display_hp_r = ini_parser_get_int(parser, "HUD", "hud_hp_r", 255);
-        int head_up_display_hp_g = ini_parser_get_int(parser, "HUD", "hud_hp_g", 0);
-        int head_up_display_hp_b = ini_parser_get_int(parser, "HUD", "hud_hp_b", 0);
-        hud_hp_color = al_map_rgb(head_up_display_hp_r, head_up_display_hp_g, head_up_display_hp_b);
+    int head_up_display_hp_r = ini_parser_get_int(parser, "HUD", "hud_hp_r", 255);
+    int head_up_display_hp_g = ini_parser_get_int(parser, "HUD", "hud_hp_g", 0);
+    int head_up_display_hp_b = ini_parser_get_int(parser, "HUD", "hud_hp_b", 0);
+    hud_hp_color = al_map_rgb(head_up_display_hp_r, head_up_display_hp_g, head_up_display_hp_b);
 
-        int head_up_display_border_r = ini_parser_get_int(parser, "HUD", "hud_border_r", 255);
-        int head_up_display_border_g = ini_parser_get_int(parser, "HUD", "hud_border_g", 255);
-        int head_up_display_border_b = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
-        hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
+    int head_up_display_border_r = ini_parser_get_int(parser, "HUD", "hud_border_r", 255);
+    int head_up_display_border_g = ini_parser_get_int(parser, "HUD", "hud_border_g", 255);
+    int head_up_display_border_b = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
+    hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
 
-        hud_settings.hud_weapon_x = ini_parser_get_int(parser, "HUD", "hud_weapon_x", 20);
-        hud_settings.hud_weapon_y = ini_parser_get_int(parser, "HUD", "hud_weapon_y", 20);
-        hud_settings.hud_weapon_width = ini_parser_get_int(parser, "HUD", "hud_weapon_width", 20);
-        hud_settings.hud_weapon_height = ini_parser_get_int(parser, "HUD", "hud_weapon_height", 20);
+    // Load HUD positions and sizes
+    hud_settings.hud_weapon_x = ini_parser_get_int(parser, "HUD", "hud_weapon_x", 1100);
+    hud_settings.hud_weapon_y = ini_parser_get_int(parser, "HUD", "hud_weapon_y", 20);
+    hud_settings.hud_weapon_width = ini_parser_get_int(parser, "HUD", "hud_weapon_width", 100);
+    hud_settings.hud_weapon_height = ini_parser_get_int(parser, "HUD", "hud_weapon_height", 30);
+    
+    hud_settings.hud_text_r = head_up_display_text_r;
+    hud_settings.hud_text_g = head_up_display_text_g;
+    hud_settings.hud_text_b = head_up_display_text_b;
+    hud_settings.hud_hp_r = head_up_display_hp_r;
+    hud_settings.hud_hp_g = head_up_display_hp_g;
+    hud_settings.hud_hp_b = head_up_display_hp_b;
+    hud_settings.hud_border_r = head_up_display_border_r;
+    hud_settings.hud_border_g = head_up_display_border_g;
+    hud_settings.hud_border_b = head_up_display_border_b;
+    
+    hud_settings.hud_score_x = ini_parser_get_int(parser, "HUD", "hud_score_x", 20);
+    hud_settings.hud_score_y = ini_parser_get_int(parser, "HUD", "hud_score_y", 20);
+    hud_settings.hud_stage_x = ini_parser_get_int(parser, "HUD", "hud_stage_x", 20);
+    hud_settings.hud_stage_y = ini_parser_get_int(parser, "HUD", "hud_stage_y", 50);
+    hud_settings.hud_hp_x = ini_parser_get_int(parser, "HUD", "hud_hp_x", 20);
+    hud_settings.hud_hp_y = ini_parser_get_int(parser, "HUD", "hud_hp_y", 80);
+    hud_settings.hud_enemies_x = ini_parser_get_int(parser, "HUD", "hud_enemies_x", 20);
+    hud_settings.hud_enemies_y = ini_parser_get_int(parser, "HUD", "hud_enemies_y", 110);
+    hud_settings.hud_round_x = ini_parser_get_int(parser, "HUD", "hud_round_x", 20);
+    hud_settings.hud_round_y = ini_parser_get_int(parser, "HUD", "hud_round_y", 140);
 
-   
     if (parser) {
         ini_parser_destroy(parser);
     }
@@ -101,14 +122,14 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     case 1: weapon_name = "Cannon"; break;
     }
 
-    // HUD text
-    al_draw_textf(hud_font, hud_text_color, 10, 10, 0,
+    // HUD text using config positions
+    al_draw_textf(hud_font, hud_text_color, hud_settings.hud_score_x, hud_settings.hud_score_y, 0,
         "Score: %d", hud->score);
-    al_draw_textf(hud_font, hud_text_color, 10, 40, 0,
+    al_draw_textf(hud_font, hud_text_color, hud_settings.hud_stage_x, hud_settings.hud_stage_y, 0,
         "Stage: %d", hud->stage);
 
-    // Health bar
-    int bar_x = 10, bar_y = 100, bar_w = 200, bar_h = 20;
+    // Health bar using config positions
+    int bar_x = hud_settings.hud_hp_x, bar_y = hud_settings.hud_hp_y, bar_w = 200, bar_h = 20;
     double ratio = hud->player_hp / 100.0;
     if (ratio < 0) ratio = 0;
     if (ratio > 1) ratio = 1;
@@ -125,15 +146,30 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
             hud_hp_color);
     }
 
-    // Health text
-    al_draw_textf(hud_font, hud_text_color,
-        bar_x + bar_w + 10, bar_y, 0,
-        "%d / %d", hud->player_hp, hud->player_max_hp);
+    // Health text in the center of the bar
+    char hp_text[32];
+    snprintf(hp_text, sizeof(hp_text), "%d / %d", hud->player_hp, hud->player_max_hp);
+    int text_width = al_get_text_width(hud_font, hp_text);
+    int text_x = bar_x + (bar_w - text_width) / 2;
+    int text_y = bar_y + (bar_h - al_get_font_line_height(hud_font)) / 2;
+    
+    // Draw text with black outline for better visibility
+    al_draw_text(hud_font, al_map_rgb(0, 0, 0), text_x - 1, text_y, 0, hp_text);
+    al_draw_text(hud_font, al_map_rgb(0, 0, 0), text_x + 1, text_y, 0, hp_text);
+    al_draw_text(hud_font, al_map_rgb(0, 0, 0), text_x, text_y - 1, 0, hp_text);
+    al_draw_text(hud_font, al_map_rgb(0, 0, 0), text_x, text_y + 1, 0, hp_text);
+    
+    // Draw the main text
+    al_draw_text(hud_font, hud_text_color, text_x, text_y, 0, hp_text);
         
-    // Enemy count display - total enemies
+    // Enemy count display - total enemies using config positions
     int total_enemies = hud->enemies_alive + hud->flying_enemies_alive;
-    al_draw_textf(hud_font, hud_text_color, 10, 140, 0,
+    al_draw_textf(hud_font, hud_text_color, hud_settings.hud_enemies_x, hud_settings.hud_enemies_y, 0,
         "Enemies: %d", total_enemies);
+    
+    // Round display using config positions
+    al_draw_textf(hud_font, hud_text_color, hud_settings.hud_round_x, hud_settings.hud_round_y, 0,
+        "Round: %d", hud->round);
     
     // draw sprites    
     if (weapon_name == "Machine Gun") {
