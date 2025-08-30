@@ -114,8 +114,6 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
             double rotation_angle_rad = bullets[i].angle;
             double scale_x = (double)(bullets[i].width) / (double)(bullet_sprite_width);
             double scale_y = (double)(bullets[i].height) / (double)(bullet_sprite_height);
-            printf("tank cannon bullet width: %d, bullet height: %d\n", bullets[i].width, bullets[i].height);
-            printf("scale_x: %f, scale_y: %f\n", scale_x, scale_y);
 
             al_draw_scaled_rotated_bitmap(bullet_sprites.cannon_bullet_sheet,
                                             bullet_sprite_width / 2.0, bullet_sprite_height / 2.0,  // rotation center

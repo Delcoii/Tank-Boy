@@ -15,7 +15,7 @@ static int current_hp = 100;
 static int current_score = 0;
 static double last_time = 0;
 
-// HUD Colors
+// HUD
 static ALLEGRO_COLOR hud_text_color;
 static ALLEGRO_COLOR hud_hp_color;
 static ALLEGRO_COLOR hud_border_color;
@@ -34,56 +34,40 @@ void head_up_display_init(const char* config_file) {
         return;
     }
 
-    // Load HUD colors from config.ini
+    // Load HUD from config.ini
+
     IniParser* parser = ini_parser_create();
-    if (parser && ini_parser_load_file(parser, config_file)) {
-        int head_up_display_text_r = ini_parser_get_int(parser, "HUD Colors", "hud_text_r", 255);
-        int head_up_display_text_g = ini_parser_get_int(parser, "HUD Colors", "hud_text_g", 255);
-        int head_up_display_text_b = ini_parser_get_int(parser, "HUD Colors", "hud_text_b", 255);
+    ini_parser_load_file(parser, "TankBoy/config.ini");
+
+    int head_up_display_text_r = ini_parser_get_int(parser, "HUD", "hud_text_r", 255);
+        int head_up_display_text_g = ini_parser_get_int(parser, "HUD", "hud_text_g", 255);
+        int head_up_display_text_b = ini_parser_get_int(parser, "HUD", "hud_text_b", 255);
         hud_text_color = al_map_rgb(head_up_display_text_r, head_up_display_text_g, head_up_display_text_b);
 
-        int head_up_display_hp_r = ini_parser_get_int(parser, "HUD Colors", "hud_hp_r", 255);
-        int head_up_display_hp_g = ini_parser_get_int(parser, "HUD Colors", "hud_hp_g", 0);
-        int head_up_display_hp_b = ini_parser_get_int(parser, "HUD Colors", "hud_hp_b", 0);
+        int head_up_display_hp_r = ini_parser_get_int(parser, "HUD", "hud_hp_r", 255);
+        int head_up_display_hp_g = ini_parser_get_int(parser, "HUD", "hud_hp_g", 0);
+        int head_up_display_hp_b = ini_parser_get_int(parser, "HUD", "hud_hp_b", 0);
         hud_hp_color = al_map_rgb(head_up_display_hp_r, head_up_display_hp_g, head_up_display_hp_b);
 
-        int head_up_display_border_r = ini_parser_get_int(parser, "HUD Colors", "hud_border_r", 255);
-        int head_up_display_border_g = ini_parser_get_int(parser, "HUD Colors", "hud_border_g", 255);
-        int head_up_display_border_b = ini_parser_get_int(parser, "HUD Colors", "hud_border_b", 255);
+        int head_up_display_border_r = ini_parser_get_int(parser, "HUD", "hud_border_r", 255);
+        int head_up_display_border_g = ini_parser_get_int(parser, "HUD", "hud_border_g", 255);
+        int head_up_display_border_b = ini_parser_get_int(parser, "HUD", "hud_border_b", 255);
         hud_border_color = al_map_rgb(head_up_display_border_r, head_up_display_border_g, head_up_display_border_b);
-        
 
-    } else {
-        // Use default colors
-        hud_text_color = al_map_rgb(255, 255, 255);
-        hud_hp_color = al_map_rgb(255, 0, 0);
-        hud_border_color = al_map_rgb(255, 255, 255);
-    }
+        hud_settings.hud_weapon_x = ini_parser_get_int(parser, "HUD", "hud_weapon_x", 20);
+        hud_settings.hud_weapon_y = ini_parser_get_int(parser, "HUD", "hud_weapon_y", 20);
+        hud_settings.hud_weapon_width = ini_parser_get_int(parser, "HUD", "hud_weapon_width", 20);
+        hud_settings.hud_weapon_height = ini_parser_get_int(parser, "HUD", "hud_weapon_height", 20);
+
    
     if (parser) {
         ini_parser_destroy(parser);
     }
     
-    // Load HUD weapon display settings
-    IniParser* hud_parser = ini_parser_create();
-    if (hud_parser && ini_parser_load_file(hud_parser, config_file)) {
-        // Load HUD weapon display settings and store them globally
-        hud_settings.hud_weapon_x = ini_parser_get_int(hud_parser, "HUD", "hud_weapon_x", 20);
-        hud_settings.hud_weapon_y = ini_parser_get_int(hud_parser, "HUD", "hud_weapon_y", 20);
-        hud_settings.hud_weapon_width = ini_parser_get_int(hud_parser, "HUD", "hud_weapon_width", 32);
-        hud_settings.hud_weapon_height = ini_parser_get_int(hud_parser, "HUD", "hud_weapon_height", 32);
-        printf("HUD weapon settings loaded: x=%d, y=%d, w=%d, h=%d\n", 
-               hud_settings.hud_weapon_x, hud_settings.hud_weapon_y, 
-               hud_settings.hud_weapon_width, hud_settings.hud_weapon_height);
-    }
-    if (hud_parser) {
-        ini_parser_destroy(hud_parser);
-    }
    
     current_hp = 100;
     current_score = 0;
-    last_time = al_get_time();
-    
+    last_time = al_get_time();   
 
 }
 
@@ -151,25 +135,21 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     al_draw_textf(hud_font, hud_text_color, 10, 140, 0,
         "Enemies: %d", total_enemies);
     
-    // draw sprites
-    // Use cached HUD settings (loaded during initialization)
-    static hud_settings_t hud_settings = {20, 20, 32, 32}; // Default values
-    
+    // draw sprites    
     if (weapon_name == "Machine Gun") {
         int width = al_get_bitmap_width(hud_sprites.tank_bullet_sheet);
         int height = al_get_bitmap_height(hud_sprites.tank_bullet_sheet);
-        al_draw_scaled_bitmap(hud_sprites.tank_bullet_sheet, 0, 0,      // draw start position
-                            width, height,                              // original size to draw
-                            hud_settings.hud_weapon_x, hud_settings.hud_weapon_y,  // draw position (왼쪽 상단)
-                            hud_settings.hud_weapon_width, hud_settings.hud_weapon_height,  // draw size (INI에서 읽어온 크기)
+        al_draw_scaled_bitmap(hud_sprites.tank_bullet_sheet, 0, 0, width, height,  
+                            hud_settings.hud_weapon_x, hud_settings.hud_weapon_y,  // draw position 
+                            hud_settings.hud_weapon_width, hud_settings.hud_weapon_height, 
                             0);
     } else if (weapon_name == "Cannon") {
         int width = al_get_bitmap_width(hud_sprites.cannon_bullet_sheet);
         int height = al_get_bitmap_height(hud_sprites.cannon_bullet_sheet);
         al_draw_scaled_bitmap(hud_sprites.cannon_bullet_sheet, 0, 0,      // draw start position
                             width, height,                              // original size to draw
-                            hud_settings.hud_weapon_x, hud_settings.hud_weapon_y,  // draw position (왼쪽 상단)
-                            hud_settings.hud_weapon_width, hud_settings.hud_weapon_height,  // draw size (INI에서 읽어온 크기)
+                            hud_settings.hud_weapon_x + (hud_settings.hud_weapon_width/2), hud_settings.hud_weapon_y,  // draw position
+                            hud_settings.hud_weapon_height*1.5, hud_settings.hud_weapon_height*1.5,  // draw size   
                             0);
     }   
 }

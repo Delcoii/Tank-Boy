@@ -547,12 +547,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->stage_clear = true;
             
             // Add score to ranking when game is completed (stage 3)
-            if (game_system->current_stage >= 3) {
-                // Final health bonus for game completion
-                int current_hp = get_tank_hp();
-                int final_health_bonus = current_hp * 1000;
-                game_system->score += final_health_bonus;
-                
+            if (game_system->current_stage >= 3) {                
                 // Transition to stage complete state instead of directly adding to ranking
                 game_system->current_state = STATE_STAGE_COMPLETE;
                 printf("Game completed! Final score %d\n", (int)game_system->score);
