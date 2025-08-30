@@ -205,7 +205,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     enemy_sprites_init();
     flying_enemy_sprites_init();
     bullet_sprites_init();
-    
+    hud_sprites_init();
     
     // Set global references for getter functions
     set_global_tank_ref(&game_system->player_tank);
@@ -636,16 +636,11 @@ static void draw_game(const GameSystem* game_system) {
         enemies_draw(game_system->camera_x, game_system->camera_y);
         flying_enemies_draw(game_system->camera_x, game_system->camera_y);
         bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
-    }
-    
-    
-    
-    
-    // Draw enemy HP bars (only when not game over)
-    if (!game_system->game_over) {
         draw_enemy_hp_bars();
         draw_flying_enemy_hp_bars();
     }
+    
+    
 
     if (game_system->game_over) {
         // Game Over screen - draw over everything
@@ -674,6 +669,7 @@ static void draw_game(const GameSystem* game_system) {
     }
     else if (!game_system->stage_clear) {
         head_up_display_draw(&game_system->hud);
+
     }
     else {
         int cx = game_system->config.buffer_width / 2;
