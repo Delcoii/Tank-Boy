@@ -43,7 +43,17 @@ typedef struct {
     size_t block_capacity;
     int map_width;
     int map_height;
+    int stage;  // 현재 스테이지 번호 (1, 2, 3)
 } Map;
+
+// sprite structure
+typedef struct _map_sprites
+{
+    ALLEGRO_BITMAP* _sheet;
+    ALLEGRO_BITMAP** grass_sprites;
+    ALLEGRO_BITMAP** ground_sprites;
+    
+} map_sprites_t;
 
 // Map management
 bool map_load(Map* map, const char* csv_path);

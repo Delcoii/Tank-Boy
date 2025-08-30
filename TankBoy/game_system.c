@@ -193,7 +193,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
 
     char map_sprite_file[256];
-    snprintf(map_sprite_file, sizeof(map_sprite_file), "TankBoy/resources/sprites/stage1_ground.png");
+    snprintf(map_sprite_file, sizeof(map_sprite_file), "TankBoy/resources/sprites/grounds.png");
 
     printf("location : %s\n", map_sprite_file);
     map_sprites_init(map_sprite_file);
