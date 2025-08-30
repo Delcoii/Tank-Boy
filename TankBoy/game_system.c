@@ -300,6 +300,11 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             game_system->exit_button.hovered = is_point_in_button(bx, by, &game_system->exit_button);
         }
         else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
+            // can change cannon angle in clear state
+            double cx = game_system->player_tank.x - game_system->camera_x + get_tank_width() / 2;
+            double cy = game_system->player_tank.y - game_system->camera_y + get_tank_height() / 2;
+            game_system->player_tank.cannon_angle = atan2(by - cy, bx - cx);
+            
             // Handle hover for stage clear/end screen buttons
             if (game_system->current_stage >= 3) {
                 // Game end screen - handle menu button hover
