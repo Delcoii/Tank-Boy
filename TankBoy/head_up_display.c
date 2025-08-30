@@ -28,15 +28,29 @@ void head_up_display_init(const char* config_file) {
     al_init_font_addon();
     al_init_ttf_addon();
 
-    hud_font = al_create_builtin_font();
-    if (!hud_font) {
-        // Continue even if font creation fails
-        return;
-    }
-
     // Load HUD from config.ini
     IniParser* parser = ini_parser_create();
     ini_parser_load_file(parser, "TankBoy/config.ini");
+
+    // Load font from config.ini [Font] section
+    const char* font_file = ini_parser_get_string(parser, "Font", "font_file", "TankBoy/resources/fonts/pressstart.ttf");
+    int font_size = ini_parser_get_int(parser, "Font", "font_size", 15);
+    bool fallback_to_builtin = ini_parser_get_bool(parser, "Font", "fallback_to_builtin", true);
+    
+    // Try to load TTF font first
+    hud_font = al_load_ttf_font(font_file, font_size, 0);
+    if (!hud_font) {
+        if (fallback_to_builtin) {
+            // Fallback to builtin font if TTF fails
+            hud_font = al_create_builtin_font();
+            printf("HUD: Using builtin font (TTF font not found: %s)\\n", font_file);
+        } else {
+            printf("HUD: Failed to load font: %s\\n", font_file);
+            return;
+        }
+    } else {
+        printf("HUD: Loaded TTF font: %s (size: %d)\\n", font_file, font_size);
+    }
 
     // Load HUD colors
     int head_up_display_text_r = ini_parser_get_int(parser, "HUD", "hud_text_r", 255);
@@ -124,7 +138,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
 
     // HUD text using config positions
     al_draw_textf(hud_font, hud_text_color, hud_settings.hud_score_x, hud_settings.hud_score_y, 0,
-        "Score: %d", hud->score);
+        "Score  : %d", hud->score);
     al_draw_textf(hud_font, hud_text_color, hud_settings.hud_stage_x, hud_settings.hud_stage_y, 0,
         "Stage: %d", hud->stage);
 
@@ -169,7 +183,7 @@ void head_up_display_draw(const Head_Up_Display_Data* hud) {
     
     // Round display using config positions
     al_draw_textf(hud_font, hud_text_color, hud_settings.hud_round_x, hud_settings.hud_round_y, 0,
-        "Round: %d", hud->round);
+        "Round  : %d", hud->round);
     
     // draw sprites    
     if (weapon_name == "Machine Gun") {

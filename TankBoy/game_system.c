@@ -60,7 +60,7 @@ void load_game_config(GameConfig* config, const char* config_file) {
     config->max_bullets = ini_parser_get_int(parser, "Game", "max_bullets", 100);
 
     // Font
-    const char* font_file = ini_parser_get_string(parser, "Font", "font_file", "TankBoy/resources/fonts/ARCADECLASSIC.ttf");
+    const char* font_file = ini_parser_get_string(parser, "Font", "font_file", "TankBoy/resources/fonts/pressstart.ttf");
     strncpy(config->font_file, font_file, sizeof(config->font_file) - 1);
     config->font_file[sizeof(config->font_file) - 1] = '\0';
     config->font_size = ini_parser_get_int(parser, "Font", "font_size", 15);
@@ -151,28 +151,28 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int bx = game_system->config.buffer_width / 2 - game_system->config.button_width / 2;
     int sy = game_system->config.buffer_height / 2 - game_system->config.button_spacing / 2;
     int ey = game_system->config.buffer_height / 2 + game_system->config.button_spacing / 2;
-    init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start  Game");
+    init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start Game");
     
     // Initialize Ranking button (중앙 아래쪽)
     init_button(&game_system->ranking_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Rankings");
     
     // Initialize Exit button (맨 아래쪽)
     int exit_y = ey + game_system->config.button_spacing;
-    init_button(&game_system->exit_button, bx, exit_y, game_system->config.button_width, game_system->config.button_height, "Exit  Game");
+    init_button(&game_system->exit_button, bx, exit_y, game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
 
     
     // Initialize Next button for stage clear screen (position will be set when needed)
     int next_y = game_system->config.buffer_height / 2 + 120;
-    init_button(&game_system->next_button, bx, next_y, game_system->config.button_width, game_system->config.button_height, "Next  Stage");
+    init_button(&game_system->next_button, bx, next_y, game_system->config.button_width, game_system->config.button_height, "Next Stage");
     
     // Initialize Menu button for game end screen
     init_button(&game_system->menu_button, bx, next_y, game_system->config.button_width, 
-        game_system->config.button_height, "Back  to  Menu");
+        game_system->config.button_height, "Back to Menu");
     
     // Initialize Ranking Page button for stage complete screen
     init_button(&game_system->ranking_page_button, bx, next_y, game_system->config.button_width, 
-        game_system->config.button_height, "View  Rankings");
+        game_system->config.button_height, "View Rankings");
     
 
     
