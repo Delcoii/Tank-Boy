@@ -171,7 +171,7 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                 if (!bullets[i].alive) {
                     // Load cannon bullet size from config
                     IniParser* parser = ini_parser_create();
-                    ini_parser_load_file(parser, "config.ini");
+                    ini_parser_load_file(parser, "TankBoy/config.ini");
                     int cannon_width = ini_parser_get_int(parser, "Bullets", "cannon_bullet_width", 20);
                     int cannon_height = ini_parser_get_int(parser, "Bullets", "cannon_bullet_height", 20);
                     ini_parser_destroy(parser);
@@ -180,8 +180,8 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                     bullets[i].x = tank->x + tank->width / 2;
                     bullets[i].y = tank->y + tank->height / 2;
                     bullets[i].weapon = 1;
-                    bullets[i].vx = cos(tank->cannon_angle) * tank->cannon_power * 0.7;
-                    bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 0.7;
+                    bullets[i].vx = cos(tank->cannon_angle) * tank->cannon_power * 1.4;
+                    bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 1.4;
                     bullets[i].width = cannon_width;
                     bullets[i].height = cannon_height;
                     bullets[i].angle = tank->cannon_angle;

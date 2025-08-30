@@ -243,7 +243,7 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
             enemies[enemy_index].vx = 0.0;
             enemies[enemy_index].vy = 0.0;
             enemies[enemy_index].on_ground = true;
-            enemies[enemy_index].max_hp = ENEMY_BASE_HP + ENEMY_HP_PER_ROUND * difficulty;
+            enemies[enemy_index].max_hp = ENEMY_BASE_HP + difficulty * 50;
             enemies[enemy_index].hp = enemies[enemy_index].max_hp;
             enemies[enemy_index].last_x = x;
             enemies[enemy_index].stuck_time = 0.0;
