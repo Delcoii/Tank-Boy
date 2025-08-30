@@ -142,6 +142,10 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     init_button(&game_system->menu_button, bx, next_y, game_system->config.button_width, 
         game_system->config.button_height, "Back to Menu");
     
+    // Initialize Ranking Page button for stage complete screen
+    init_button(&game_system->ranking_page_button, bx, next_y, game_system->config.button_width, 
+        game_system->config.button_height, "View Rankings");
+    
     // Initialize name input
     text_input_init(&game_system->name_input, 20);
 
@@ -292,7 +296,27 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
         display_to_buffer_coords(event->mouse.x, event->mouse.y, &bx, &by, &game_system->config);
         if (game_system->current_state == STATE_MENU) {
             game_system->start_button.hovered = is_point_in_button(bx, by, &game_system->start_button);
+            game_system->ranking_button.hovered = is_point_in_button(bx, by, &game_system->ranking_button);
             game_system->exit_button.hovered = is_point_in_button(bx, by, &game_system->exit_button);
+        }
+        else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
+            // Handle hover for stage clear/end screen buttons
+            if (game_system->current_stage >= 3) {
+                // Game end screen - handle menu button hover
+                game_system->menu_button.hovered = is_point_in_button(bx, by, &game_system->menu_button);
+            } else {
+                // Stage clear screen - handle next button hover
+                game_system->next_button.hovered = is_point_in_button(bx, by, &game_system->next_button);
+            }
+        }
+        else if (game_system->current_state == STATE_STAGE_COMPLETE) {
+            // Handle hover for stage complete screen buttons
+            game_system->ranking_page_button.hovered = is_point_in_button(bx, by, &game_system->ranking_page_button);
+            game_system->menu_button.hovered = is_point_in_button(bx, by, &game_system->menu_button);
+        }
+        else if (game_system->current_state == STATE_GAME_OVER) {
+            // Handle hover for game over screen buttons
+            game_system->menu_button.hovered = is_point_in_button(bx, by, &game_system->menu_button);
         }
         else if (game_system->current_state == STATE_GAME) {
             double cx = game_system->player_tank.x - game_system->camera_x + get_tank_width() / 2;
@@ -403,6 +427,19 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 }
             }
         }
+        else if (game_system->current_state == STATE_STAGE_COMPLETE) {
+            // Handle button clicks on stage complete screen
+            if (is_point_in_button(bx, by, &game_system->ranking_page_button)) {
+                // Transition to name input state
+                game_system->current_state = STATE_NAME_INPUT;
+                text_input_reset(&game_system->name_input);
+                printf("Enter your name for final score %d\n", (int)game_system->score);
+            }
+            else if (is_point_in_button(bx, by, &game_system->menu_button)) {
+                game_system->current_state = STATE_MENU;
+                game_system->stage_clear = false;
+            }
+        }
         else if (game_system->current_state == STATE_GAME_OVER) {
             // Handle button clicks on game over screen
             if (is_point_in_button(bx, by, &game_system->menu_button)) {
@@ -415,9 +452,11 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
     case ALLEGRO_EVENT_MOUSE_BUTTON_UP:
         if (event->mouse.button == 1) {
             game_system->start_button.clicked = false;
+            game_system->ranking_button.clicked = false;
             game_system->exit_button.clicked = false;
             game_system->next_button.clicked = false;
             game_system->menu_button.clicked = false;
+            game_system->ranking_page_button.clicked = false;
         }
         break;
     }
@@ -518,10 +557,9 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 int final_health_bonus = current_hp * 1000;
                 game_system->score += final_health_bonus;
                 
-                // Transition to name input state instead of directly adding to ranking
-                game_system->current_state = STATE_NAME_INPUT;
-                text_input_reset(&game_system->name_input);
-                printf("Game completed! Enter your name for final score %d\n", (int)game_system->score);
+                // Transition to stage complete state instead of directly adding to ranking
+                game_system->current_state = STATE_STAGE_COMPLETE;
+                printf("Game completed! Final score %d\n", (int)game_system->score);
                 
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
             } else {
@@ -695,6 +733,35 @@ void render_game(GameSystem* game_system) {
         // Draw ranking screen
         al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
         ranking_draw(game_system->camera_x, game_system->camera_y);
+    }
+    else if (game_system->current_state == STATE_STAGE_COMPLETE) {
+        // Draw stage complete screen
+        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        
+        int cx = game_system->config.buffer_width / 2;
+        int cy = game_system->config.buffer_height / 2;
+        
+        // Title
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy - 100, ALLEGRO_ALIGN_CENTER, "Congratulations!");
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy - 70, ALLEGRO_ALIGN_CENTER, "You completed all stages!");
+        
+        // Final score display
+        char score_text[64];
+        snprintf(score_text, sizeof(score_text), "Final Score: %d", (int)game_system->score);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 0), cx, cy - 30, ALLEGRO_ALIGN_CENTER, score_text);
+        
+        // Stage display
+        char stage_text[64];
+        snprintf(stage_text, sizeof(stage_text), "Stages Completed: %d", game_system->current_stage);
+        al_draw_text(game_system->font, al_map_rgb(255, 255, 255), cx, cy, ALLEGRO_ALIGN_CENTER, stage_text);
+        
+        // Buttons
+        int button_y = cy + 80;
+        game_system->ranking_page_button.y = button_y;
+        game_system->menu_button.y = button_y + game_system->config.button_spacing;
+        
+        draw_button(&game_system->ranking_page_button, &game_system->config, game_system->font);
+        draw_button(&game_system->menu_button, &game_system->config, game_system->font);
     }
     else if (game_system->current_state == STATE_NAME_INPUT) {
         // Draw name input screen
