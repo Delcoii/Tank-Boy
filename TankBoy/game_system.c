@@ -126,11 +126,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int sy = game_system->config.buffer_height / 2 - game_system->config.button_spacing / 2;
     int ey = game_system->config.buffer_height / 2 + game_system->config.button_spacing / 2;
     init_button(&game_system->start_button, bx, sy, game_system->config.button_width, game_system->config.button_height, "Start Game");
-    init_button(&game_system->exit_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
-    // Initialize Ranking button
-    int ry = ey + game_system->config.button_spacing;
-    init_button(&game_system->ranking_button, bx, ry, game_system->config.button_width, game_system->config.button_height, "Rankings");
+    // Initialize Ranking button (중앙 아래쪽)
+    init_button(&game_system->ranking_button, bx, ey, game_system->config.button_width, game_system->config.button_height, "Rankings");
+    
+    // Initialize Exit button (맨 아래쪽)
+    int exit_y = ey + game_system->config.button_spacing;
+    init_button(&game_system->exit_button, bx, exit_y, game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
     // Initialize Next button for stage clear screen (position will be set when needed)
     int next_y = game_system->config.buffer_height / 2 + 120;
