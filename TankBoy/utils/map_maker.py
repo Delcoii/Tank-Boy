@@ -796,8 +796,8 @@ class MapEditor:
     
     def create_default_ground(self):
         """Create ground blocks at default ground level"""
-        # Set ground level (2-3 rows from bottom of map)
-        ground_level_start = MAP_HEIGHT - BLOCK_SIZE * 3  # 3 blocks height from bottom
+        # Set ground level (10 rows from bottom of map)
+        ground_level_start = MAP_HEIGHT - BLOCK_SIZE * 10  # 10 blocks height from bottom
         ground_level_end = MAP_HEIGHT
         
         # Place ground blocks across entire map width
