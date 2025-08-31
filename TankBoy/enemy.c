@@ -839,7 +839,7 @@ void enemies_draw(double camera_x, double camera_y) {
         double sy = e->y - camera_y;
         
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        // al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
         // draw enemy sprite
         int width = al_get_bitmap_width(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
@@ -863,9 +863,9 @@ void flying_enemies_draw(double camera_x, double camera_y) {
 
 
         // Convert world coordinates to screen coordinates
-        al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
-            fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
-            al_map_rgb(180, 0, 180));
+        // al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
+        //     fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
+        //     al_map_rgb(180, 0, 180));
 
         int width = al_get_bitmap_width(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
         int height = al_get_bitmap_height(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
