@@ -296,7 +296,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double cy = sy + tank->height / 2;
     double bx = cx + cos(tank->cannon_angle) * 18;
     double by = cy + sin(tank->cannon_angle) * 18;
-    al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
+    // al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);  // Commented out yellow cannon line
 
     // Cannon charge gauge (centered on tank, smaller size)
     if (tank->charging && tank->weapon == 1) {
