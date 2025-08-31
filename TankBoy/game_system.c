@@ -867,8 +867,31 @@ void render_game(GameSystem* game_system) {
         ranking_draw(game_system->camera_x, game_system->camera_y);
     }
     else if (game_system->current_state == STATE_STAGE_COMPLETE) {
-        // Draw stage complete screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw stage complete screen with intro background
+        if (game_system->intro_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->intro_bg);
+            int bg_height = al_get_bitmap_height(game_system->intro_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         
         int cx = game_system->config.buffer_width / 2;
         int cy = game_system->config.buffer_height / 2;
@@ -896,8 +919,31 @@ void render_game(GameSystem* game_system) {
         draw_button(&game_system->menu_button, &game_system->config, game_system->font);
     }
     else if (game_system->current_state == STATE_NAME_INPUT) {
-        // Draw name input screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw name input screen with intro background
+        if (game_system->intro_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->intro_bg);
+            int bg_height = al_get_bitmap_height(game_system->intro_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         
         int cx = game_system->config.buffer_width / 2;
         int cy = game_system->config.buffer_height / 2;
