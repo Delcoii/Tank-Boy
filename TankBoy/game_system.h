@@ -13,6 +13,7 @@
 #include "ini_parser.h"     // Configuration file parser
 #include "input_system.h"   // Keyboard and mouse input handling
 #include "head_up_display.h" // HUD and UI display system
+#include "audio.h"           // Audio system for BGM
 
 // MAX_BULLETS is now loaded from config.ini
 

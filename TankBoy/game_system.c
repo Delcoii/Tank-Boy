@@ -299,6 +299,12 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     // Initialize ranking system
     ranking_init();
+    
+    // Initialize audio system
+    audio_init();
+    
+    // Start playing intro BGM immediately
+    play_intro_bgm();
 }
 
 // =================== Cleanup ===================
@@ -324,6 +330,9 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     al_destroy_display(display);
     map_sprites_deinit();
     ranking_deinit();
+    
+    // Cleanup audio system
+    audio_cleanup();
 }
 
 // =================== Input Handling ===================

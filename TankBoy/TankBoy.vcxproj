@@ -141,6 +141,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="audio.c" />
     <ClCompile Include="head_up_display.c" />
     <ClCompile Include="bullet.c" />
     <ClCompile Include="main.c" />
@@ -154,6 +155,7 @@
     <ClCompile Include="ranking.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="audio.h" />
     <ClInclude Include="bullet.h" />
     <ClInclude Include="game_system.h" />
     <ClInclude Include="head_up_display.h" />
