@@ -131,7 +131,7 @@ static void draw_menu(const GameSystem* game_system) {
         al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
     }
     
-    al_draw_text(game_system->font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
+    al_draw_text(game_system->title_font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
         game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "TANK BOY");
     draw_button(&game_system->start_button, &game_system->config, game_system->font);
     draw_button(&game_system->exit_button, &game_system->config, game_system->font);
@@ -250,6 +250,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
     if (!game_system->intro_bg) printf("Warning: Could not load intro_bg.png\n");
     
+    // Load title font (larger size)
+    game_system->title_font = al_load_ttf_font("TankBoy/resources/fonts/pressstart.ttf", 40, 0);
+    if (!game_system->title_font) {
+        printf("Warning: Could not load title font\n");
+        game_system->title_font = game_system->font; // Fallback to regular font
+    }
+    
     // Initialize and load map
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -300,6 +307,9 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
+    if (game_system->title_font && game_system->title_font != game_system->font) {
+        al_destroy_font(game_system->title_font);
+    }
     
     // Destroy background images
     if (game_system->bg_green) al_destroy_bitmap(game_system->bg_green);

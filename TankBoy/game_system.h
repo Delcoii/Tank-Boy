@@ -108,6 +108,9 @@ typedef struct {
     ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
     ALLEGRO_BITMAP* intro_bg;   // Intro screen background
     
+    // Fonts
+    ALLEGRO_FONT* title_font;   // Large font for titles
+    
     // Enemy System
     int round_number;         // Current round number
     bool enemies_spawned;     // Enemy spawn flag
