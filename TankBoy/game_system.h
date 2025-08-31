@@ -107,6 +107,7 @@ typedef struct {
     ALLEGRO_BITMAP* bg_volcano; // Stage 2 background
     ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
     ALLEGRO_BITMAP* intro_bg;   // Intro screen background
+    ALLEGRO_BITMAP* ranking_bg; // Ranking screen background
     
     // Fonts
     ALLEGRO_FONT* title_font;   // Large font for titles

@@ -244,11 +244,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->bg_volcano = al_load_bitmap("TankBoy/resources/sprites/bg_volcano.png");
     game_system->bg_snow = al_load_bitmap("TankBoy/resources/sprites/bg_snow.png");
     game_system->intro_bg = al_load_bitmap("TankBoy/resources/sprites/intro_bg.png");
+    game_system->ranking_bg = al_load_bitmap("TankBoy/resources/sprites/ranking_bg.png");
     
     if (!game_system->bg_green) printf("Warning: Could not load bg_green.png\n");
     if (!game_system->bg_volcano) printf("Warning: Could not load bg_volcano.png\n");
     if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
     if (!game_system->intro_bg) printf("Warning: Could not load intro_bg.png\n");
+    if (!game_system->ranking_bg) printf("Warning: Could not load ranking_bg.png\n");
     
     // Load title font (larger size)
     game_system->title_font = al_load_ttf_font("TankBoy/resources/fonts/pressstart.ttf", 40, 0);
@@ -316,6 +318,7 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     if (game_system->bg_volcano) al_destroy_bitmap(game_system->bg_volcano);
     if (game_system->bg_snow) al_destroy_bitmap(game_system->bg_snow);
     if (game_system->intro_bg) al_destroy_bitmap(game_system->intro_bg);
+    if (game_system->ranking_bg) al_destroy_bitmap(game_system->ranking_bg);
     
     al_destroy_event_queue(queue);
     al_destroy_display(display);
@@ -836,8 +839,31 @@ void render_game(GameSystem* game_system) {
     disp_pre_draw(game_system);
     if (game_system->current_state == STATE_MENU) draw_menu(game_system);
     else if (game_system->current_state == STATE_RANKING) {
-        // Draw ranking screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw ranking screen with background
+        if (game_system->ranking_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->ranking_bg);
+            int bg_height = al_get_bitmap_height(game_system->ranking_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->ranking_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         ranking_draw(game_system->camera_x, game_system->camera_y);
     }
     else if (game_system->current_state == STATE_STAGE_COMPLETE) {
