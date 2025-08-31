@@ -281,10 +281,16 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
 
     // Cannon charge gauge (centered on tank, smaller size)
     if (tank->charging && tank->weapon == 1) {
-        double gauge_w = tank->cannon_power * 8; // Reduced from 10 to 8
         double bar_width = 100; // Reduced from 150 to 100
         double bar_x = cx - bar_width / 2; // Center on tank
-        double bar_y = cy - 30; // Position above tank center
+        double bar_y = sy - 25; // Position above tank (tank height based)
+        
+        // Calculate gauge width with proper scaling and clamping
+        double max_power = 15.0; // Maximum cannon power
+        double gauge_ratio = tank->cannon_power / max_power;
+        if (gauge_ratio > 1.0) gauge_ratio = 1.0; // Clamp to 100%
+        double gauge_w = bar_width * gauge_ratio;
+        
         al_draw_filled_rectangle(bar_x, bar_y, bar_x + gauge_w, bar_y + 8, al_map_rgb(255, 0, 0));
         al_draw_rectangle(bar_x, bar_y, bar_x + bar_width, bar_y + 8, al_map_rgb(255, 255, 255), 1);
     }
@@ -297,7 +303,7 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
         if (filled > 1) filled = 1;
         double bar_width = 100; // Reduced from 150 to 100
         double bar_x = cx - bar_width / 2; // Center on tank
-        double bar_y = cy - 45; // Position above cannon charge gauge
+        double bar_y = sy - 40; // Position above tank (tank height based)
         double gw = bar_width * filled;
         al_draw_rectangle(bar_x, bar_y, bar_x + bar_width, bar_y + 8, al_map_rgb(255, 255, 255), 1);
         al_draw_filled_rectangle(bar_x + 1, bar_y + 1, bar_x + 1 + gw, bar_y + 7, al_map_rgb(0, 200, 255));
