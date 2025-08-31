@@ -279,23 +279,28 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double by = cy + sin(tank->cannon_angle) * 18;
     al_draw_line(cx, cy, bx, by, al_map_rgb(200, 200, 0), 4);
 
-    // Cannon charge gauge
+    // Cannon charge gauge (centered on tank, smaller size)
     if (tank->charging && tank->weapon == 1) {
-        double gauge_w = tank->cannon_power * 10;
-        al_draw_filled_rectangle(sx, sy - 20, sx + gauge_w, sy - 10, al_map_rgb(255, 0, 0));
-        al_draw_rectangle(sx, sy - 20, sx + 150, sy - 10, al_map_rgb(255, 255, 255), 2);
+        double gauge_w = tank->cannon_power * 8; // Reduced from 10 to 8
+        double bar_width = 100; // Reduced from 150 to 100
+        double bar_x = cx - bar_width / 2; // Center on tank
+        double bar_y = cy - 30; // Position above tank center
+        al_draw_filled_rectangle(bar_x, bar_y, bar_x + gauge_w, bar_y + 8, al_map_rgb(255, 0, 0));
+        al_draw_rectangle(bar_x, bar_y, bar_x + bar_width, bar_y + 8, al_map_rgb(255, 255, 255), 1);
     }
 
-    // Machine gun reload gauge
-    if (tank->mg_reloading) {
+    // Machine gun reload gauge (centered on tank, smaller size) - only show when using MG
+    if (tank->mg_reloading && tank->weapon == 0) {
         double total = 2.0;
         double filled = (total - tank->mg_reload_time) / total;
         if (filled < 0) filled = 0;
         if (filled > 1) filled = 1;
-        double full_w = 150;
-        double gw = full_w * filled;
-        al_draw_rectangle(sx, sy - 35, sx + full_w, sy - 20, al_map_rgb(255, 255, 255), 2);
-        al_draw_filled_rectangle(sx + 1, sy - 34, sx + 1 + gw, sy - 21, al_map_rgb(0, 200, 255));
+        double bar_width = 100; // Reduced from 150 to 100
+        double bar_x = cx - bar_width / 2; // Center on tank
+        double bar_y = cy - 45; // Position above cannon charge gauge
+        double gw = bar_width * filled;
+        al_draw_rectangle(bar_x, bar_y, bar_x + bar_width, bar_y + 8, al_map_rgb(255, 255, 255), 1);
+        al_draw_filled_rectangle(bar_x + 1, bar_y + 1, bar_x + 1 + gw, bar_y + 7, al_map_rgb(0, 200, 255));
     }
 }
 
