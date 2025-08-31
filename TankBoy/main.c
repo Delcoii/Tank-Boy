@@ -45,7 +45,7 @@ int main(void) {
     
     // Initialize HUD
     head_up_display_init("config.ini");
-    
+
     // Create display with scaled buffer size
     int disp_w = (int)(game_system.config.buffer_width * game_system.config.display_scale);
     int disp_h = (int)(game_system.config.buffer_height * game_system.config.display_scale);
@@ -91,6 +91,6 @@ int main(void) {
     
     // Cleanup map configuration
     map_config_cleanup();
-    
+ 
     return 0;
 }
