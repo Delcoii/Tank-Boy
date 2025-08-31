@@ -102,6 +102,11 @@ typedef struct {
     // HUD System
     Head_Up_Display_Data hud; // Heads-up display data
     
+    // Background System
+    ALLEGRO_BITMAP* bg_green;   // Stage 1 background
+    ALLEGRO_BITMAP* bg_volcano; // Stage 2 background
+    ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
+    
     // Enemy System
     int round_number;         // Current round number
     bool enemies_spawned;     // Enemy spawn flag

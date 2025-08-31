@@ -214,6 +214,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     head_up_display_init("config.ini");
 
+    // Load background images
+    game_system->bg_green = al_load_bitmap("TankBoy/resources/sprites/bg_green.png");
+    game_system->bg_volcano = al_load_bitmap("TankBoy/resources/sprites/bg_volcano.png");
+    game_system->bg_snow = al_load_bitmap("TankBoy/resources/sprites/bg_snow.png");
+    
+    if (!game_system->bg_green) printf("Warning: Could not load bg_green.png\n");
+    if (!game_system->bg_volcano) printf("Warning: Could not load bg_volcano.png\n");
+    if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
+    
     // Initialize and load map
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -264,6 +273,12 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
+    
+    // Destroy background images
+    if (game_system->bg_green) al_destroy_bitmap(game_system->bg_green);
+    if (game_system->bg_volcano) al_destroy_bitmap(game_system->bg_volcano);
+    if (game_system->bg_snow) al_destroy_bitmap(game_system->bg_snow);
+    
     al_destroy_event_queue(queue);
     al_destroy_display(display);
     map_sprites_deinit();
@@ -652,6 +667,41 @@ void disp_post_draw(GameSystem* game_system) {
 
 static void draw_game(const GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
+
+    // Draw background based on current stage
+    ALLEGRO_BITMAP* current_bg = NULL;
+    switch (game_system->current_stage) {
+        case 1:
+            current_bg = game_system->bg_green;
+            break;
+        case 2:
+            current_bg = game_system->bg_volcano;
+            break;
+        case 3:
+            current_bg = game_system->bg_snow;
+            break;
+        default:
+            current_bg = game_system->bg_green; // Default to green
+            break;
+    }
+    
+    // Draw background if loaded
+    if (current_bg) {
+        // Calculate background position to follow camera
+        int bg_width = al_get_bitmap_width(current_bg);
+        int bg_height = al_get_bitmap_height(current_bg);
+        
+        // Draw background with parallax effect (background moves slower than camera)
+        double bg_x = -(game_system->camera_x * 0.3); // Parallax factor
+        double bg_y = -(game_system->camera_y * 0.1); // Less vertical movement
+        
+        // Draw background tiles to cover the entire screen
+        for (int x = (int)bg_x - bg_width; x < game_system->config.buffer_width + bg_width; x += bg_width) {
+            for (int y = (int)bg_y - bg_height; y < game_system->config.buffer_height + bg_height; y += bg_height) {
+                al_draw_bitmap(current_bg, x, y, 0);
+            }
+        }
+    }
 
     map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     
