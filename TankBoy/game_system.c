@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <allegro5/allegro_ttf.h>
 #include "enemy.h"
 #include "collision.h"
 #include "ranking.h"
@@ -58,6 +59,13 @@ void load_game_config(GameConfig* config, const char* config_file) {
     config->max_lives = ini_parser_get_int(parser, "Game", "max_lives", 3);
     config->max_bullets = ini_parser_get_int(parser, "Game", "max_bullets", 100);
 
+    // Font
+    const char* font_file = ini_parser_get_string(parser, "Font", "font_file", "TankBoy/resources/fonts/pressstart.ttf");
+    strncpy(config->font_file, font_file, sizeof(config->font_file) - 1);
+    config->font_file[sizeof(config->font_file) - 1] = '\0';
+    config->font_size = ini_parser_get_int(parser, "Font", "font_size", 15);
+    config->fallback_to_builtin = ini_parser_get_bool(parser, "Font", "fallback_to_builtin", true);
+
     ini_parser_destroy(parser);
 }
 
@@ -66,6 +74,10 @@ void load_game_config(GameConfig* config, const char* config_file) {
 static void init_button(Button* btn, int x, int y, int w, int h, char* text) {
     btn->x = x; btn->y = y; btn->width = w; btn->height = h;
     btn->text = text; btn->hovered = false; btn->clicked = false;
+    btn->button_sprite = al_load_bitmap("TankBoy/resources/sprites/button.png");
+    if (btn->button_sprite == NULL) {
+        printf("wrong location of button sprite!!\n");
+    }
 }
 
 static bool is_point_in_button(int x, int y, const Button* btn) {
@@ -74,6 +86,10 @@ static bool is_point_in_button(int x, int y, const Button* btn) {
 }
 
 static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* font) {
+    al_draw_scaled_bitmap(btn->button_sprite, 0, 0, 
+                        al_get_bitmap_width(btn->button_sprite), al_get_bitmap_height(btn->button_sprite),
+                        btn->x, btn->y, btn->width, btn->height, 0);
+
     ALLEGRO_COLOR bg, fg;
     if (btn->clicked)
         bg = al_map_rgb(cfg->button_clicked_r, cfg->button_clicked_g, cfg->button_clicked_b),
@@ -85,8 +101,6 @@ static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* 
         bg = al_map_rgb(cfg->button_normal_r, cfg->button_normal_g, cfg->button_normal_b),
         fg = al_map_rgb(0, 0, 0);
 
-    al_draw_filled_rectangle(btn->x, btn->y, btn->x + btn->width, btn->y + btn->height, bg);
-    al_draw_rectangle(btn->x, btn->y, btn->x + btn->width, btn->y + btn->height, al_map_rgb(0, 0, 0), 2);
     al_draw_text(font, fg, btn->x + btn->width / 2, btn->y + btn->height / 2 - 8, ALLEGRO_ALIGN_CENTER, btn->text);
 }
 
@@ -110,6 +124,7 @@ static void display_to_buffer_coords(int display_x, int display_y, int* buffer_x
 
 void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, GameSystem* game_system) {
     al_init_font_addon();
+    al_init_ttf_addon();
     al_init_image_addon();
     al_init_primitives_addon();
     al_install_mouse();
@@ -120,7 +135,18 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     al_register_event_source(queue, al_get_keyboard_event_source());
 
     game_system->buffer = al_create_bitmap(game_system->config.buffer_width, game_system->config.buffer_height);
-    game_system->font = al_create_builtin_font();
+    
+    // Load font from config
+    game_system->font = al_load_ttf_font(game_system->config.font_file, game_system->config.font_size, 0);
+    if (!game_system->font) {
+        if (game_system->config.fallback_to_builtin) {
+            // Fallback to builtin font if TTF fails
+            game_system->font = al_create_builtin_font();
+            printf("Using builtin font (TTF font not found: %s)\n", game_system->config.font_file);
+        } else {
+            printf("Failed to load font: %s\n", game_system->config.font_file);
+        }
+    }
 
     int bx = game_system->config.buffer_width / 2 - game_system->config.button_width / 2;
     int sy = game_system->config.buffer_height / 2 - game_system->config.button_spacing / 2;
@@ -134,6 +160,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     int exit_y = ey + game_system->config.button_spacing;
     init_button(&game_system->exit_button, bx, exit_y, game_system->config.button_width, game_system->config.button_height, "Exit Game");
     
+
+    
     // Initialize Next button for stage clear screen (position will be set when needed)
     int next_y = game_system->config.buffer_height / 2 + 120;
     init_button(&game_system->next_button, bx, next_y, game_system->config.button_width, game_system->config.button_height, "Next Stage");
@@ -145,6 +173,8 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize Ranking Page button for stage complete screen
     init_button(&game_system->ranking_page_button, bx, next_y, game_system->config.button_width, 
         game_system->config.button_height, "View Rankings");
+    
+
     
     // Initialize name input
     text_input_init(&game_system->name_input, 20);
@@ -184,6 +214,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     head_up_display_init("config.ini");
 
+    // Load background images
+    game_system->bg_green = al_load_bitmap("TankBoy/resources/sprites/bg_green.png");
+    game_system->bg_volcano = al_load_bitmap("TankBoy/resources/sprites/bg_volcano.png");
+    game_system->bg_snow = al_load_bitmap("TankBoy/resources/sprites/bg_snow.png");
+    
+    if (!game_system->bg_green) printf("Warning: Could not load bg_green.png\n");
+    if (!game_system->bg_volcano) printf("Warning: Could not load bg_volcano.png\n");
+    if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
+    
     // Initialize and load map
     char map_file[256];
     snprintf(map_file, sizeof(map_file), "TankBoy/resources/stages/stage%d.csv", game_system->current_stage);
@@ -205,7 +244,7 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     enemy_sprites_init();
     flying_enemy_sprites_init();
     bullet_sprites_init();
-    
+    hud_sprites_init();
     
     // Set global references for getter functions
     set_global_tank_ref(&game_system->player_tank);
@@ -234,6 +273,12 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
+    
+    // Destroy background images
+    if (game_system->bg_green) al_destroy_bitmap(game_system->bg_green);
+    if (game_system->bg_volcano) al_destroy_bitmap(game_system->bg_volcano);
+    if (game_system->bg_snow) al_destroy_bitmap(game_system->bg_snow);
+    
     al_destroy_event_queue(queue);
     al_destroy_display(display);
     map_sprites_deinit();
@@ -541,18 +586,13 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         if (total_enemies == 0) {
             // Add health bonus when clearing stage
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 100;
+            int health_bonus = current_hp * 10;  // HP * 10 = 보너스 점수
             game_system->score += health_bonus;
-            
+                       
             game_system->stage_clear = true;
             
             // Add score to ranking when game is completed (stage 3)
-            if (game_system->current_stage >= 3) {
-                // Final health bonus for game completion
-                int current_hp = get_tank_hp();
-                int final_health_bonus = current_hp * 1000;
-                game_system->score += final_health_bonus;
-                
+            if (game_system->current_stage >= 3) {                
                 // Transition to stage complete state instead of directly adding to ranking
                 game_system->current_state = STATE_STAGE_COMPLETE;
                 printf("Game completed! Final score %d\n", (int)game_system->score);
@@ -628,6 +668,41 @@ void disp_post_draw(GameSystem* game_system) {
 static void draw_game(const GameSystem* game_system) {
     al_clear_to_color(al_map_rgb(game_system->config.game_bg_r, game_system->config.game_bg_g, game_system->config.game_bg_b));
 
+    // Draw background based on current stage
+    ALLEGRO_BITMAP* current_bg = NULL;
+    switch (game_system->current_stage) {
+        case 1:
+            current_bg = game_system->bg_green;
+            break;
+        case 2:
+            current_bg = game_system->bg_volcano;
+            break;
+        case 3:
+            current_bg = game_system->bg_snow;
+            break;
+        default:
+            current_bg = game_system->bg_green; // Default to green
+            break;
+    }
+    
+    // Draw background if loaded
+    if (current_bg) {
+        // Calculate background position to follow camera
+        int bg_width = al_get_bitmap_width(current_bg);
+        int bg_height = al_get_bitmap_height(current_bg);
+        
+        // Draw background with parallax effect (background moves slower than camera)
+        double bg_x = -(game_system->camera_x * 0.3); // Parallax factor
+        double bg_y = -(game_system->camera_y * 0.1); // Less vertical movement
+        
+        // Draw background tiles to cover the entire screen
+        for (int x = (int)bg_x - bg_width; x < game_system->config.buffer_width + bg_width; x += bg_width) {
+            for (int y = (int)bg_y - bg_height; y < game_system->config.buffer_height + bg_height; y += bg_height) {
+                al_draw_bitmap(current_bg, x, y, 0);
+            }
+        }
+    }
+
     map_draw((const Map*)&game_system->current_map, game_system->camera_x, game_system->camera_y, game_system->config.buffer_width, game_system->config.buffer_height);
     
     // Only draw tank and game elements when not game over
@@ -636,16 +711,11 @@ static void draw_game(const GameSystem* game_system) {
         enemies_draw(game_system->camera_x, game_system->camera_y);
         flying_enemies_draw(game_system->camera_x, game_system->camera_y);
         bullets_draw(game_system->bullets, game_system->max_bullets, game_system->camera_x, game_system->camera_y);
-    }
-    
-    
-    
-    
-    // Draw enemy HP bars (only when not game over)
-    if (!game_system->game_over) {
         draw_enemy_hp_bars();
         draw_flying_enemy_hp_bars();
     }
+    
+    
 
     if (game_system->game_over) {
         // Game Over screen - draw over everything
@@ -674,6 +744,7 @@ static void draw_game(const GameSystem* game_system) {
     }
     else if (!game_system->stage_clear) {
         head_up_display_draw(&game_system->hud);
+
     }
     else {
         int cx = game_system->config.buffer_width / 2;
@@ -690,7 +761,7 @@ static void draw_game(const GameSystem* game_system) {
             // Show health bonus info
             char health_bonus_text[64];
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 1000;
+            int health_bonus = current_hp * 10;            
             snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
             al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 50, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
@@ -710,7 +781,8 @@ static void draw_game(const GameSystem* game_system) {
             // Show health bonus info
             char health_bonus_text[64];
             int current_hp = get_tank_hp();
-            int health_bonus = current_hp * 1000;
+            int health_bonus = current_hp * 10;
+            
             snprintf(health_bonus_text, sizeof(health_bonus_text), "Health Bonus: +%d", health_bonus);
             al_draw_text(game_system->font, al_map_rgb(0, 255, 0), cx, cy + 70, ALLEGRO_ALIGN_CENTER, health_bonus_text);
             
@@ -791,7 +863,7 @@ void render_game(GameSystem* game_system) {
         if (strlen(game_system->name_input.buffer) > 0) {
             al_draw_text(game_system->font, al_map_rgb(255, 255, 255), input_x + 5, input_y + 5, 0, game_system->name_input.buffer);
         } else {
-            al_draw_text(game_system->font, al_map_rgb(128, 128, 128), input_x + 5, input_y + 5, 0, "Type your name here...");
+            al_draw_text(game_system->font, al_map_rgb(128, 128, 128), input_x + 5, input_y + 5, 0, "Type your name : ");
         }
         
         // Draw cursor (blinking)

@@ -39,6 +39,11 @@ typedef struct {
     int game_speed;
     int max_lives;
     int max_bullets;
+    
+    // Font settings
+    char font_file[256];
+    int font_size;
+    bool fallback_to_builtin;
 } GameConfig;
 
 typedef struct {
@@ -49,6 +54,8 @@ typedef struct {
     // Button state
     bool hovered;
     bool clicked;
+    // Button sprites
+    ALLEGRO_BITMAP* button_sprite;
 } Button;
 
 typedef enum {
@@ -95,6 +102,11 @@ typedef struct {
     // HUD System
     Head_Up_Display_Data hud; // Heads-up display data
     
+    // Background System
+    ALLEGRO_BITMAP* bg_green;   // Stage 1 background
+    ALLEGRO_BITMAP* bg_volcano; // Stage 2 background
+    ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
+    
     // Enemy System
     int round_number;         // Current round number
     bool enemies_spawned;     // Enemy spawn flag
@@ -126,5 +138,6 @@ void disp_post_draw(GameSystem* game_system);                                   
 // ================= Score System =================
 void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
 void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
+
 
 #endif // GAME_SYSTEM_H

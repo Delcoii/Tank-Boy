@@ -17,6 +17,28 @@ typedef struct {
     int flying_enemies_alive; // Number of alive flying enemies
 } Head_Up_Display_Data;
 
+typedef struct _hud_sprites {
+    ALLEGRO_BITMAP* button_sheet;
+    ALLEGRO_BITMAP* tank_bullet_sheet;
+    ALLEGRO_BITMAP* cannon_bullet_sheet;
+} hud_sprites_t;
+
+// HUD display settings
+typedef struct {
+    int hud_weapon_x;
+    int hud_weapon_y;
+    int hud_weapon_width;
+    int hud_weapon_height;
+    int hud_text_r, hud_text_g, hud_text_b;
+    int hud_hp_r, hud_hp_g, hud_hp_b;
+    int hud_border_r, hud_border_g, hud_border_b;
+    int hud_score_x, hud_score_y;
+    int hud_stage_x, hud_stage_y;
+    int hud_hp_x, hud_hp_y;
+    int hud_enemies_x, hud_enemies_y;
+    int hud_round_x, hud_round_y;
+} hud_settings_t;
+
 // HUD initialization
 void head_up_display_init(const char* config_file);
 
@@ -36,5 +58,8 @@ void draw_hp_bar_world(double wx, double wy, int hp, int hp_max, double bar_w);
 // HUD update functions
 void update_tank_hp_display(int new_hp);
 void update_enemy_count_display(int ground_count, int flying_count);
+
+// sprite
+void hud_sprites_init();
 
 #endif

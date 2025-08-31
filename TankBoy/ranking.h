@@ -5,7 +5,7 @@
 
 // ===== Constants =====
 #define MAX_RANKINGS 100
-#define MAX_NAME_LENGTH 32
+#define MAX_NAME_LENGTH 7
 #define DEFAULT_PLAYER_NAME "aaaaa"
 
 // ===== Data Types =====

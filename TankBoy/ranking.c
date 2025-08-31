@@ -10,6 +10,7 @@
 // ===== Globals =====
 static RankingSystem g_ranking_system;
 static ALLEGRO_FONT* g_ranking_font = NULL;
+static int g_ranking_font_size = 20;  // Default font size
 
 // ===== Ranking System Management =====
 
@@ -21,13 +22,31 @@ void ranking_init(void) {
     // Load existing rankings
     ranking_load_from_csv("TankBoy/rankings.csv");
     
-    // Create font for ranking display
-    g_ranking_font = al_create_builtin_font();
-    if (!g_ranking_font) {
-        printf("Warning: Could not create ranking font\n");
+    // Load font size from config
+    FILE* config_file = fopen("TankBoy/config.ini", "r");
+    if (config_file) {
+        char line[256];
+        while (fgets(line, sizeof(line), config_file)) {
+            if (strncmp(line, "font_size", 9) == 0) {
+                char* equal_sign = strchr(line, '=');
+                if (equal_sign) {
+                    g_ranking_font_size = atoi(equal_sign + 1);
+                    break;
+                }
+            }
+        }
+        fclose(config_file);
     }
     
-    printf("Ranking system initialized with %d entries\n", g_ranking_system.count);
+    // Create font for ranking display using pressstart.ttf
+    g_ranking_font = al_load_ttf_font("TankBoy/resources/fonts/pressstart.ttf", g_ranking_font_size, 0);
+    if (!g_ranking_font) {
+        // Fallback to builtin font if pressstart.ttf fails to load
+        g_ranking_font = al_create_builtin_font();
+        printf("Warning: Could not load pressstart.ttf font, using builtin font\n");
+    }
+    
+    printf("Ranking system initialized with %d entries, font size: %d\n", g_ranking_system.count, g_ranking_font_size);
 }
 
 void ranking_cleanup(void) {
@@ -266,15 +285,16 @@ void ranking_draw(double camera_x, double camera_y) {
     al_draw_text(g_ranking_font, al_map_rgb(255, 255, 255), 50, 50, 0, "=== HIGH SCORES ===");
     
     // Draw header
-    al_draw_text(g_ranking_font, al_map_rgb(200, 200, 200), 50, 100, 0, "Rank  Name      Score   Stage   Date");
+    al_draw_text(g_ranking_font, al_map_rgb(200, 200, 200), 50, 100, 0, "Rank  Name             Score   Stage   Date");
     
-    // Draw rankings
-    for (int i = 0; i < g_ranking_system.count && i < 20; i++) {  // Show top 20
+    // Draw rankings (top 10 only)
+    int max_display = (g_ranking_system.count < 10) ? g_ranking_system.count : 10;
+    for (int i = 0; i < max_display; i++) {
         RankingEntry* entry = &g_ranking_system.entries[i];
         char line[256];
         
         // Format: "1.    aaaaa    15000   3      2024-01-01 12:00"
-        snprintf(line, sizeof(line), "%2d.   %-10s %6d   %2d      %s",
+        snprintf(line, sizeof(line), "%2d.   %-15s %6d   %2d      %s",
                 i + 1, entry->name, entry->score, entry->stage, entry->date);
         
         // Highlight current player's score
