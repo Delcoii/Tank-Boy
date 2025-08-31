@@ -287,6 +287,9 @@ void tank_draw(Tank* tank, double camera_x, double camera_y) {
     double sx = tank->x - camera_x;
     double sy = tank->y - camera_y;
 
+    // Draw tank collision box (blue rectangle)
+    al_draw_filled_rectangle(sx, sy, sx + tank->width, sy + tank->height, al_map_rgb(0, 100, 255));
+    
     ALLEGRO_BITMAP* sprite = tank->facing_right ? tank_sprites.fliped_sheet : tank_sprites._sheet;
     al_draw_scaled_bitmap(sprite, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
    // al_draw_scaled_bitmap(tank_sprites.tank_base, 0, 0, 1024, 793, sx, sy, tank->width, tank->height, 0);
