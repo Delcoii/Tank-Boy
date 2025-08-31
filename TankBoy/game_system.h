@@ -106,6 +106,7 @@ typedef struct {
     ALLEGRO_BITMAP* bg_green;   // Stage 1 background
     ALLEGRO_BITMAP* bg_volcano; // Stage 2 background
     ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
+    ALLEGRO_BITMAP* intro_bg;   // Intro screen background
     
     // Enemy System
     int round_number;         // Current round number

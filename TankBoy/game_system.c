@@ -105,9 +105,34 @@ static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* 
 }
 
 static void draw_menu(const GameSystem* game_system) {
-    al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+    // Draw intro background if loaded
+    if (game_system->intro_bg) {
+        // Scale background to fill the entire buffer (crop if necessary)
+        int bg_width = al_get_bitmap_width(game_system->intro_bg);
+        int bg_height = al_get_bitmap_height(game_system->intro_bg);
+        
+        // Calculate scaling to fill the buffer completely (may crop parts of the image)
+        float scale_x = (float)game_system->config.buffer_width / bg_width;
+        float scale_y = (float)game_system->config.buffer_height / bg_height;
+        float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+        
+        // Calculate scaled dimensions
+        int scaled_width = (int)(bg_width * scale);
+        int scaled_height = (int)(bg_height * scale);
+        
+        // Calculate position to center the image (may be negative if image is larger than buffer)
+        int x = (game_system->config.buffer_width - scaled_width) / 2;
+        int y = (game_system->config.buffer_height - scaled_height) / 2;
+        
+        al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                              x, y, scaled_width, scaled_height, 0);
+    } else {
+        // Fallback to solid color if background not loaded
+        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+    }
+    
     al_draw_text(game_system->font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
-        game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "Tank-Boy Game");
+        game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "TANK BOY");
     draw_button(&game_system->start_button, &game_system->config, game_system->font);
     draw_button(&game_system->exit_button, &game_system->config, game_system->font);
     draw_button(&game_system->ranking_button, &game_system->config, game_system->font);
@@ -218,10 +243,12 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->bg_green = al_load_bitmap("TankBoy/resources/sprites/bg_green.png");
     game_system->bg_volcano = al_load_bitmap("TankBoy/resources/sprites/bg_volcano.png");
     game_system->bg_snow = al_load_bitmap("TankBoy/resources/sprites/bg_snow.png");
+    game_system->intro_bg = al_load_bitmap("TankBoy/resources/sprites/intro_bg.png");
     
     if (!game_system->bg_green) printf("Warning: Could not load bg_green.png\n");
     if (!game_system->bg_volcano) printf("Warning: Could not load bg_volcano.png\n");
     if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
+    if (!game_system->intro_bg) printf("Warning: Could not load intro_bg.png\n");
     
     // Initialize and load map
     char map_file[256];
@@ -278,6 +305,7 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     if (game_system->bg_green) al_destroy_bitmap(game_system->bg_green);
     if (game_system->bg_volcano) al_destroy_bitmap(game_system->bg_volcano);
     if (game_system->bg_snow) al_destroy_bitmap(game_system->bg_snow);
+    if (game_system->intro_bg) al_destroy_bitmap(game_system->intro_bg);
     
     al_destroy_event_queue(queue);
     al_destroy_display(display);
