@@ -1,6 +1,7 @@
 #include "tank.h"
 #include "map_generation.h"
 #include "ini_parser.h"
+#include "audio.h"
 #include <math.h>
 #include <allegro5/allegro_primitives.h>
 
@@ -242,6 +243,9 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                             bullets[i].from_enemy = false;
                             // Debug output removed
                             tank->mg_shot_cooldown = 0.1;
+                            
+                            // Play machine gun sound effect
+                            play_machine_sound();
                             break;
                         }
                     }

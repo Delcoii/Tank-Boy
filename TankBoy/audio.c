@@ -44,6 +44,14 @@ void audio_init(void) {
     }
     printf("ingame.flac loaded successfully\n");
     
+    // Load machine gun sound effect
+    audio_system.machine_sound = al_load_sample("TankBoy/resources/flacs/machine.flac");
+    if (!audio_system.machine_sound) {
+        printf("ERROR: Could not load machine.flac\n");
+        return;
+    }
+    printf("machine.flac loaded successfully\n");
+    
     // Create sample instance for intro BGM
     audio_system.intro_bgm_instance = al_create_sample_instance(audio_system.intro_bgm);
     if (!audio_system.intro_bgm_instance) {
@@ -101,6 +109,11 @@ void audio_cleanup(void) {
     if (audio_system.ingame_bgm) {
         al_destroy_sample(audio_system.ingame_bgm);
         audio_system.ingame_bgm = NULL;
+    }
+    
+    if (audio_system.machine_sound) {
+        al_destroy_sample(audio_system.machine_sound);
+        audio_system.machine_sound = NULL;
     }
     
     audio_system.is_initialized = false;
@@ -255,4 +268,16 @@ void switch_to_game_audio(void) {
     
     audio_system.current_audio_state = AUDIO_STATE_GAME;
     printf("Switched to game audio (ingame BGM)\n");
+}
+
+void play_machine_sound(void) {
+    if (!audio_system.is_initialized || !audio_system.machine_sound) {
+        printf("WARNING: Audio system not initialized, cannot play machine sound\n");
+        return;
+    }
+    
+    // Play machine gun sound effect using al_play_sample
+    // Parameters: sample, gain, pan, speed, playmode, sample_id
+    al_play_sample(audio_system.machine_sound, 0.5, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+    printf("Machine gun sound effect played\n");
 }
