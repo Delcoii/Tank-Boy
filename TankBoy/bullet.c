@@ -103,8 +103,8 @@ void bullets_draw(Bullet* bullets, int max_bullets, double camera_x, double came
         float y4 = sy + (-half_w * sin_a + half_h * cos_a);
         
         // Draw rotated rectangle using two triangles
-        al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
-        al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
+        // al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, col);
+        // al_draw_filled_triangle(x1, y1, x3, y3, x4, y4, col);
 
         
         if (bullets[i].weapon != 0) {

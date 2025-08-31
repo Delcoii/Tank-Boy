@@ -105,9 +105,34 @@ static void draw_button(const Button* btn, const GameConfig* cfg, ALLEGRO_FONT* 
 }
 
 static void draw_menu(const GameSystem* game_system) {
-    al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
-    al_draw_text(game_system->font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
-        game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "Tank-Boy Game");
+    // Draw intro background if loaded
+    if (game_system->intro_bg) {
+        // Scale background to fill the entire buffer (crop if necessary)
+        int bg_width = al_get_bitmap_width(game_system->intro_bg);
+        int bg_height = al_get_bitmap_height(game_system->intro_bg);
+        
+        // Calculate scaling to fill the buffer completely (may crop parts of the image)
+        float scale_x = (float)game_system->config.buffer_width / bg_width;
+        float scale_y = (float)game_system->config.buffer_height / bg_height;
+        float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+        
+        // Calculate scaled dimensions
+        int scaled_width = (int)(bg_width * scale);
+        int scaled_height = (int)(bg_height * scale);
+        
+        // Calculate position to center the image (may be negative if image is larger than buffer)
+        int x = (game_system->config.buffer_width - scaled_width) / 2;
+        int y = (game_system->config.buffer_height - scaled_height) / 2;
+        
+        al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                              x, y, scaled_width, scaled_height, 0);
+    } else {
+        // Fallback to solid color if background not loaded
+        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+    }
+    
+    al_draw_text(game_system->title_font, al_map_rgb(game_system->config.text_r, game_system->config.text_g, game_system->config.text_b),
+        game_system->config.buffer_width / 2, 100, ALLEGRO_ALIGN_CENTER, "TANK BOY");
     draw_button(&game_system->start_button, &game_system->config, game_system->font);
     draw_button(&game_system->exit_button, &game_system->config, game_system->font);
     draw_button(&game_system->ranking_button, &game_system->config, game_system->font);
@@ -218,10 +243,21 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     game_system->bg_green = al_load_bitmap("TankBoy/resources/sprites/bg_green.png");
     game_system->bg_volcano = al_load_bitmap("TankBoy/resources/sprites/bg_volcano.png");
     game_system->bg_snow = al_load_bitmap("TankBoy/resources/sprites/bg_snow.png");
+    game_system->intro_bg = al_load_bitmap("TankBoy/resources/sprites/intro_bg.png");
+    game_system->ranking_bg = al_load_bitmap("TankBoy/resources/sprites/ranking_bg.png");
     
     if (!game_system->bg_green) printf("Warning: Could not load bg_green.png\n");
     if (!game_system->bg_volcano) printf("Warning: Could not load bg_volcano.png\n");
     if (!game_system->bg_snow) printf("Warning: Could not load bg_snow.png\n");
+    if (!game_system->intro_bg) printf("Warning: Could not load intro_bg.png\n");
+    if (!game_system->ranking_bg) printf("Warning: Could not load ranking_bg.png\n");
+    
+    // Load title font (larger size)
+    game_system->title_font = al_load_ttf_font("TankBoy/resources/fonts/pressstart.ttf", 40, 0);
+    if (!game_system->title_font) {
+        printf("Warning: Could not load title font\n");
+        game_system->title_font = game_system->font; // Fallback to regular font
+    }
     
     // Initialize and load map
     char map_file[256];
@@ -237,6 +273,15 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     printf("location : %s\n", map_sprite_file);
     map_sprites_init(map_sprite_file);
 
+
+    char tank_sprite_file[256];
+    snprintf(tank_sprite_file, sizeof(tank_sprite_file), "TankBoy/resources/sprites/tank_sprite_sheet_croped.png");
+    printf("location : %s\n", tank_sprite_file);
+    tank_sprite_init(tank_sprite_file);
+    
+    // Load enemies from CSV file after map is loaded
+    load_enemies_from_csv_with_map(1, (const Map*)&game_system->current_map); // Load stage 1 enemies
+    
     // Initialize enemy system
     game_system->round_number = 1;
     game_system->enemies_spawned = false;
@@ -263,6 +308,13 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
 
     // Initialize ranking system
     ranking_init();
+    
+    // Initialize audio system
+    audio_init();
+    
+    // Start playing intro BGM immediately and set initial audio state
+    play_intro_bgm();
+    switch_audio_for_state(STATE_MENU);
 }
 
 // =================== Cleanup ===================
@@ -273,16 +325,24 @@ void cleanup_game_system(GameSystem* game_system, ALLEGRO_EVENT_QUEUE* queue, AL
     free(game_system->bullets);
     al_destroy_bitmap(game_system->buffer);
     al_destroy_font(game_system->font);
+    if (game_system->title_font && game_system->title_font != game_system->font) {
+        al_destroy_font(game_system->title_font);
+    }
     
     // Destroy background images
     if (game_system->bg_green) al_destroy_bitmap(game_system->bg_green);
     if (game_system->bg_volcano) al_destroy_bitmap(game_system->bg_volcano);
     if (game_system->bg_snow) al_destroy_bitmap(game_system->bg_snow);
+    if (game_system->intro_bg) al_destroy_bitmap(game_system->intro_bg);
+    if (game_system->ranking_bg) al_destroy_bitmap(game_system->ranking_bg);
     
     al_destroy_event_queue(queue);
     al_destroy_display(display);
     map_sprites_deinit();
     ranking_deinit();
+    
+    // Cleanup audio system
+    audio_cleanup();
 }
 
 // =================== Input Handling ===================
@@ -294,10 +354,12 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
     case ALLEGRO_KEY_ESCAPE:
         if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_RANKING) {
             game_system->current_state = STATE_MENU;
+            switch_audio_for_state(STATE_MENU);
         }
         else if (game_system->current_state == STATE_NAME_INPUT) {
             // Cancel name input and go back to menu
             game_system->current_state = STATE_MENU;
+            switch_audio_for_state(STATE_MENU);
         }
         else game_system->running = false;
         break;
@@ -314,6 +376,7 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
             }
             // Go to ranking page
             game_system->current_state = STATE_RANKING;
+            switch_audio_for_state(STATE_RANKING);
         }
         break;
     // Removed U key force clear - now auto clears when all enemies defeated
@@ -410,12 +473,14 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 flying_enemies_init();
                 game_system->enemies_spawned = false;
                 
-                // Reset game state flags
+                // Reset game state flags and switch audio
                 game_system->current_state = STATE_GAME;
+                switch_audio_for_state(STATE_GAME);
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
             else if (is_point_in_button(bx, by, &game_system->ranking_button)) {
                 game_system->current_state = STATE_RANKING;
+                switch_audio_for_state(STATE_RANKING);
             }
         }
         else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
@@ -425,6 +490,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 if (is_point_in_button(bx, by, &game_system->menu_button)) {
                     game_system->current_state = STATE_MENU;
                     game_system->stage_clear = false;
+                    switch_audio_for_state(STATE_MENU);
                 }
             } else {
                 // Stage clear screen - handle next button
@@ -474,11 +540,13 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 // Transition to name input state
                 game_system->current_state = STATE_NAME_INPUT;
                 text_input_reset(&game_system->name_input);
+                switch_audio_for_state(STATE_NAME_INPUT);
                 printf("Enter your name for final score %d\n", (int)game_system->score);
             }
             else if (is_point_in_button(bx, by, &game_system->menu_button)) {
                 game_system->current_state = STATE_MENU;
                 game_system->stage_clear = false;
+                switch_audio_for_state(STATE_MENU);
             }
         }
         else if (game_system->current_state == STATE_GAME_OVER) {
@@ -486,6 +554,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             if (is_point_in_button(bx, by, &game_system->menu_button)) {
                 game_system->current_state = STATE_MENU;
                 game_system->game_over = false;
+                switch_audio_for_state(STATE_MENU);
             }
         }
         break;
@@ -528,6 +597,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         // Transition directly to name input state
         game_system->current_state = STATE_NAME_INPUT;
         text_input_reset(&game_system->name_input);
+        switch_audio_for_state(STATE_NAME_INPUT);
         printf("Game over! Enter your name for score %d\n", (int)game_system->score);
     }
 
@@ -595,6 +665,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
             if (game_system->current_stage >= 3) {                
                 // Transition to stage complete state instead of directly adding to ranking
                 game_system->current_state = STATE_STAGE_COMPLETE;
+                switch_audio_for_state(STATE_STAGE_COMPLETE);
                 printf("Game completed! Final score %d\n", (int)game_system->score);
                 
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
@@ -798,13 +869,59 @@ void render_game(GameSystem* game_system) {
     disp_pre_draw(game_system);
     if (game_system->current_state == STATE_MENU) draw_menu(game_system);
     else if (game_system->current_state == STATE_RANKING) {
-        // Draw ranking screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw ranking screen with background
+        if (game_system->ranking_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->ranking_bg);
+            int bg_height = al_get_bitmap_height(game_system->ranking_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->ranking_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         ranking_draw(game_system->camera_x, game_system->camera_y);
     }
     else if (game_system->current_state == STATE_STAGE_COMPLETE) {
-        // Draw stage complete screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw stage complete screen with intro background
+        if (game_system->intro_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->intro_bg);
+            int bg_height = al_get_bitmap_height(game_system->intro_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         
         int cx = game_system->config.buffer_width / 2;
         int cy = game_system->config.buffer_height / 2;
@@ -832,8 +949,31 @@ void render_game(GameSystem* game_system) {
         draw_button(&game_system->menu_button, &game_system->config, game_system->font);
     }
     else if (game_system->current_state == STATE_NAME_INPUT) {
-        // Draw name input screen
-        al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        // Draw name input screen with intro background
+        if (game_system->intro_bg) {
+            // Scale background to fill the entire buffer (crop if necessary)
+            int bg_width = al_get_bitmap_width(game_system->intro_bg);
+            int bg_height = al_get_bitmap_height(game_system->intro_bg);
+            
+            // Calculate scaling to fill the buffer completely (may crop parts of the image)
+            float scale_x = (float)game_system->config.buffer_width / bg_width;
+            float scale_y = (float)game_system->config.buffer_height / bg_height;
+            float scale = (scale_x > scale_y) ? scale_x : scale_y; // Use the larger scale to fill
+            
+            // Calculate scaled dimensions
+            int scaled_width = (int)(bg_width * scale);
+            int scaled_height = (int)(bg_height * scale);
+            
+            // Calculate position to center the image (may be negative if image is larger than buffer)
+            int x = (game_system->config.buffer_width - scaled_width) / 2;
+            int y = (game_system->config.buffer_height - scaled_height) / 2;
+            
+            al_draw_scaled_bitmap(game_system->intro_bg, 0, 0, bg_width, bg_height, 
+                                  x, y, scaled_width, scaled_height, 0);
+        } else {
+            // Fallback to solid color if background not loaded
+            al_clear_to_color(al_map_rgb(game_system->config.menu_bg_r, game_system->config.menu_bg_g, game_system->config.menu_bg_b));
+        }
         
         int cx = game_system->config.buffer_width / 2;
         int cy = game_system->config.buffer_height / 2;
@@ -908,4 +1048,30 @@ void add_score_for_enemy_kill(int difficulty) {
     }
     
     global_game_system->score += score_points;
+}
+
+// ================= Audio Management =================
+
+void switch_audio_for_state(GameState new_state) {
+    switch (new_state) {
+        case STATE_MENU:
+        case STATE_RANKING:
+        case STATE_NAME_INPUT:
+            // Menu-related states use intro BGM
+            switch_to_menu_audio();
+            break;
+            
+        case STATE_GAME:
+        case STATE_GAME_OVER:
+        case STATE_STAGE_COMPLETE:
+            // Game-related states use ingame BGM
+            switch_to_game_audio();
+            break;
+            
+        case STATE_EXIT:
+            // Stop all audio when exiting
+            stop_intro_bgm();
+            stop_ingame_bgm();
+            break;
+    }
 }

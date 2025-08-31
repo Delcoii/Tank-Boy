@@ -13,6 +13,7 @@
 #include "ini_parser.h"     // Configuration file parser
 #include "input_system.h"   // Keyboard and mouse input handling
 #include "head_up_display.h" // HUD and UI display system
+#include "audio.h"           // Audio system for BGM
 
 // MAX_BULLETS is now loaded from config.ini
 
@@ -106,6 +107,11 @@ typedef struct {
     ALLEGRO_BITMAP* bg_green;   // Stage 1 background
     ALLEGRO_BITMAP* bg_volcano; // Stage 2 background
     ALLEGRO_BITMAP* bg_snow;    // Stage 3 background
+    ALLEGRO_BITMAP* intro_bg;   // Intro screen background
+    ALLEGRO_BITMAP* ranking_bg; // Ranking screen background
+    
+    // Fonts
+    ALLEGRO_FONT* title_font;   // Large font for titles
     
     // Enemy System
     int round_number;         // Current round number
@@ -138,6 +144,9 @@ void disp_post_draw(GameSystem* game_system);                                   
 // ================= Score System =================
 void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
 void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
+
+// ================= Audio Management =================
+void switch_audio_for_state(GameState new_state);                                    // Switch audio based on game state
 
 
 #endif // GAME_SYSTEM_H

@@ -1,5 +1,7 @@
 x,y,enemy_type,difficulty
-1100,1500,tank,3
-1650,1400,tank,3
-2350,1200,tank,3
-2750,1100,tank,3
+1700,1250,tank,3
+2150,1200,tank,3
+2550,1200,tank,3
+3100,1150,helicopter,3
+3400,1200,helicopter,3
+2800,1150,helicopter,2

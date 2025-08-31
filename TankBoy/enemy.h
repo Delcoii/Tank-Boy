@@ -75,6 +75,9 @@ typedef struct {
     
     // Difficulty for scoring
     int difficulty;
+    
+    // Direction tracking for sprite flipping
+    bool facing_right;  // true = right, false = left
 } Enemy;
 
 // Flying enemy: sine flight, burst fire (10 shots in ~0.5s) then rest
@@ -97,6 +100,9 @@ typedef struct {
     
     // Flying enemy dimensions (loaded from config)
     int width, height;
+    
+    // Direction tracking for sprite flipping
+    bool facing_right;  // true = right, false = left
     
     // Difficulty for scoring
     int difficulty;

@@ -95,6 +95,7 @@ void enemies_init(void) {
         enemies[i].stuck_time = 0.0;
         enemies[i].speed = 0.0;
         enemies[i].jump_timer = 0.0;
+        enemies[i].facing_right = true;  // Default facing right
         
         // Set dimensions from config
         enemies[i].width = enemy_width;
@@ -159,6 +160,7 @@ void flying_enemies_init(void) {
         f_enemies[i].rest_timer = flying_enemy_rest_time;
         f_enemies[i].hp = 0;
         f_enemies[i].max_hp = 0;
+        f_enemies[i].facing_right = true;  // Default facing right
         
         // Set dimensions from config
         f_enemies[i].width = flying_enemy_width;
@@ -256,6 +258,7 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
             
             // Store difficulty for scoring
             enemies[enemy_index].difficulty = difficulty;
+            enemies[enemy_index].facing_right = true;  // Default facing right
             
             printf("Spawned tank enemy at (%f, %f) with difficulty %d\n", x, enemies[enemy_index].y, difficulty);
         }
@@ -296,6 +299,7 @@ void load_enemies_from_csv_with_map(int stage_number, const Map* map) {
                 
                 // Store difficulty for scoring
                 f_enemies[fly_index].difficulty = difficulty;
+                f_enemies[fly_index].facing_right = (f_enemies[fly_index].vx > 0);  // Set based on initial velocity
                 
                 printf("Spawned helicopter enemy at (%f, %f) with difficulty %d\n", x, y, difficulty);
             }
@@ -426,6 +430,14 @@ void enemies_update_roi_with_map(double dt, double camera_x, double camera_y, in
         
         // Set constant speed based on direction
         e->vx = dir * e->speed;
+        
+        // Update facing direction based on velocity
+        if (e->vx > 0) {
+            e->facing_right = true;
+        } else if (e->vx < 0) {
+            e->facing_right = false;
+        }
+        // If vx == 0, keep previous facing direction
 
         e->vy += gravity;
 
@@ -535,6 +547,14 @@ void enemies_update_with_map(double dt, const Map* map) {
         
         // Set constant speed based on direction
         e->vx = dir * e->speed;
+        
+        // Update facing direction based on velocity
+        if (e->vx > 0) {
+            e->facing_right = true;
+        } else if (e->vx < 0) {
+            e->facing_right = false;
+        }
+        // If vx == 0, keep previous facing direction
 
         e->vy += gravity;
 
@@ -658,7 +678,19 @@ void flying_enemies_update_roi(double dt, double camera_x, double camera_y, int 
         // X-axis: left-right movement based on trigonometry centered on spawn position
         fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
         double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
+        double old_x = fe->x;
         fe->x = fe->spawn_x + x_offset;
+        
+        // Calculate velocity for direction tracking
+        fe->vx = (fe->x - old_x) / dt;  // Approximate velocity
+        
+        // Update facing direction based on velocity
+        if (fe->vx > 0) {
+            fe->facing_right = true;
+        } else if (fe->vx < 0) {
+            fe->facing_right = false;
+        }
+        // If vx == 0, keep previous facing direction
 
         // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
@@ -750,7 +782,19 @@ void flying_enemies_update(double dt) {
         // X-axis: left-right movement based on trigonometry centered on spawn position
         fe->x_angle += dt * 1.5;  // x-axis movement speed (adjustable)
         double x_offset = sin(fe->x_angle) * 150.0;  // ±150 pixel range from spawn position (adjustable)
+        double old_x = fe->x;
         fe->x = fe->spawn_x + x_offset;
+        
+        // Calculate velocity for direction tracking
+        fe->vx = (fe->x - old_x) / dt;  // Approximate velocity
+        
+        // Update facing direction based on velocity
+        if (fe->vx > 0) {
+            fe->facing_right = true;
+        } else if (fe->vx < 0) {
+            fe->facing_right = false;
+        }
+        // If vx == 0, keep previous facing direction
 
         // 맵 경계 체크 (삼각함수 기반이므로 bounce 대신 경계 제한)
         if (fe->x < 0) { 
@@ -839,18 +883,24 @@ void enemies_draw(double camera_x, double camera_y) {
         double sy = e->y - camera_y;
         
         // Draw enemy (basic rectangle for now)
-        al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
+        // al_draw_filled_rectangle(sx, sy, sx + e->width, sy + e->height, al_map_rgb(200, 50, 50));
         
-        // draw enemy sprite
+        // draw enemy sprite with flip based on movement direction
         int width = al_get_bitmap_width(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
         int height = al_get_bitmap_height(enemy_sprites.land_enemy_sprites[e->difficulty-1]);
+        
+        // Determine flip flags based on facing direction
+        int flip_flags = 0;
+        if (e->facing_right) {
+            flip_flags = ALLEGRO_FLIP_HORIZONTAL; // Flip horizontally when facing right
+        }
         
         al_draw_scaled_bitmap(enemy_sprites.land_enemy_sprites[e->difficulty-1],
             0, 0,
             width, height,
             e->x - camera_x, e->y - camera_y,
             e->width, e->height,
-            0);
+            flip_flags);
 
         // HP bar would be drawn by HUD system
     }
@@ -863,19 +913,25 @@ void flying_enemies_draw(double camera_x, double camera_y) {
 
 
         // Convert world coordinates to screen coordinates
-        al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
-            fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
-            al_map_rgb(180, 0, 180));
+        // al_draw_filled_rectangle(fe->x - camera_x, fe->y - camera_y, 
+        //     fe->x - camera_x + fe->width, fe->y - camera_y + fe->height, 
+        //     al_map_rgb(180, 0, 180));
 
         int width = al_get_bitmap_width(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
         int height = al_get_bitmap_height(enemy_sprites.flying_enemy_sprites[fe->difficulty-1]);
+        
+        // Determine flip flags based on facing direction
+        int flip_flags = 0;
+        if (fe->facing_right) {
+            flip_flags = ALLEGRO_FLIP_HORIZONTAL; // Flip horizontally when facing right
+        }
         
         al_draw_scaled_bitmap(enemy_sprites.flying_enemy_sprites[fe->difficulty-1],
             0, 0,
             width, height,
             fe->x - camera_x, fe->y - camera_y,
             fe->width, fe->height,
-            0);
+            flip_flags);
     }
 }
 
