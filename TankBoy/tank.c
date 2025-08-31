@@ -185,10 +185,13 @@ void tank_update(Tank* tank, InputState* input, double dt, Bullet* bullets, int 
                     bullets[i].vy = sin(tank->cannon_angle) * tank->cannon_power * 1.4;
                     bullets[i].width = cannon_width;
                     bullets[i].height = cannon_height;
-                    bullets[i].angle = tank->cannon_angle;
-                    bullets[i].from_enemy = false;
-                    // Debug output removed
-                    break;
+                                         bullets[i].angle = tank->cannon_angle;
+                     bullets[i].from_enemy = false;
+                     // Debug output removed
+                     
+                     // Play cannon sound effect
+                     play_cannon_sound();
+                     break;
                 }
             }
             tank->charging = false;

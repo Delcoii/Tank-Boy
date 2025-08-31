@@ -52,6 +52,14 @@ void audio_init(void) {
     }
     printf("machine.flac loaded successfully\n");
     
+    // Load cannon sound effect
+    audio_system.cannon_sound = al_load_sample("TankBoy/resources/flacs/cannon.flac");
+    if (!audio_system.cannon_sound) {
+        printf("ERROR: Could not load cannon.flac\n");
+        return;
+    }
+    printf("cannon.flac loaded successfully\n");
+    
     // Create sample instance for intro BGM
     audio_system.intro_bgm_instance = al_create_sample_instance(audio_system.intro_bgm);
     if (!audio_system.intro_bgm_instance) {
@@ -114,6 +122,11 @@ void audio_cleanup(void) {
     if (audio_system.machine_sound) {
         al_destroy_sample(audio_system.machine_sound);
         audio_system.machine_sound = NULL;
+    }
+    
+    if (audio_system.cannon_sound) {
+        al_destroy_sample(audio_system.cannon_sound);
+        audio_system.cannon_sound = NULL;
     }
     
     audio_system.is_initialized = false;
@@ -280,4 +293,16 @@ void play_machine_sound(void) {
     // Parameters: sample, gain, pan, speed, playmode, sample_id
     al_play_sample(audio_system.machine_sound, 0.5, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
     printf("Machine gun sound effect played\n");
+}
+
+void play_cannon_sound(void) {
+    if (!audio_system.is_initialized || !audio_system.cannon_sound) {
+        printf("WARNING: Audio system not initialized, cannot play cannon sound\n");
+        return;
+    }
+    
+    // Play cannon sound effect using al_play_sample
+    // Parameters: sample, gain, pan, speed, playmode, sample_id
+    al_play_sample(audio_system.cannon_sound, 0.6, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+    printf("Cannon sound effect played\n");
 }

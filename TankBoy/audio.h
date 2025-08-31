@@ -17,6 +17,7 @@ typedef struct {
     ALLEGRO_SAMPLE* ingame_bgm;
     ALLEGRO_SAMPLE_INSTANCE* ingame_bgm_instance;
     ALLEGRO_SAMPLE* machine_sound;  // Machine gun sound effect
+    ALLEGRO_SAMPLE* cannon_sound;    // Cannon sound effect
     AudioState current_audio_state;
     bool is_initialized;
 } AudioSystem;
@@ -35,6 +36,7 @@ void set_ingame_bgm_volume(float volume);
 void switch_to_menu_audio(void);
 void switch_to_game_audio(void);
 void play_machine_sound(void);  // Play machine gun sound effect
+void play_cannon_sound(void);   // Play cannon sound effect
 
 // Global audio system instance
 extern AudioSystem audio_system;
