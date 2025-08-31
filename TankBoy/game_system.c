@@ -303,8 +303,9 @@ void init_game_system(ALLEGRO_DISPLAY* display, ALLEGRO_EVENT_QUEUE* queue, Game
     // Initialize audio system
     audio_init();
     
-    // Start playing intro BGM immediately
+    // Start playing intro BGM immediately and set initial audio state
     play_intro_bgm();
+    switch_audio_for_state(STATE_MENU);
 }
 
 // =================== Cleanup ===================
@@ -344,10 +345,12 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
     case ALLEGRO_KEY_ESCAPE:
         if (game_system->current_state == STATE_GAME || game_system->current_state == STATE_RANKING) {
             game_system->current_state = STATE_MENU;
+            switch_audio_for_state(STATE_MENU);
         }
         else if (game_system->current_state == STATE_NAME_INPUT) {
             // Cancel name input and go back to menu
             game_system->current_state = STATE_MENU;
+            switch_audio_for_state(STATE_MENU);
         }
         else game_system->running = false;
         break;
@@ -364,6 +367,7 @@ static void handle_keyboard_input(ALLEGRO_EVENT* event, GameSystem* game_system)
             }
             // Go to ranking page
             game_system->current_state = STATE_RANKING;
+            switch_audio_for_state(STATE_RANKING);
         }
         break;
     // Removed U key force clear - now auto clears when all enemies defeated
@@ -460,12 +464,14 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 flying_enemies_init();
                 game_system->enemies_spawned = false;
                 
-                // Reset game state flags
+                // Reset game state flags and switch audio
                 game_system->current_state = STATE_GAME;
+                switch_audio_for_state(STATE_GAME);
             }
             else if (is_point_in_button(bx, by, &game_system->exit_button)) game_system->running = false;
             else if (is_point_in_button(bx, by, &game_system->ranking_button)) {
                 game_system->current_state = STATE_RANKING;
+                switch_audio_for_state(STATE_RANKING);
             }
         }
         else if (game_system->current_state == STATE_GAME && game_system->stage_clear && game_system->stage_clear_timer < 0) {
@@ -475,6 +481,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 if (is_point_in_button(bx, by, &game_system->menu_button)) {
                     game_system->current_state = STATE_MENU;
                     game_system->stage_clear = false;
+                    switch_audio_for_state(STATE_MENU);
                 }
             } else {
                 // Stage clear screen - handle next button
@@ -524,11 +531,13 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
                 // Transition to name input state
                 game_system->current_state = STATE_NAME_INPUT;
                 text_input_reset(&game_system->name_input);
+                switch_audio_for_state(STATE_NAME_INPUT);
                 printf("Enter your name for final score %d\n", (int)game_system->score);
             }
             else if (is_point_in_button(bx, by, &game_system->menu_button)) {
                 game_system->current_state = STATE_MENU;
                 game_system->stage_clear = false;
+                switch_audio_for_state(STATE_MENU);
             }
         }
         else if (game_system->current_state == STATE_GAME_OVER) {
@@ -536,6 +545,7 @@ static void handle_mouse_input(ALLEGRO_EVENT* event, GameSystem* game_system) {
             if (is_point_in_button(bx, by, &game_system->menu_button)) {
                 game_system->current_state = STATE_MENU;
                 game_system->game_over = false;
+                switch_audio_for_state(STATE_MENU);
             }
         }
         break;
@@ -578,6 +588,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
         // Transition directly to name input state
         game_system->current_state = STATE_NAME_INPUT;
         text_input_reset(&game_system->name_input);
+        switch_audio_for_state(STATE_NAME_INPUT);
         printf("Game over! Enter your name for score %d\n", (int)game_system->score);
     }
 
@@ -645,6 +656,7 @@ void update_game_state(ALLEGRO_EVENT* event, GameSystem* game_system) {
             if (game_system->current_stage >= 3) {                
                 // Transition to stage complete state instead of directly adding to ranking
                 game_system->current_state = STATE_STAGE_COMPLETE;
+                switch_audio_for_state(STATE_STAGE_COMPLETE);
                 printf("Game completed! Final score %d\n", (int)game_system->score);
                 
                 game_system->stage_clear_timer = -1.0; // Infinite wait for click
@@ -1027,4 +1039,30 @@ void add_score_for_enemy_kill(int difficulty) {
     }
     
     global_game_system->score += score_points;
+}
+
+// ================= Audio Management =================
+
+void switch_audio_for_state(GameState new_state) {
+    switch (new_state) {
+        case STATE_MENU:
+        case STATE_RANKING:
+        case STATE_NAME_INPUT:
+            // Menu-related states use intro BGM
+            switch_to_menu_audio();
+            break;
+            
+        case STATE_GAME:
+        case STATE_GAME_OVER:
+        case STATE_STAGE_COMPLETE:
+            // Game-related states use ingame BGM
+            switch_to_game_audio();
+            break;
+            
+        case STATE_EXIT:
+            // Stop all audio when exiting
+            stop_intro_bgm();
+            stop_ingame_bgm();
+            break;
+    }
 }

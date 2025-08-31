@@ -145,5 +145,8 @@ void disp_post_draw(GameSystem* game_system);                                   
 void set_global_game_system(GameSystem* gs);                                         // Set global game system reference for scoring
 void add_score_for_enemy_kill(int difficulty);                                       // Add score when enemy is killed
 
+// ================= Audio Management =================
+void switch_audio_for_state(GameState new_state);                                    // Switch audio based on game state
+
 
 #endif // GAME_SYSTEM_H
