@@ -11,6 +11,7 @@ https://youtu.be/WzLoNt00ITM
 
 
 ### 스크린샷
+![메뉴 스크린샷](./gamescreenshot_menu.png)
 ![게임 스크린샷](./gamescreenshot.png)
 
 
