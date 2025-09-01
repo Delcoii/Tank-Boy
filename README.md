@@ -10,6 +10,10 @@
 - YouTube: [Tank Boy 플레이 영상](https://youtu.be/WzLoNt00ITM)
 
 
+### 스크린샷
+![게임 스크린샷](./gamescreenshot.png)
+
+
 ### 환경 구성
 ```sh
 # any folder you want
